@@ -2,7 +2,7 @@ import React from 'react';
 import Navbar from '../components/common/Navbar';
 import { Briefcase, Users, Eye, TrendingUp } from 'lucide-react';
 
-const EmployerDashboard = () => {
+const RecruiterDashboard = () => {
   const stats = [
     { icon: Briefcase, label: 'Active Jobs', value: '0', color: '#2563eb' },
     { icon: Users, label: 'Total Applications', value: '0', color: '#16a34a' },
@@ -12,8 +12,7 @@ const EmployerDashboard = () => {
 
   return (
     <div>
-      <Navbar title="Employer Dashboard" />
-      
+      <Navbar title="Recruiter Dashboard" />
       <div className="container">
         <h2 style={{ marginBottom: '20px', color: '#1f2937' }}>Welcome to Your Dashboard</h2>
         
@@ -68,4 +67,4 @@ const EmployerDashboard = () => {
   );
 };
 
-export default EmployerDashboard;
+export default RecruiterDashboard;

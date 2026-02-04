@@ -8,12 +8,16 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (user) {
+      if (!user.profileCompleted) {
+      navigate("/complete-profile");
+      return;
+    }
       switch (user.role) {
         case 'jobseeker':
           navigate('/jobseeker/dashboard', { replace: true });
           break;
         case 'recruiter':
-          navigate('/employer/dashboard', { replace: true });
+          navigate('/recruiter/dashboard', { replace: true });
           break;
         case 'business':
           navigate('/business/dashboard', { replace: true });

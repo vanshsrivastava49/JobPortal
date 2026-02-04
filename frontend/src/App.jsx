@@ -6,10 +6,10 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import JobSeekerDashboard from "./pages/JobSeekerDashboard";
-import EmployerDashboard from "./pages/EmployerDashboard";
+import RecruiterDashboard from "./pages/RecruiterDashboard";
 import BusinessOwnerDashboard from "./pages/BusinessOwnerDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
-
+import CompleteProfile from "./pages/CompleteProfile";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
 
@@ -48,7 +48,7 @@ function App() {
             path="/recruiter/*"
             element={
               <ProtectedRoute allowedRoles={["recruiter"]}>
-                <EmployerDashboard />
+                <RecruiterDashboard />
               </ProtectedRoute>
             }
           />
@@ -70,6 +70,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/complete-profile" element={<CompleteProfile />} />
 
           {/* DEFAULT */}
           <Route path="/" element={<Navigate to="/login" replace />} />

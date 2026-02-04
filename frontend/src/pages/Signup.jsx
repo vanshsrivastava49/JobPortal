@@ -12,8 +12,13 @@ const Signup = () => {
   const { isAuthenticated } = useAuth();
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
-  }
+  return (
+    <Navigate 
+      to={user?.profileCompleted ? "/dashboard" : "/complete-profile"} 
+      replace 
+    />
+  );
+}
 
   const handleOTPSent = (userEmail) => {
     setEmail(userEmail);

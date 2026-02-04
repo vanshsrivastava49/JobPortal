@@ -67,7 +67,12 @@ const Login = () => {
       if (res.success) {
         toast.success("Login successful");
         login(res.user, res.token);
-        navigate("/dashboard");
+        if (res.user.profileCompleted) {
+  navigate("/dashboard");
+} else {
+  navigate("/complete-profile");
+}
+
       } else {
         toast.error(res.message || "Invalid OTP");
       }
@@ -151,7 +156,13 @@ const Login = () => {
               />
             </div>
 
-            <button className="btn btn-primary" disabled={loading}>
+            <button className="btn btn-primary"style={{
+            width: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+          }} disabled={loading}>
               {loading ? <Loader className="spin" /> : "Send OTP"}
             </button>
 
