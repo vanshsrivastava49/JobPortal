@@ -1,22 +1,35 @@
 import React from 'react';
 import Navbar from '../components/common/Navbar';
 import { Briefcase, FileText, User, TrendingUp } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const JobSeekerDashboard = () => {
+
+  const { user } = useAuth();
+
+  const resumeUrl = user?.jobSeekerProfile?.resume;
+  const profileProgress = user?.profileProgress || 0;
+
   const stats = [
     { icon: Briefcase, label: 'Jobs Applied', value: '0', color: '#2563eb' },
     { icon: FileText, label: 'Profile Views', value: '0', color: '#16a34a' },
     { icon: TrendingUp, label: 'Shortlisted', value: '0', color: '#ea580c' },
-    { icon: User, label: 'Profile Completion', value: '25%', color: '#7c3aed' },
+    { icon: User, label: 'Profile Completion', value: `${profileProgress}%`, color: '#7c3aed' },
   ];
+
+  const handleViewResume = () => {
+    if (resumeUrl) {
+      window.open(resumeUrl, "_blank");
+    }
+  };
 
   return (
     <div>
       <Navbar title="Job Seeker Dashboard" />
-      
       <div className="container">
-        <h2 style={{ marginBottom: '20px', color: '#1f2937' }}>Welcome to Your Dashboard</h2>
-        
+        <h2 style={{ marginBottom: '20px', color: '#1f2937' }}>
+          Welcome {user?.name || "User"}
+        </h2>
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
@@ -54,14 +67,49 @@ const JobSeekerDashboard = () => {
             );
           })}
         </div>
-
         <div className="card">
-          <h3 style={{ marginBottom: '15px', color: '#1f2937' }}>Quick Actions</h3>
+          <h3 style={{ marginBottom: '15px', color: '#1f2937' }}>
+            Quick Actions
+          </h3>
+
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <button className="btn btn-primary">Complete Profile</button>
-            <button className="btn btn-secondary">Upload Resume</button>
-            <button className="btn btn-secondary">Browse Jobs</button>
+            
+            <button
+              className="btn btn-primary"
+              onClick={() => window.location.href="/complete-profile"}
+            >
+              Complete Profile
+            </button>
+            {resumeUrl ? (
+              <button
+                className="btn btn-secondary"
+                onClick={handleViewResume}
+              >
+                View Resume
+              </button>
+            ) : (
+              <button
+                className="btn btn-secondary"
+                onClick={() => window.location.href="/complete-profile"}
+              >
+                Upload Resume
+              </button>
+            )}
+
+            <button className="btn btn-secondary">
+              Browse Jobs
+            </button>
+
           </div>
+          <p style={{ marginTop: 15, color: "#6b7280" }}>
+            Resume Status: {" "}
+            {resumeUrl ? (
+              <span style={{color:"green"}}>Uploaded ✅</span>
+            ) : (
+              <span style={{color:"red"}}>Not Uploaded ❌</span>
+            )}
+          </p>
+
         </div>
       </div>
     </div>
