@@ -3,54 +3,168 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import axios from "axios";
+import "./CompleteProfile.css";
 
 const CompleteProfile = () => {
-  const { user, token, login } = useAuth();
+  const { user, token, login, logout } = useAuth();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({});
   const [uploading, setUploading] = useState(false);
+  const [currentSection, setCurrentSection] = useState("basicDetails");
+  const [skillInput, setSkillInput] = useState("");
+  const [selectedSkills, setSelectedSkills] = useState([]);
 
   const API = "http://localhost:5000/api/profile";
 
   /* ======================
-     REQUIRED FIELDS
+     SECTION CONFIGURATIONS
   ====================== */
-  const requiredFields = {
+  const sections = {
     jobseeker: [
-      "fullName","mobile","city",
-      "education","skills",
-      "experience","resume"
+      { id: "basicDetails", label: "Basic Details", icon: "👤", required: true },
+      { id: "resume", label: "Resume", icon: "📄", required: true },
+      { id: "about", label: "About", icon: "ℹ️", required: true },
+      { id: "skills", label: "Skills", icon: "⚡", required: true },
+      { id: "education", label: "Education", icon: "🎓", required: true },
+      { id: "experience", label: "Work Experience", icon: "💼", required: false },
+      { id: "accomplishments", label: "Accomplishments & Initiatives", icon: "🏆", required: false }
     ],
     recruiter: [
-      "companyName","companyWebsite",
-      "companyDescription","companyLocation",
-      "contactNumber","companyLogo",
-      "industryType"
+      { id: "basicDetails", label: "Company Basics", icon: "🏢", required: true },
+      { id: "companyDetails", label: "Company Details", icon: "📋", required: true },
+      { id: "branding", label: "Branding", icon: "🎨", required: true }
     ],
     business: [
-      "businessName","category",
-      "address","contactDetails",
-      "description","images"
+      { id: "basicDetails", label: "Business Info", icon: "🏪", required: true },
+      { id: "businessDetails", label: "Business Details", icon: "📝", required: true },
+      { id: "media", label: "Media", icon: "📸", required: true }
     ]
   };
 
   /* ======================
+     REQUIRED FIELDS BY SECTION
+  ====================== */
+  const requiredFieldsBySection = {
+    jobseeker: {
+      basicDetails: ["fullName", "mobile", "city"],
+      resume: ["resume"],
+      about: ["about"],
+      skills: ["skills"],
+      education: ["education"],
+      experience: [],
+      accomplishments: []
+    },
+    recruiter: {
+      basicDetails: ["companyName", "companyWebsite", "contactNumber"],
+      companyDetails: ["companyDescription", "companyLocation", "industryType"],
+      branding: ["companyLogo"]
+    },
+    business: {
+      basicDetails: ["businessName", "category", "contactDetails"],
+      businessDetails: ["address", "description"],
+      media: ["images"]
+    }
+  };
+
+  /* ======================
+     SKILL SUGGESTIONS
+  ====================== */
+  const skillSuggestions = [
+    "Data Quality Management",
+    "BMC Helix ITSM (Remedy)",
+    "HTML",
+    "Social Recruiting",
+    "Machine Learning Concepts",
+    "E-Discovery",
+    "Embedded programming",
+    "GDPR Compliance",
+    "Asana (Software)",
+    "Education Law",
+    "React",
+    "Node.js",
+    "Python",
+    "JavaScript",
+    "TypeScript",
+    "MongoDB",
+    "SQL",
+    "AWS",
+    "Docker",
+    "Git"
+  ];
+
+  /* ======================
      PROGRESS CALCULATION
   ====================== */
-  const progress = useMemo(() => {
-    const fields = requiredFields[user.role] || [];
-    const filled = fields.filter(f => form[f]).length;
+  const getSectionProgress = (sectionId) => {
+    const fields = requiredFieldsBySection[user.role]?.[sectionId] || [];
+    if (fields.length === 0) return 100;
+    
+    const filled = fields.filter(f => {
+      if (f === "skills") return selectedSkills.length > 0;
+      return form[f];
+    }).length;
+    
     return Math.round((filled / fields.length) * 100);
-  }, [form, user.role]);
+  };
 
-  /* ====================== */
+  const overallProgress = useMemo(() => {
+    const userSections = sections[user.role] || [];
+    const requiredSections = userSections.filter(s => s.required);
+    
+    const totalProgress = requiredSections.reduce((acc, section) => {
+      return acc + getSectionProgress(section.id);
+    }, 0);
+    
+    return Math.round(totalProgress / requiredSections.length);
+  }, [form, user.role, selectedSkills]);
+
+  /* ======================
+     HANDLERS
+  ====================== */
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const handleAddSkill = (skill) => {
+    if (!selectedSkills.includes(skill)) {
+      setSelectedSkills([...selectedSkills, skill]);
+      setSkillInput("");
+    }
+  };
+
+  const handleRemoveSkill = (skill) => {
+    setSelectedSkills(selectedSkills.filter(s => s !== skill));
+  };
+
+  const handleSkillInputKeyPress = (e) => {
+    if (e.key === "Enter" && skillInput.trim()) {
+      e.preventDefault();
+      handleAddSkill(skillInput.trim());
+    }
+  };
+
   /* ======================
-     RESUME UPLOAD (S3)
+     LOGOUT
+  ====================== */
+  const handleLogout = async () => {
+    try {
+      await axios.post(
+        "http://localhost:5000/api/auth/logout",
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (err) {
+      // Even if backend fails, still logout locally
+    } finally {
+      logout();
+      toast.success("Logged out successfully");
+      navigate("/login");
+    }
+  };
+
+  /* ======================
+     FILE UPLOAD
   ====================== */
   const handleResumeUpload = async (file) => {
     if (!file) return;
@@ -72,10 +186,9 @@ const CompleteProfile = () => {
       );
 
       setForm({ ...form, resume: res.data.resumeUrl });
-      toast.success("Resume uploaded");
-
+      toast.success("Resume uploaded successfully");
     } catch {
-      toast.error("Upload failed");
+      toast.error("Upload failed. Please try again.");
     } finally {
       setUploading(false);
     }
@@ -85,16 +198,15 @@ const CompleteProfile = () => {
      SUBMIT PROFILE
   ====================== */
   const handleSubmit = async () => {
-    if (progress < 100) {
-      return toast.error("Complete all required fields");
+    if (overallProgress < 0) {
+      return toast.error("Please complete all required sections");
     }
 
     try {
-      let payload = { ...form };
-
-      if (payload.skills) {
-        payload.skills = payload.skills.split(",").map(s => s.trim());
-      }
+      let payload = { 
+        ...form,
+        skills: selectedSkills
+      };
 
       const res = await axios.post(
         `${API}/complete`,
@@ -102,125 +214,492 @@ const CompleteProfile = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      toast.success("Profile completed!");
+      toast.success("Profile completed successfully!");
       login(res.data.user, token);
       navigate("/dashboard");
-
     } catch (err) {
-      toast.error(err.response?.data?.message || "Error");
+      toast.error(err.response?.data?.message || "An error occurred");
     }
   };
 
   /* ======================
-     ROLE FIELDS
+     RENDER SECTION CONTENT
   ====================== */
-  const renderFields = () => {
-    switch (user.role) {
+  const renderSectionContent = () => {
+    const role = user.role;
 
-      case "jobseeker":
-        return (
-          <>
-            <input name="fullName" placeholder="Full Name" onChange={handleChange}/>
-            <input name="mobile" placeholder="Mobile" onChange={handleChange}/>
-            <input name="city" placeholder="City" onChange={handleChange}/>
-            <input name="education" placeholder="Education" onChange={handleChange}/>
+    if (role === "jobseeker") {
+      switch (currentSection) {
+        case "basicDetails":
+          return (
+            <div className="section-content">
+              <h2 className="section-title">Basic Details</h2>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Full Name <span className="required">*</span></label>
+                  <input
+                    type="text"
+                    name="fullName"
+                    value={form.fullName || ""}
+                    onChange={handleChange}
+                    placeholder="Enter your full name"
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Mobile Number <span className="required">*</span></label>
+                  <input
+                    type="tel"
+                    name="mobile"
+                    value={form.mobile || ""}
+                    onChange={handleChange}
+                    placeholder="Enter your mobile number"
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>City <span className="required">*</span></label>
+                  <input
+                    type="text"
+                    name="city"
+                    value={form.city || ""}
+                    onChange={handleChange}
+                    placeholder="Enter your city"
+                    className="form-input"
+                  />
+                </div>
+              </div>
+            </div>
+          );
 
-            <input
-              name="skills"
-              placeholder="Skills (React, Node, Java)"
-              onChange={handleChange}
-            />
+        case "resume":
+          return (
+            <div className="section-content">
+              <div className="resume-header">
+                <div className="resume-banner">
+                  <div className="resume-icon">📄</div>
+                  <h2>Create your Resume</h2>
+                </div>
+              </div>
+              
+              <div className="upload-section">
+                <h3>Upload Resume <span className="required">*</span></h3>
+                <div className="upload-area">
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    onChange={(e) => handleResumeUpload(e.target.files[0])}
+                    className="file-input"
+                    id="resume-upload"
+                  />
+                  <label htmlFor="resume-upload" className="upload-label">
+                    <div className="upload-icon">📎</div>
+                    <span>{uploading ? "Uploading..." : "Choose File"}</span>
+                  </label>
+                </div>
+                {form.resume && (
+                  <div className="upload-success">
+                    <span className="success-icon">✓</span>
+                    <span>Resume uploaded successfully!</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
 
-            <input name="experience" placeholder="Experience" onChange={handleChange}/>
+        case "about":
+          return (
+            <div className="section-content">
+              <h2 className="section-title">About <span className="required">*</span></h2>
+              <div className="form-group">
+                <textarea
+                  name="about"
+                  value={form.about || ""}
+                  onChange={handleChange}
+                  placeholder="Tell us about yourself, your experience, and what makes you unique..."
+                  className="form-textarea"
+                  rows="8"
+                />
+              </div>
+            </div>
+          );
 
-            {/* Resume Upload */}
-            <label>Upload Resume (PDF/DOC)</label>
-            <input
-              type="file"
-              accept=".pdf,.doc,.docx"
-              onChange={(e)=>handleResumeUpload(e.target.files[0])}
-            />
+        case "skills":
+          return (
+            <div className="section-content">
+              <h2 className="section-title">
+                <span className="section-icon">✓</span> Skills
+              </h2>
+              
+              <div className="skills-container">
+                {selectedSkills.length > 0 && (
+                  <div className="selected-skills">
+                    {selectedSkills.map((skill, idx) => (
+                      <div key={idx} className="skill-tag">
+                        <span>{skill}</span>
+                        <button
+                          onClick={() => handleRemoveSkill(skill)}
+                          className="remove-skill"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
-            {uploading && <p>Uploading...</p>}
-            {form.resume && <p style={{color:"green"}}>Resume uploaded ✓</p>}
-          </>
-        );
+                <div className="suggestions-section">
+                  <h3>Suggestions</h3>
+                  <div className="skill-suggestions">
+                    {skillSuggestions
+                      .filter(s => !selectedSkills.includes(s))
+                      .map((skill, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handleAddSkill(skill)}
+                          className="suggestion-tag"
+                        >
+                          {skill}
+                        </button>
+                      ))}
+                  </div>
+                </div>
 
-      case "recruiter":
-        return (
-          <>
-            <input name="companyName" placeholder="Company Name" onChange={handleChange}/>
-            <input name="companyWebsite" placeholder="Website" onChange={handleChange}/>
-            <input name="companyDescription" placeholder="Description" onChange={handleChange}/>
-            <input name="companyLocation" placeholder="Location" onChange={handleChange}/>
-            <input name="contactNumber" placeholder="Contact" onChange={handleChange}/>
-            <input name="companyLogo" placeholder="Logo URL" onChange={handleChange}/>
-            <input name="industryType" placeholder="Industry" onChange={handleChange}/>
-          </>
-        );
+                <div className="form-group">
+                  <label>Skills</label>
+                  <input
+                    type="text"
+                    value={skillInput}
+                    onChange={(e) => setSkillInput(e.target.value)}
+                    onKeyPress={handleSkillInputKeyPress}
+                    placeholder="List your skills here, showcasing what you excel at."
+                    className="form-input"
+                  />
+                </div>
+              </div>
+            </div>
+          );
 
-      case "business":
-        return (
-          <>
-            <input name="businessName" placeholder="Business Name" onChange={handleChange}/>
-            <input name="category" placeholder="Category" onChange={handleChange}/>
-            <input name="address" placeholder="Address" onChange={handleChange}/>
-            <input name="contactDetails" placeholder="Contact" onChange={handleChange}/>
-            <input name="description" placeholder="Description" onChange={handleChange}/>
-            <input
-              name="images"
-              placeholder="Image URLs (comma separated)"
-              onChange={handleChange}
-            />
-          </>
-        );
+        case "education":
+          return (
+            <div className="section-content">
+              <h2 className="section-title">Education <span className="required">*</span></h2>
+              <div className="form-group">
+                <label>Highest Education</label>
+                <input
+                  type="text"
+                  name="education"
+                  value={form.education || ""}
+                  onChange={handleChange}
+                  placeholder="e.g., Bachelor's in Computer Science"
+                  className="form-input"
+                />
+              </div>
+            </div>
+          );
 
-      default:
-        return null;
+        case "experience":
+          return (
+            <div className="section-content">
+              <h2 className="section-title">Work Experience</h2>
+              <div className="form-group">
+                <label>Years of Experience</label>
+                <input
+                  type="number"
+                  name="experience"
+                  value={form.experience || ""}
+                  onChange={handleChange}
+                  placeholder="Enter years of experience"
+                  className="form-input"
+                />
+              </div>
+            </div>
+          );
+
+        case "accomplishments":
+          return (
+            <div className="section-content">
+              <h2 className="section-title">Accomplishments & Initiatives</h2>
+              <div className="form-group">
+                <textarea
+                  name="accomplishments"
+                  value={form.accomplishments || ""}
+                  onChange={handleChange}
+                  placeholder="Share your key achievements, awards, certifications, or initiatives..."
+                  className="form-textarea"
+                  rows="6"
+                />
+              </div>
+            </div>
+          );
+
+        default:
+          return null;
+      }
+    } else if (role === "recruiter") {
+      switch (currentSection) {
+        case "basicDetails":
+          return (
+            <div className="section-content">
+              <h2 className="section-title">Company Basics</h2>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Company Name <span className="required">*</span></label>
+                  <input
+                    type="text"
+                    name="companyName"
+                    value={form.companyName || ""}
+                    onChange={handleChange}
+                    placeholder="Enter company name"
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Company Website <span className="required">*</span></label>
+                  <input
+                    type="url"
+                    name="companyWebsite"
+                    value={form.companyWebsite || ""}
+                    onChange={handleChange}
+                    placeholder="https://example.com"
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Contact Number <span className="required">*</span></label>
+                  <input
+                    type="tel"
+                    name="contactNumber"
+                    value={form.contactNumber || ""}
+                    onChange={handleChange}
+                    placeholder="Enter contact number"
+                    className="form-input"
+                  />
+                </div>
+              </div>
+            </div>
+          );
+
+        case "companyDetails":
+          return (
+            <div className="section-content">
+              <h2 className="section-title">Company Details</h2>
+              <div className="form-grid">
+                <div className="form-group full-width">
+                  <label>Company Description <span className="required">*</span></label>
+                  <textarea
+                    name="companyDescription"
+                    value={form.companyDescription || ""}
+                    onChange={handleChange}
+                    placeholder="Describe your company..."
+                    className="form-textarea"
+                    rows="4"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Company Location <span className="required">*</span></label>
+                  <input
+                    type="text"
+                    name="companyLocation"
+                    value={form.companyLocation || ""}
+                    onChange={handleChange}
+                    placeholder="Enter location"
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Industry Type <span className="required">*</span></label>
+                  <input
+                    type="text"
+                    name="industryType"
+                    value={form.industryType || ""}
+                    onChange={handleChange}
+                    placeholder="e.g., Technology, Finance"
+                    className="form-input"
+                  />
+                </div>
+              </div>
+            </div>
+          );
+
+        case "branding":
+          return (
+            <div className="section-content">
+              <h2 className="section-title">Branding</h2>
+              <div className="form-group">
+                <label>Company Logo URL <span className="required">*</span></label>
+                <input
+                  type="url"
+                  name="companyLogo"
+                  value={form.companyLogo || ""}
+                  onChange={handleChange}
+                  placeholder="https://example.com/logo.png"
+                  className="form-input"
+                />
+              </div>
+            </div>
+          );
+
+        default:
+          return null;
+      }
+    } else if (role === "business") {
+      switch (currentSection) {
+        case "basicDetails":
+          return (
+            <div className="section-content">
+              <h2 className="section-title">Business Info</h2>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Business Name <span className="required">*</span></label>
+                  <input
+                    type="text"
+                    name="businessName"
+                    value={form.businessName || ""}
+                    onChange={handleChange}
+                    placeholder="Enter business name"
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Category <span className="required">*</span></label>
+                  <input
+                    type="text"
+                    name="category"
+                    value={form.category || ""}
+                    onChange={handleChange}
+                    placeholder="e.g., Restaurant, Retail"
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Contact Details <span className="required">*</span></label>
+                  <input
+                    type="text"
+                    name="contactDetails"
+                    value={form.contactDetails || ""}
+                    onChange={handleChange}
+                    placeholder="Enter contact details"
+                    className="form-input"
+                  />
+                </div>
+              </div>
+            </div>
+          );
+
+        case "businessDetails":
+          return (
+            <div className="section-content">
+              <h2 className="section-title">Business Details</h2>
+              <div className="form-grid">
+                <div className="form-group full-width">
+                  <label>Address <span className="required">*</span></label>
+                  <textarea
+                    name="address"
+                    value={form.address || ""}
+                    onChange={handleChange}
+                    placeholder="Enter business address"
+                    className="form-textarea"
+                    rows="3"
+                  />
+                </div>
+                <div className="form-group full-width">
+                  <label>Description <span className="required">*</span></label>
+                  <textarea
+                    name="description"
+                    value={form.description || ""}
+                    onChange={handleChange}
+                    placeholder="Describe your business..."
+                    className="form-textarea"
+                    rows="4"
+                  />
+                </div>
+              </div>
+            </div>
+          );
+
+        case "media":
+          return (
+            <div className="section-content">
+              <h2 className="section-title">Media</h2>
+              <div className="form-group">
+                <label>Image URLs <span className="required">*</span></label>
+                <textarea
+                  name="images"
+                  value={form.images || ""}
+                  onChange={handleChange}
+                  placeholder="Enter image URLs separated by commas"
+                  className="form-textarea"
+                  rows="4"
+                />
+              </div>
+            </div>
+          );
+
+        default:
+          return null;
+      }
     }
   };
 
   return (
-    <div style={{ padding:40, maxWidth:500, margin:"auto" }}>
-      <h2>Complete Your Profile</h2>
+    <div className="profile-page">
+      {/* Header */}
+      <header className="profile-header">
+  <button onClick={() => navigate(-1)} className="back-button">
+    ← Edit Profile
+  </button>
 
-      {/* PROGRESS BAR */}
-      <div style={{ marginBottom:20 }}>
-        <p>Profile Completion: {progress}%</p>
+  <button
+    onClick={handleLogout}
+    className="logout-button"
+  >
+    Logout
+  </button>
+</header>
 
-        <div style={{
-          height:10,
-          background:"#e5e7eb",
-          borderRadius:5
-        }}>
-          <div style={{
-            height:10,
-            width:`${progress}%`,
-            background: progress===100 ? "#16a34a" : "#4f46e5",
-            borderRadius:5,
-            transition:"0.3s"
-          }} />
-        </div>
-      </div>
+      <div className="profile-container">
+        {/* Sidebar */}
+        <aside className="profile-sidebar">
+          <div className="sidebar-top">
+            <div className="enhance-card">
+              <h3>Enhance your Profile</h3>
+              <p>Stay ahead of the competition by regularly updating your profile.</p>
+            </div>
+          </div>
 
-      {/* FORM */}
-      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-        {renderFields()}
+          <nav className="sidebar-nav">
+            {sections[user.role]?.map((section) => {
+              const progress = getSectionProgress(section.id);
+              const isComplete = progress === 100;
+              
+              return (
+                <button
+                  key={section.id}
+                  onClick={() => setCurrentSection(section.id)}
+                  className={`nav-item ${currentSection === section.id ? "active" : ""} ${isComplete ? "complete" : ""}`}
+                >
+                  <span className="nav-icon">
+                    {isComplete ? "✓" : section.icon}
+                  </span>
+                  <span className="nav-label">{section.label}</span>
+                  {section.required && <span className="required-badge">Required</span>}
+                </button>
+              );
+            })}
+          </nav>
+        </aside>
 
-        <button
-          onClick={handleSubmit}
-          disabled={progress < 100}
-          style={{
-            background: progress<100 ? "#9ca3af" : "#4f46e5",
-            color:"white",
-            padding:10,
-            border:"none",
-            borderRadius:5,
-            cursor:"pointer"
-          }}
-        >
-          Submit Profile
-        </button>
+        {/* Main Content */}
+        <main className="profile-main">
+          {renderSectionContent()}
+          
+          <div className="action-bar">
+            <button onClick={handleSubmit} className="save-button" enabled={overallProgress>0}>
+              <span className="save-icon">✓</span> Save
+            </button>
+          </div>
+        </main>
       </div>
     </div>
   );

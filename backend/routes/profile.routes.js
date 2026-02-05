@@ -1,11 +1,15 @@
 const router = require("express").Router();
 const auth = require("../middleware/auth");
-const upload = require("../middleware/uploadResume");
+
+const uploadResume = require("../middleware/uploadResume");
+const uploadImage = require("../middleware/uploadImage");
 
 const {
   completeProfile,
   getMyProfile,
-  uploadResume
+  uploadResume: uploadResumeCtrl,
+  uploadLogo,
+  uploadBusinessImages
 } = require("../controllers/profile.controller");
 
 /* =========================
@@ -15,15 +19,31 @@ const {
 // Complete profile
 router.post("/complete", auth, completeProfile);
 
-// Get logged-in profile
+// Get profile
 router.get("/me", auth, getMyProfile);
 
-// Upload resume to S3
+/* ========= RESUME ========= */
 router.post(
   "/upload-resume",
   auth,
-  upload.single("resume"),
-  uploadResume
+  uploadResume.single("resume"),
+  uploadResumeCtrl
+);
+
+/* ========= RECRUITER LOGO ========= */
+router.post(
+  "/upload-logo",
+  auth,
+  uploadImage.single("logo"),
+  uploadLogo
+);
+
+/* ========= BUSINESS IMAGES ========= */
+router.post(
+  "/upload-business-images",
+  auth,
+  uploadImage.array("images", 5),
+  uploadBusinessImages
 );
 
 module.exports = router;

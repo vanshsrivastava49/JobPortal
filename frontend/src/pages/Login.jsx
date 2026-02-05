@@ -45,43 +45,41 @@ const Login = () => {
   };
 
   // STEP 2: VERIFY LOGIN OTP
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault();
+const handleVerifyOtp = async (e) => {
+  e.preventDefault();
 
-    if (otp.length !== 6) {
-      toast.error("Enter a valid 6-digit OTP");
-      return;
+  if (otp.length !== 6) {
+    toast.error("Enter a valid 6-digit OTP");
+    return;
+  }
+
+  setLoading(true);
+  try {
+    const res = await verifyOTP(
+      email,
+      otp,
+      null,
+      null,
+      null,
+      "login"
+    );
+
+    if (res.success) {
+      toast.success("Login successful");
+
+      login(res.user, res.token);
+      navigate("/dashboard");
+
+    } else {
+      toast.error(res.message || "Invalid OTP");
     }
+  } catch (err) {
+    toast.error(err.response?.data?.message || "Invalid OTP");
+  } finally {
+    setLoading(false);
+  }
+};
 
-    setLoading(true);
-    try {
-      const res = await verifyOTP(
-        email,
-        otp,
-        null,
-        null,
-        null,
-        "login"
-      );
-
-      if (res.success) {
-        toast.success("Login successful");
-        login(res.user, res.token);
-        if (res.user.profileCompleted) {
-  navigate("/dashboard");
-} else {
-  navigate("/complete-profile");
-}
-
-      } else {
-        toast.error(res.message || "Invalid OTP");
-      }
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Invalid OTP");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div

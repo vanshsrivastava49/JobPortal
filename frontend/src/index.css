@@ -37,6 +37,7 @@ body {
 .btn-primary {
   background-color: #2563eb;
   color: white;
+      margin: 10px 0px;
 }
 
 .btn-primary:hover {
