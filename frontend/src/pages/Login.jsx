@@ -5,10 +5,12 @@ import { Briefcase, Mail, Shield, Loader, ArrowLeft } from "lucide-react";
 import toast from "react-hot-toast";
 import { sendOTP, verifyOTP } from "../api/authApi";
 import GoogleSignIn from "../components/Auth/GoogleSignIn";
+import ReCAPTCHA from "react-google-recaptcha";
 
 const Login = () => {
   const [step, setStep] = useState("email");
   const [email, setEmail] = useState("");
+  const [captchaToken, setCaptchaToken] = useState(null);
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -19,7 +21,9 @@ const Login = () => {
     return <Navigate to="/dashboard" replace />;
   }
 
-  // STEP 1: SEND LOGIN OTP
+  /* ======================
+     SEND OTP
+  ====================== */
   const handleSendOtp = async (e) => {
     e.preventDefault();
 
@@ -28,9 +32,16 @@ const Login = () => {
       return;
     }
 
+    if (!captchaToken) {
+      toast.error("Please verify that you are not a robot");
+      return;
+    }
+
     setLoading(true);
+
     try {
-      const res = await sendOTP(email, "login");
+      const res = await sendOTP(email, "login", captchaToken);
+
       if (res.success) {
         toast.success("OTP sent to your email");
         setStep("verify");
@@ -44,42 +55,46 @@ const Login = () => {
     }
   };
 
-  // STEP 2: VERIFY LOGIN OTP
-const handleVerifyOtp = async (e) => {
-  e.preventDefault();
+  /* ======================
+     VERIFY OTP
+  ====================== */
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
 
-  if (otp.length !== 6) {
-    toast.error("Enter a valid 6-digit OTP");
-    return;
-  }
-
-  setLoading(true);
-  try {
-    const res = await verifyOTP(
-      email,
-      otp,
-      null,
-      null,
-      null,
-      "login"
-    );
-
-    if (res.success) {
-      toast.success("Login successful");
-
-      login(res.user, res.token);
-      navigate("/dashboard");
-
-    } else {
-      toast.error(res.message || "Invalid OTP");
+    if (otp.length !== 6) {
+      toast.error("Enter a valid 6-digit OTP");
+      return;
     }
-  } catch (err) {
-    toast.error(err.response?.data?.message || "Invalid OTP");
-  } finally {
-    setLoading(false);
-  }
-};
 
+    setLoading(true);
+
+    try {
+      const res = await verifyOTP(
+        email,
+        otp,
+        null,
+        null,
+        null,
+        "login"
+      );
+
+      if (res.success) {
+        toast.success("Login successful");
+
+        login(res.user, res.token);
+
+        // ✅ Always go dashboard (File 2 logic kept)
+        navigate("/dashboard");
+
+      } else {
+        toast.error(res.message || "Invalid OTP");
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Invalid OTP");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div
@@ -154,13 +169,23 @@ const handleVerifyOtp = async (e) => {
               />
             </div>
 
-            <button className="btn btn-primary"style={{
-            width: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "8px",
-          }} disabled={loading}>
+            {/* ✅ Added from File 1 */}
+            <ReCAPTCHA
+              sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+              onChange={(token) => setCaptchaToken(token)}
+            />
+
+            <button
+              className="btn btn-primary"
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+              }}
+              disabled={loading}
+            >
               {loading ? <Loader className="spin" /> : "Send OTP"}
             </button>
 

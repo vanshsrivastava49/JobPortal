@@ -6,10 +6,6 @@ const sendOtpEmail = require("../utils/sendOtpEmail");
 const { OAuth2Client } = require("google-auth-library");
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
-/* ======================================================
-   HELPER: CREATE JWT
-====================================================== */
 const createToken = (user) => {
   return jwt.sign(
     { id: user._id, role: user.role },
@@ -18,9 +14,6 @@ const createToken = (user) => {
   );
 };
 
-/* ======================================================
-   SEND SIGNUP OTP
-====================================================== */
 exports.sendSignupOtp = async (req, res) => {
   try {
     const { email } = req.body;
@@ -55,9 +48,6 @@ exports.sendSignupOtp = async (req, res) => {
   }
 };
 
-/* ======================================================
-   VERIFY SIGNUP OTP
-====================================================== */
 exports.verifySignupOtp = async (req, res) => {
   try {
     const { email, otp, role, name, mobile } = req.body;
@@ -99,7 +89,7 @@ exports.verifySignupOtp = async (req, res) => {
     res.json({
       success: true,
       message: "Signup successful",
-      user: fullUser, // ✅ FULL DATA
+      user: fullUser,
       token,
     });
 
@@ -109,9 +99,6 @@ exports.verifySignupOtp = async (req, res) => {
   }
 };
 
-/* ======================================================
-   SEND LOGIN OTP
-====================================================== */
 exports.sendLoginOtp = async (req, res) => {
   try {
     const { email } = req.body;
@@ -143,9 +130,6 @@ exports.sendLoginOtp = async (req, res) => {
   }
 };
 
-/* ======================================================
-   VERIFY LOGIN OTP
-====================================================== */
 exports.verifyLoginOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -177,7 +161,7 @@ exports.verifyLoginOtp = async (req, res) => {
     res.json({
       success: true,
       message: "Login successful",
-      user, // ✅ FULL USER OBJECT
+      user,
       token,
     });
 
@@ -190,9 +174,6 @@ exports.verifyLoginOtp = async (req, res) => {
   }
 };
 
-/* ======================================================
-   GOOGLE AUTH (LOGIN + SIGNUP)
-====================================================== */
 exports.googleAuth = async (req, res) => {
   try {
     const { token, role } = req.body;
@@ -238,7 +219,7 @@ exports.googleAuth = async (req, res) => {
     res.json({
       success: true,
       message: "Google authentication successful",
-      user: fullUser, // ✅ FULL DATA
+      user: fullUser,
       token: jwtToken,
     });
 
@@ -251,9 +232,6 @@ exports.googleAuth = async (req, res) => {
   }
 };
 
-/* ======================================================
-   LOGOUT
-====================================================== */
 exports.logout = async (req, res) => {
   try {
     res.json({
