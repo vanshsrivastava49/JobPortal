@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Navbar from '../components/common/Navbar';
 import { Briefcase, FileText, User, TrendingUp } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -8,9 +8,13 @@ const JobSeekerDashboard = () => {
 
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [showDetails, setShowDetails] = useState(false);
 
   const resumeUrl = user?.jobSeekerProfile?.resume;
   const profileProgress = user?.profileProgress || 0;
+  const profile = user?.jobSeekerProfile || {};
+
+  const isProfileComplete = user?.profileCompleted;
 
   const stats = [
     { icon: Briefcase, label: 'Jobs Applied', value: '0', color: '#2563eb' },
@@ -34,8 +38,8 @@ const JobSeekerDashboard = () => {
           Welcome {user?.name || "User"}
         </h2>
 
-        {/* ✅ OPTIONAL REMINDER (no redirect) */}
-        {!user?.profileCompleted && (
+        {/* PROFILE REMINDER */}
+        {!isProfileComplete && (
           <div style={{
             background: "#fff7ed",
             padding: "12px",
@@ -101,11 +105,19 @@ const JobSeekerDashboard = () => {
 
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
 
+            {/* ✅ Dynamic Button Label */}
             <button
               className="btn btn-primary"
               onClick={() => navigate("/complete-profile")}
             >
-              Complete Profile
+              {isProfileComplete ? "Update Profile" : "Complete Profile"}
+            </button>
+
+            <button
+              className="btn btn-secondary"
+              onClick={() => setShowDetails(!showDetails)}
+            >
+              {showDetails ? "Hide Details" : "View Saved Details"}
             </button>
 
             {resumeUrl ? (
@@ -129,6 +141,34 @@ const JobSeekerDashboard = () => {
             </button>
 
           </div>
+
+          {/* PROFILE DETAILS SECTION */}
+          {showDetails && (
+            <div style={{
+              marginTop: 20,
+              padding: 15,
+              background: "#f9fafb",
+              borderRadius: 8
+            }}>
+              <h4 style={{ marginBottom: 10 }}>Saved Details</h4>
+
+              <p><b>Full Name:</b> {profile.fullName || "-"}</p>
+              <p><b>Email:</b> {user.email}</p>
+              <p><b>Mobile:</b> {profile.mobile || "-"}</p>
+              <p><b>City:</b> {profile.city || "-"}</p>
+              <p><b>Education:</b> {profile.education || "-"}</p>
+              <p><b>Skills:</b> {profile.skills?.join(", ") || "-"}</p>
+
+              {resumeUrl && (
+                <p>
+                  <b>Resume:</b>{" "}
+                  <a href={resumeUrl} target="_blank" rel="noreferrer">
+                    View Resume
+                  </a>
+                </p>
+              )}
+            </div>
+          )}
 
           {/* RESUME STATUS */}
           <p style={{ marginTop: 15, color: "#6b7280" }}>

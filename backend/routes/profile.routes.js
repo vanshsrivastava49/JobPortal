@@ -3,7 +3,7 @@ const auth = require("../middleware/auth");
 
 const uploadResume = require("../middleware/uploadResume");
 const uploadImage = require("../middleware/uploadImage");
-
+const uploadLogo = require("../middleware/uploadLogo");
 const {
   completeProfile,
   getMyProfile,
@@ -34,8 +34,8 @@ router.post(
 router.post(
   "/upload-logo",
   auth,
-  uploadImage.single("logo"),
-  uploadLogo
+  uploadLogo.single("logo"),
+  uploadLogoCtrl
 );
 
 /* ========= BUSINESS IMAGES ========= */

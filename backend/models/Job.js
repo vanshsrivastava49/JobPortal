@@ -1,14 +1,27 @@
 const mongoose = require("mongoose");
 
-const jobSchema = new mongoose.Schema({
+const jobSchema = new mongoose.Schema(
+{
   title: String,
-  description: String,
-  skills: [String],
+  company: String,
   location: String,
   salary: String,
-  companyId: { type: mongoose.Schema.Types.ObjectId, ref: "Company" },
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-  isActive: { type: Boolean, default: true }
-}, { timestamps: true });
+  description: String,
+  skills: [String],
+
+  recruiter: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User"
+  },
+
+  status: {
+    type: String,
+    enum: ["pending", "approved", "rejected"],
+    default: "pending"
+  }
+
+},
+{ timestamps: true }
+);
 
 module.exports = mongoose.model("Job", jobSchema);

@@ -216,52 +216,53 @@ exports.uploadResume = async (req, res) => {
 /* =========================
    UPLOAD RECRUITER LOGO
 ========================= */
-exports.uploadLogo = async (req,res)=>{
-  try{
-    if(!req.file){
+exports.uploadLogo = async (req, res) => {
+  try {
+    if (!req.file) {
       return res.status(400).json({
         success:false,
         message:"No logo uploaded"
       });
     }
 
-    const user=await User.findById(req.user.id);
+    const user = await User.findById(req.user.id);
 
-    const oldLogo=user.recruiterProfile?.companyLogo;
+    /* DELETE OLD LOGO */
+    const oldLogo = user.recruiterProfile?.companyLogo;
 
-    /* DELETE OLD */
-    if(oldLogo){
-      try{
-        const key=oldLogo.split(".amazonaws.com/")[1];
-        if(key){
-          await s3.send(new DeleteObjectCommand({
-            Bucket:process.env.AWS_S3_BUCKET_NAME,
-            Key:key
-          }));
-        }
-      }catch{}
+    if (oldLogo) {
+      try {
+        const url = new URL(oldLogo);
+        const key = decodeURIComponent(url.pathname.substring(1));
+
+        await s3.send(new DeleteObjectCommand({
+          Bucket: process.env.AWS_S3_BUCKET_NAME,
+          Key: key
+        }));
+
+      } catch {}
     }
 
-    user.recruiterProfile={
+    /* SAVE NEW */
+    user.recruiterProfile = {
       ...user.recruiterProfile,
-      companyLogo:req.file.location
+      companyLogo: req.file.location
     };
 
     await user.save();
 
     res.json({
       success:true,
-      logo:req.file.location
+      logoUrl:req.file.location
     });
 
-  }catch{
+  } catch (err) {
     res.status(500).json({
       success:false,
       message:"Logo upload failed"
     });
   }
 };
-
 /* =========================
    UPLOAD BUSINESS IMAGES
 ========================= */

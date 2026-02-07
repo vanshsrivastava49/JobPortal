@@ -12,7 +12,8 @@ import AdminDashboard from "./pages/AdminDashboard";
 import CompleteProfile from "./pages/CompleteProfile";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
-
+import PostJob from "./pages/PostJob";
+import PendingJobs from "./pages/PendingJobs";
 function App() {
   return (
     <AuthProvider>
@@ -33,6 +34,8 @@ function App() {
               </ProtectedRoute>
             }
           />
+<Route path="/post-job"element={<PostJob />} />
+<Route path="/admin/pending-jobs" element={<PendingJobs />} />
 
           {/* ROLE-BASED ROUTES */}
           <Route

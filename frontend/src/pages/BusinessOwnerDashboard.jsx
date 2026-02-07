@@ -25,7 +25,6 @@ const BusinessOwnerDashboard = () => {
           Welcome {user?.name || "Business Owner"}
         </h2>
 
-        {/* ===== STATS ===== */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',

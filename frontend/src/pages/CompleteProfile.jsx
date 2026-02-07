@@ -193,12 +193,41 @@ const CompleteProfile = () => {
       setUploading(false);
     }
   };
+  const handleLogoUpload = async (file) => {
+  if (!file) return;
+
+  setUploading(true);
+
+  const data = new FormData();
+  data.append("logo", file);
+
+  try {
+    const res = await axios.post(
+      `${API}/upload-logo`,
+      data,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data"
+        }
+      }
+    );
+
+    setForm({ ...form, companyLogo: res.data.logo });
+    toast.success("Logo uploaded!");
+  } catch {
+    toast.error("Logo upload failed");
+  } finally {
+    setUploading(false);
+  }
+};
+
 
   /* ======================
      SUBMIT PROFILE
   ====================== */
   const handleSubmit = async () => {
-    if (overallProgress < 0) {
+    if (overallProgress < 100) {
       return toast.error("Please complete all required sections");
     }
 
@@ -523,22 +552,31 @@ const CompleteProfile = () => {
           );
 
         case "branding":
-          return (
-            <div className="section-content">
-              <h2 className="section-title">Branding</h2>
-              <div className="form-group">
-                <label>Company Logo URL <span className="required">*</span></label>
-                <input
-                  type="url"
-                  name="companyLogo"
-                  value={form.companyLogo || ""}
-                  onChange={handleChange}
-                  placeholder="https://example.com/logo.png"
-                  className="form-input"
-                />
-              </div>
-            </div>
-          );
+  return (
+    <div className="section-content">
+      <h2 className="section-title">Branding</h2>
+
+      <div className="form-group">
+        <label>Upload Company Logo *</label>
+
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => handleLogoUpload(e.target.files[0])}
+          className="form-input"
+        />
+
+        {form.companyLogo && (
+          <img
+            src={form.companyLogo}
+            alt="logo"
+            style={{ width: 120, marginTop: 10, borderRadius: 8 }}
+          />
+        )}
+      </div>
+    </div>
+  );
+
 
         default:
           return null;
@@ -695,7 +733,7 @@ const CompleteProfile = () => {
           {renderSectionContent()}
           
           <div className="action-bar">
-            <button onClick={handleSubmit} className="save-button" enabled={overallProgress>0}>
+            <button onClick={handleSubmit} className="save-button" disables={overallProgress<100}>
               <span className="save-icon">✓</span> Save
             </button>
           </div>
