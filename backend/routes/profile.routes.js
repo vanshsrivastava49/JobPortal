@@ -8,7 +8,7 @@ const {
   completeProfile,
   getMyProfile,
   uploadResume: uploadResumeCtrl,
-  uploadLogo,
+  uploadLogo: uploadLogoCtrl,
   uploadBusinessImages
 } = require("../controllers/profile.controller");
 

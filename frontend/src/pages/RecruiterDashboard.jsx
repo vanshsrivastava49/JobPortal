@@ -10,7 +10,7 @@ const RecruiterDashboard = () => {
   const { user, token } = useAuth();
 
   const [showDetails, setShowDetails] = useState(false);
-  const [jobs, setJobs] = useState([]);
+  const [jobs, setJobs] = useState([]); // MUST always be array
   const [loadingJobs, setLoadingJobs] = useState(true);
 
   const profileProgress = user?.profileProgress || 0;
@@ -28,11 +28,19 @@ const RecruiterDashboard = () => {
     try {
       const res = await axios.get(
         "http://localhost:5000/api/jobs/my",
-        { headers: { Authorization: `Bearer ${token}` } }
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
-      setJobs(res.data || []);
+
+      // ✅ SAFE EXTRACTION
+      const jobsData = res.data?.jobs || [];
+      setJobs(Array.isArray(jobsData) ? jobsData : []);
     } catch (err) {
       console.log("Jobs fetch error:", err);
+      setJobs([]);
     } finally {
       setLoadingJobs(false);
     }
@@ -51,10 +59,30 @@ const RecruiterDashboard = () => {
      STATS
   =========================== */
   const stats = [
-    { icon: Briefcase, label: "Active Jobs", value: jobs.length || "0", color: "#2563eb" },
-    { icon: Users, label: "Total Applications", value: "—", color: "#16a34a" },
-    { icon: Eye, label: "Profile Views", value: "—", color: "#ea580c" },
-    { icon: TrendingUp, label: "Hires This Month", value: "—", color: "#7c3aed" },
+    {
+      icon: Briefcase,
+      label: "Active Jobs",
+      value: jobs.length,
+      color: "#2563eb",
+    },
+    {
+      icon: Users,
+      label: "Total Applications",
+      value: "—",
+      color: "#16a34a",
+    },
+    {
+      icon: Eye,
+      label: "Profile Views",
+      value: "—",
+      color: "#ea580c",
+    },
+    {
+      icon: TrendingUp,
+      label: "Hires This Month",
+      value: "—",
+      color: "#7c3aed",
+    },
   ];
 
   return (
@@ -62,23 +90,25 @@ const RecruiterDashboard = () => {
       <Navbar title="Recruiter Dashboard" />
 
       <div className="container">
-        <h2 style={{ marginBottom: "20px", color: "#1f2937" }}>
+        <h2 style={{ marginBottom: 20, color: "#1f2937" }}>
           Welcome {user?.name || "Recruiter"}
         </h2>
 
         {/* PROFILE ALERT */}
         {!isProfileComplete && (
-          <div style={{
-            background: "#fff7ed",
-            padding: "14px",
-            borderRadius: "10px",
-            marginBottom: "25px",
-            color: "#9a3412",
-            display: "flex",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: "10px"
-          }}>
+          <div
+            style={{
+              background: "#fff7ed",
+              padding: 14,
+              borderRadius: 10,
+              marginBottom: 25,
+              color: "#9a3412",
+              display: "flex",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 10,
+            }}
+          >
             <div>
               Profile incomplete <b>({profileProgress}%)</b>.
             </div>
@@ -93,38 +123,48 @@ const RecruiterDashboard = () => {
         )}
 
         {/* STATS */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-          gap: "20px",
-          marginBottom: "30px",
-        }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+            gap: 20,
+            marginBottom: 30,
+          }}
+        >
           {stats.map((stat, i) => {
             const Icon = stat.icon;
             return (
-              <div key={i} className="card" style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "15px",
-              }}>
-                <div style={{
-                  width: 60,
-                  height: 60,
-                  borderRadius: 12,
-                  background: `${stat.color}15`,
+              <div
+                key={i}
+                className="card"
+                style={{
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "center",
-                }}>
+                  gap: 15,
+                }}
+              >
+                <div
+                  style={{
+                    width: 60,
+                    height: 60,
+                    borderRadius: 12,
+                    background: `${stat.color}15`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
                   <Icon size={28} color={stat.color} />
                 </div>
 
                 <div>
-                  <div style={{
-                    fontSize: 24,
-                    fontWeight: 700,
-                    color: "#1f2937",
-                  }}>
+                  <div
+                    style={{
+                      fontSize: 24,
+                      fontWeight: 700,
+                      color: "#1f2937",
+                    }}
+                  >
                     {stat.value}
                   </div>
 
@@ -160,19 +200,24 @@ const RecruiterDashboard = () => {
               Post New Job
             </button>
 
-            <button className="btn btn-secondary" onClick={() => navigate("/complete-profile")}>
+            <button
+              className="btn btn-secondary"
+              onClick={() => navigate("/complete-profile")}
+            >
               Update Profile
             </button>
           </div>
 
           {/* COMPANY DETAILS */}
           {showDetails && (
-            <div style={{
-              marginTop: 20,
-              padding: 15,
-              background: "#f9fafb",
-              borderRadius: 8
-            }}>
+            <div
+              style={{
+                marginTop: 20,
+                padding: 15,
+                background: "#f9fafb",
+                borderRadius: 8,
+              }}
+            >
               <h4>Company Details</h4>
               <p><b>Name:</b> {profile.companyName || "-"}</p>
               <p><b>Website:</b> {profile.companyWebsite || "-"}</p>
@@ -184,7 +229,7 @@ const RecruiterDashboard = () => {
               {profile.companyLogo && (
                 <img
                   src={profile.companyLogo}
-                  alt="logo"
+                  alt="Company Logo"
                   style={{ width: 120, borderRadius: 8 }}
                 />
               )}
@@ -203,34 +248,41 @@ const RecruiterDashboard = () => {
           {loadingJobs && <p>Loading jobs...</p>}
           {!loadingJobs && jobs.length === 0 && <p>No jobs posted.</p>}
 
-          {jobs.map((job) => (
-            <div key={job._id} style={{
-              padding: 12,
-              border: "1px solid #e5e7eb",
-              borderRadius: 8,
-              marginTop: 10,
-              display: "flex",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-            }}>
-              <div>
-                <b>{job.title}</b>
-                <p style={{ fontSize: 14, color: "#6b7280" }}>
-                  {job.location}
-                </p>
-              </div>
+          {!loadingJobs &&
+            Array.isArray(jobs) &&
+            jobs.map((job) => (
+              <div
+                key={job._id}
+                style={{
+                  padding: 12,
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 8,
+                  marginTop: 10,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                }}
+              >
+                <div>
+                  <b>{job.title}</b>
+                  <p style={{ fontSize: 14, color: "#6b7280" }}>
+                    {job.location}
+                  </p>
+                </div>
 
-              <span style={{
-                padding: "6px 12px",
-                borderRadius: 20,
-                background: `${statusColor(job.status)}20`,
-                color: statusColor(job.status),
-                fontWeight: 600,
-              }}>
-                {job.status?.toUpperCase()}
-              </span>
-            </div>
-          ))}
+                <span
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: 20,
+                    background: `${statusColor(job.status)}20`,
+                    color: statusColor(job.status),
+                    fontWeight: 600,
+                  }}
+                >
+                  {job.status?.toUpperCase() || "PENDING"}
+                </span>
+              </div>
+            ))}
         </div>
       </div>
     </div>
