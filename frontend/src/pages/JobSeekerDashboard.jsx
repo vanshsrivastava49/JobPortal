@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import Navbar from '../components/common/Navbar';
-import { Briefcase, FileText, User, TrendingUp } from 'lucide-react';
+import { Briefcase, FileText, User, TrendingUp, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const JobSeekerDashboard = () => {
-
   const { user } = useAuth();
   const navigate = useNavigate();
   const [showDetails, setShowDetails] = useState(false);
@@ -13,7 +12,6 @@ const JobSeekerDashboard = () => {
   const resumeUrl = user?.jobSeekerProfile?.resume;
   const profileProgress = user?.profileProgress || 0;
   const profile = user?.jobSeekerProfile || {};
-
   const isProfileComplete = user?.profileCompleted;
 
   const stats = [
@@ -29,12 +27,17 @@ const JobSeekerDashboard = () => {
     }
   };
 
+  // 🔥 NEW: Browse Jobs handler
+  const handleBrowseJobs = () => {
+    navigate("/jobs");
+  };
+
   return (
     <div>
       <Navbar title="Job Seeker Dashboard" />
 
       <div className="container">
-        <h2 style={{ marginBottom: '20px', color: '#1f2937' }}>
+        <h2 style={{ marginBottom: "20px", color: "#1f2937" }}>
           Welcome {user?.name || "User"}
         </h2>
 
@@ -45,9 +48,12 @@ const JobSeekerDashboard = () => {
             padding: "12px",
             borderRadius: "8px",
             marginBottom: "20px",
-            color: "#9a3412"
+            color: "#9a3412",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
           }}>
-            Your profile is incomplete ({profileProgress}%).
+            <span>Your profile is incomplete ({profileProgress}%).</span>
             <button
               className="btn btn-primary"
               style={{ marginLeft: 10 }}
@@ -60,35 +66,36 @@ const JobSeekerDashboard = () => {
 
         {/* STATS */}
         <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-          gap: '20px',
-          marginBottom: '30px'
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+          gap: "20px",
+          marginBottom: "30px"
         }}>
           {stats.map((stat, index) => {
             const Icon = stat.icon;
             return (
               <div key={index} className="card" style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '15px'
+                display: "flex",
+                alignItems: "center",
+                gap: "15px",
+                padding: "20px"
               }}>
                 <div style={{
-                  width: '60px',
-                  height: '60px',
-                  borderRadius: '12px',
+                  width: "60px",
+                  height: "60px",
+                  borderRadius: "12px",
                   background: `${stat.color}15`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center"
                 }}>
                   <Icon size={28} color={stat.color} />
                 </div>
                 <div>
-                  <div style={{ fontSize: '24px', fontWeight: '700', color: '#1f2937' }}>
+                  <div style={{ fontSize: "24px", fontWeight: "700", color: "#1f2937" }}>
                     {stat.value}
                   </div>
-                  <div style={{ fontSize: '14px', color: '#6b7280' }}>
+                  <div style={{ fontSize: "14px", color: "#6b7280" }}>
                     {stat.label}
                   </div>
                 </div>
@@ -97,15 +104,12 @@ const JobSeekerDashboard = () => {
           })}
         </div>
 
-        {/* QUICK ACTIONS */}
-        <div className="card">
-          <h3 style={{ marginBottom: '15px', color: '#1f2937' }}>
-            Quick Actions
-          </h3>
-
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-
-            {/* ✅ Dynamic Button Label */}
+        {/* QUICK ACTIONS - 🔥 FIXED WITH JOBS BUTTON */}
+        <div className="card" style={{ marginBottom: 30 }}>
+          <h3 style={{ marginBottom: "15px", color: "#1f2937" }}>Quick Actions</h3>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            
+            {/* ✅ Dynamic Profile Button */}
             <button
               className="btn btn-primary"
               onClick={() => navigate("/complete-profile")}
@@ -136,8 +140,18 @@ const JobSeekerDashboard = () => {
               </button>
             )}
 
-            <button className="btn btn-secondary">
-              Browse Jobs
+            {/* 🔥 NEW: Browse Jobs Button */}
+            <button 
+              className="btn btn-primary" 
+              style={{ 
+                background: "#10b981", 
+                borderColor: "#10b981",
+                fontWeight: "bold",
+                padding: "12px 24px"
+              }}
+              onClick={handleBrowseJobs}
+            >
+              🚀 Browse Jobs
             </button>
 
           </div>
@@ -179,7 +193,6 @@ const JobSeekerDashboard = () => {
               <span style={{color:"red"}}>Not Uploaded ❌</span>
             )}
           </p>
-
         </div>
       </div>
     </div>

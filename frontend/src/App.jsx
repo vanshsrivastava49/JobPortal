@@ -5,15 +5,22 @@ import { Toaster } from "react-hot-toast";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
+
 import JobSeekerDashboard from "./pages/JobSeekerDashboard";
 import RecruiterDashboard from "./pages/RecruiterDashboard";
 import BusinessOwnerDashboard from "./pages/BusinessOwnerDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+
 import CompleteProfile from "./pages/CompleteProfile";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
+
 import PostJob from "./pages/PostJob";
 import PendingJobs from "./pages/PendingJobs";
+import PendingBusinesses from "./pages/PendingBusinesses";
+import Businesses from "./pages/Businesses";
+import ApprovedBusinesses from "./pages/ApprovedBusinesses";
+import Jobs from "./pages/Jobs";
 function App() {
   return (
     <AuthProvider>
@@ -21,11 +28,12 @@ function App() {
         <Toaster position="top-right" />
 
         <Routes>
-          {/* AUTH */}
+
+          {/* ================= AUTH ================= */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
 
-          {/* DASHBOARD */}
+          {/* ================= MAIN DASHBOARD REDIRECT ================= */}
           <Route
             path="/dashboard"
             element={
@@ -34,10 +42,49 @@ function App() {
               </ProtectedRoute>
             }
           />
-<Route path="/post-job"element={<PostJob />} />
-<Route path="/admin/pending-jobs" element={<PendingJobs />} />
 
-          {/* ROLE-BASED ROUTES */}
+          {/* ================= JOB ROUTES ================= */}
+
+          {/* Recruiter post job */}
+          <Route
+            path="/post-job"
+            element={
+              <ProtectedRoute allowedRoles={["recruiter"]}>
+                <PostJob />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Admin approve jobs */}
+          <Route
+            path="/admin/pending-jobs"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <PendingJobs />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ================= BUSINESS ROUTES ================= */}
+
+          {/* Admin approve businesses */}
+          <Route
+            path="/admin/pending-businesses"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <PendingBusinesses />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Public business listing */}
+          <Route
+            path="/businesses"
+            element={<Businesses />}
+          />
+          
+          {/* ================= ROLE DASHBOARDS ================= */}
+
           <Route
             path="/jobseeker/*"
             element={
@@ -55,7 +102,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-
+          
           <Route
             path="/business/*"
             element={
@@ -64,7 +111,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-
+<Route path="/jobs" element={<Jobs />} />
           <Route
             path="/admin/*"
             element={
@@ -73,10 +120,20 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="/complete-profile" element={<CompleteProfile />} />
 
-          {/* DEFAULT */}
+          {/* ================= PROFILE ================= */}
+          <Route
+            path="/complete-profile"
+            element={
+              <ProtectedRoute>
+                <CompleteProfile />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/admin/approved-businesses" element={<ApprovedBusinesses />} />
+          {/* ================= DEFAULT ================= */}
           <Route path="/" element={<Navigate to="/login" replace />} />
+
         </Routes>
       </div>
     </AuthProvider>

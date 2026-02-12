@@ -1,32 +1,32 @@
-const router = require("express").Router();
-const auth = require("../middleware/auth");
-const role = require("../middleware/role");
-
-const {
-  createJob,
-  getMyJobs,
-  getPendingJobs,
-  approveJob,
-  rejectJob,
+const express = require('express');
+const router = express.Router();
+const auth = require('../middleware/auth');
+const role = require('../middleware/role');
+const { 
+  createJob, 
+  getBusinessPendingJobs, 
+  businessApproveJob, 
+  businessRejectJob, 
+  getMyJobs, 
   getApprovedJobs,
-} = require("../controllers/job.controller");
+  getPublicJobs  // ✅ ADD THIS
+} = require('../controllers/job.controller');
 
-/* ===============================
-   RECRUITER
-=============================== */
-router.post("/", auth, role("recruiter"), createJob);
-router.get("/my", auth, role("recruiter"), getMyJobs);
+// ✅ RECRUITER POSTS JOB
+router.post('/', auth, role('recruiter'), createJob);
 
-/* ===============================
-   ADMIN
-=============================== */
-router.get("/pending", auth, role("admin"), getPendingJobs);
-router.patch("/approve/:id", auth, role("admin"), approveJob);
-router.patch("/reject/:id", auth, role("admin"), rejectJob);
+// ✅ BUSINESS OWNER - PENDING JOBS
+router.get('/pending', auth, role('business'), getBusinessPendingJobs);
 
-/* ===============================
-   JOBSEEKER
-=============================== */
-router.get("/approved", auth, getApprovedJobs);
+// ✅ BUSINESS OWNER - APPROVE/REJECT
+router.patch('/approve/:jobId', auth, role('business'), businessApproveJob);
+router.patch('/reject/:jobId', auth, role('business'), businessRejectJob);
+
+// ✅ RECRUITER - MY JOBS
+router.get('/my', auth, role('recruiter'), getMyJobs);
+
+// 🔥 FIXED: PUBLIC LIVE JOBS (NO AUTH REQUIRED)
+router.get('/public', getPublicJobs);  // ✅ CORRECT ROUTE - NO AUTH
+router.get('/', auth, getApprovedJobs);  // Authenticated users
 
 module.exports = router;

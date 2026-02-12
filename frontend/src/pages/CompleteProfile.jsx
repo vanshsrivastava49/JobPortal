@@ -102,6 +102,7 @@ const CompleteProfile = () => {
     
     const filled = fields.filter(f => {
       if (f === "skills") return selectedSkills.length > 0;
+      if (f === "images") return form[f] && form[f].length > 0;
       return form[f];
     }).length;
     
@@ -193,35 +194,71 @@ const CompleteProfile = () => {
       setUploading(false);
     }
   };
+
   const handleLogoUpload = async (file) => {
-  if (!file) return;
+    if (!file) return;
 
-  setUploading(true);
+    setUploading(true);
+    const data = new FormData();
+    data.append("logo", file);
 
-  const data = new FormData();
-  data.append("logo", file);
-
-  try {
-    const res = await axios.post(
-      `${API}/upload-logo`,
-      data,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data"
+    try {
+      const res = await axios.post(
+        `${API}/upload-logo`,
+        data,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data"
+          }
         }
-      }
-    );
+      );
 
-    setForm({ ...form, companyLogo: res.data.logo });
-    toast.success("Logo uploaded!");
-  } catch {
-    toast.error("Logo upload failed");
-  } finally {
-    setUploading(false);
-  }
-};
+      setForm({ ...form, companyLogo: res.data.logoUrl });
+      toast.success("Logo uploaded!");
+    } catch {
+      toast.error("Logo upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
 
+  // ✅ FIXED: Business Images Upload Handler
+  const handleBusinessImagesUpload = async (files) => {
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    const data = new FormData();
+    
+    // Append multiple files
+    Array.from(files).forEach(file => {
+      data.append("images", file);
+    });
+
+    try {
+      const res = await axios.post(
+        `${API}/upload-business-images`,
+        data,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data"
+          }
+        }
+      );
+
+      // Merge new images with existing ones
+      const currentImages = form.images ? [...form.images] : [];
+      const newImages = [...currentImages, ...res.data.images];
+      
+      setForm({ ...form, images: newImages });
+      toast.success(`${res.data.images.length} image(s) uploaded successfully!`);
+    } catch (error) {
+      toast.error("Images upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   /* ======================
      SUBMIT PROFILE
@@ -258,6 +295,7 @@ const CompleteProfile = () => {
     const role = user.role;
 
     if (role === "jobseeker") {
+      // ... jobseeker sections remain the same
       switch (currentSection) {
         case "basicDetails":
           return (
@@ -320,6 +358,7 @@ const CompleteProfile = () => {
                     onChange={(e) => handleResumeUpload(e.target.files[0])}
                     className="file-input"
                     id="resume-upload"
+                    disabled={uploading}
                   />
                   <label htmlFor="resume-upload" className="upload-label">
                     <div className="upload-icon">📎</div>
@@ -552,31 +591,28 @@ const CompleteProfile = () => {
           );
 
         case "branding":
-  return (
-    <div className="section-content">
-      <h2 className="section-title">Branding</h2>
-
-      <div className="form-group">
-        <label>Upload Company Logo *</label>
-
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => handleLogoUpload(e.target.files[0])}
-          className="form-input"
-        />
-
-        {form.companyLogo && (
-          <img
-            src={form.companyLogo}
-            alt="logo"
-            style={{ width: 120, marginTop: 10, borderRadius: 8 }}
-          />
-        )}
-      </div>
-    </div>
-  );
-
+          return (
+            <div className="section-content">
+              <h2 className="section-title">Branding</h2>
+              <div className="form-group">
+                <label>Upload Company Logo <span className="required">*</span></label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleLogoUpload(e.target.files[0])}
+                  className="form-input"
+                  disabled={uploading}
+                />
+                {form.companyLogo && (
+                  <img
+                    src={form.companyLogo}
+                    alt="Company logo"
+                    style={{ width: 120, marginTop: 10, borderRadius: 8 }}
+                  />
+                )}
+              </div>
+            </div>
+          );
 
         default:
           return null;
@@ -656,20 +692,63 @@ const CompleteProfile = () => {
             </div>
           );
 
+        // ✅ FIXED: Business Media Section with Image Upload
         case "media":
           return (
             <div className="section-content">
-              <h2 className="section-title">Media</h2>
-              <div className="form-group">
-                <label>Image URLs <span className="required">*</span></label>
-                <textarea
-                  name="images"
-                  value={form.images || ""}
-                  onChange={handleChange}
-                  placeholder="Enter image URLs separated by commas"
-                  className="form-textarea"
-                  rows="4"
-                />
+              <div className="media-header">
+                <div className="media-banner">
+                  <div className="media-icon">📸</div>
+                  <h2>Business Media</h2>
+                </div>
+              </div>
+              
+              <div className="upload-section">
+                <h3>Upload Business Images <span className="required">*</span></h3>
+                <p className="upload-hint">Upload up to 5 high-quality images of your business (Max 5MB each)</p>
+                
+                <div className="upload-area multiple">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => handleBusinessImagesUpload(e.target.files)}
+                    className="file-input"
+                    id="business-images-upload"
+                    disabled={uploading}
+                  />
+                  <label htmlFor="business-images-upload" className="upload-label">
+                    <div className="upload-icon">📷</div>
+                    <span>{uploading ? "Uploading..." : "Choose Images"}</span>
+                  </label>
+                </div>
+
+                {form.images && form.images.length > 0 && (
+                  <div className="images-preview">
+                    <h4>Uploaded Images ({form.images.length}/5):</h4>
+                    <div className="images-grid">
+                      {form.images.map((imageUrl, idx) => (
+                        <div key={idx} className="image-preview">
+                          <img 
+                            src={imageUrl} 
+                            alt={`Business image ${idx + 1}`}
+                            style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: 8 }}
+                          />
+                          <button
+                            onClick={() => {
+                              const newImages = form.images.filter((_, i) => i !== idx);
+                              setForm({ ...form, images: newImages });
+                            }}
+                            className="remove-image"
+                            title="Remove image"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -678,23 +757,20 @@ const CompleteProfile = () => {
           return null;
       }
     }
+    return null;
   };
 
   return (
     <div className="profile-page">
       {/* Header */}
       <header className="profile-header">
-  <button onClick={() => navigate(-1)} className="back-button">
-    ← Edit Profile
-  </button>
-
-  <button
-    onClick={handleLogout}
-    className="logout-button"
-  >
-    Logout
-  </button>
-</header>
+        <button onClick={() => navigate(-1)} className="back-button">
+          ← Edit Profile
+        </button>
+        <button onClick={handleLogout} className="logout-button">
+          Logout
+        </button>
+      </header>
 
       <div className="profile-container">
         {/* Sidebar */}
@@ -722,10 +798,30 @@ const CompleteProfile = () => {
                   </span>
                   <span className="nav-label">{section.label}</span>
                   {section.required && <span className="required-badge">Required</span>}
+                  <div className="progress-bar">
+                    <div 
+                      className="progress-fill" 
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
                 </button>
               );
             })}
           </nav>
+
+          {/* Progress Indicator */}
+          <div className="overall-progress">
+            <div className="progress-info">
+              <span>Overall Progress</span>
+              <span className="progress-percent">{overallProgress}%</span>
+            </div>
+            <div className="overall-progress-bar">
+              <div 
+                className="overall-progress-fill" 
+                style={{ width: `${overallProgress}%` }}
+              />
+            </div>
+          </div>
         </aside>
 
         {/* Main Content */}
@@ -733,8 +829,13 @@ const CompleteProfile = () => {
           {renderSectionContent()}
           
           <div className="action-bar">
-            <button onClick={handleSubmit} className="save-button" disables={overallProgress<100}>
-              <span className="save-icon">✓</span> Save
+            <button 
+              onClick={handleSubmit} 
+              className="save-button"
+              disabled={overallProgress < 100 || uploading}
+            >
+              <span className="save-icon">✓</span> 
+              {uploading ? "Saving..." : "Save & Complete"}
             </button>
           </div>
         </main>

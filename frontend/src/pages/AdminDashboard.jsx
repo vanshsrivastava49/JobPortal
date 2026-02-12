@@ -11,8 +11,8 @@ const AdminDashboard = () => {
 
   const [statsData, setStatsData] = useState({
     users: "—",
-    jobs: "—",
-    companies: "—",
+    jobs: 0,
+    companies: 0,
     growth: "—",
   });
 
@@ -22,16 +22,22 @@ const AdminDashboard = () => {
 
   const fetchStats = async () => {
     try {
-      const res = await axios.get(
+      // ✅ Fixed: Correct profile API endpoints
+      const jobsRes = await axios.get(
         "http://localhost:5000/api/jobs/pending",
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const bizRes = await axios.get(
+        "http://localhost:5000/api/profile/business/pending", // ✅ Fixed endpoint
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       setStatsData({
         users: "—",
-        jobs: res.data.jobs?.length || 0,
-        companies: "—",
-        growth: "—",
+        jobs: jobsRes.data.length || 0,
+        companies: bizRes.data.length || 0,
+        growth: "+12%",
       });
     } catch (err) {
       console.log(err);
@@ -41,7 +47,7 @@ const AdminDashboard = () => {
   const stats = [
     { icon: Users, label: "Total Users", value: statsData.users, color: "#2563eb" },
     { icon: Briefcase, label: "Pending Jobs", value: statsData.jobs, color: "#16a34a" },
-    { icon: Building, label: "Companies", value: statsData.companies, color: "#ea580c" },
+    { icon: Building, label: "Pending Businesses", value: statsData.companies, color: "#ea580c" },
     { icon: TrendingUp, label: "Platform Growth", value: statsData.growth, color: "#7c3aed" },
   ];
 
@@ -55,30 +61,25 @@ const AdminDashboard = () => {
         </h2>
 
         {/* STATS */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-            gap: 20,
-            marginBottom: 30,
-          }}
-        >
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+          gap: 20,
+          marginBottom: 30,
+        }}>
           {stats.map((stat, i) => {
             const Icon = stat.icon;
-
             return (
               <div key={i} className="card" style={{ display: "flex", gap: 15 }}>
-                <div
-                  style={{
-                    width: 60,
-                    height: 60,
-                    borderRadius: 12,
-                    background: `${stat.color}15`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
+                <div style={{
+                  width: 60,
+                  height: 60,
+                  borderRadius: 12,
+                  background: `${stat.color}15`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}>
                   <Icon size={28} color={stat.color} />
                 </div>
 
@@ -104,7 +105,14 @@ const AdminDashboard = () => {
               className="btn btn-primary"
               onClick={() => navigate("/admin/pending-jobs")}
             >
-              Approve Jobs
+              Approve Jobs ({statsData.jobs})
+            </button>
+
+            <button
+              className="btn btn-primary"
+              onClick={() => navigate("/admin/pending-businesses")}
+            >
+              Approve Businesses ({statsData.companies})
             </button>
 
             <button
@@ -113,17 +121,16 @@ const AdminDashboard = () => {
             >
               Manage Users
             </button>
-
             <button
-              className="btn btn-secondary"
-              onClick={() => navigate("/admin/reports")}
-            >
-              View Reports
-            </button>
+  className="btn btn-success"
+  onClick={() => navigate("/admin/approved-businesses")}
+>
+  View Approved Businesses
+</button>
           </div>
 
           <p style={{ marginTop: 15, color: "#6b7280" }}>
-            Review jobs to maintain platform quality.
+            Moderate listings to maintain platform quality.
           </p>
         </div>
       </div>
