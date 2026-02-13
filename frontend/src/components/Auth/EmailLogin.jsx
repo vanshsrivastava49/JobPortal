@@ -94,20 +94,29 @@ const EmailLogin = ({ onOTPSent }) => {
         </div>
 
         <button
-          type="submit"
-          className="btn btn-primary"
-          style={{ width: '100%', padding: '12px' }}
-          disabled={loading}
-        >
-          {loading ? (
-            <>
-              <Loader size={20} style={{ marginRight: '8px', animation: 'spin 1s linear infinite' }} />
-              Sending OTP...
-            </>
-          ) : (
-            'Send OTP'
-          )}
-        </button>
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                  }}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader
+                        size={20}
+                        style={{ animation: "spin 1s linear infinite" }}
+                      />
+                      Sending OTP...
+                    </>
+                  ) : (
+                    "Send OTP"
+                  )}
+                </button>
 
       </form>
 

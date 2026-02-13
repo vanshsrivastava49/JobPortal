@@ -108,8 +108,7 @@ const JobSeekerDashboard = () => {
         <div className="card" style={{ marginBottom: 30 }}>
           <h3 style={{ marginBottom: "15px", color: "#1f2937" }}>Quick Actions</h3>
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-            
-            {/* ✅ Dynamic Profile Button */}
+          
             <button
               className="btn btn-primary"
               onClick={() => navigate("/complete-profile")}
@@ -139,8 +138,6 @@ const JobSeekerDashboard = () => {
                 Upload Resume
               </button>
             )}
-
-            {/* 🔥 NEW: Browse Jobs Button */}
             <button 
               className="btn btn-primary" 
               style={{ 
@@ -151,7 +148,7 @@ const JobSeekerDashboard = () => {
               }}
               onClick={handleBrowseJobs}
             >
-              🚀 Browse Jobs
+              Browse Jobs
             </button>
 
           </div>
@@ -188,9 +185,9 @@ const JobSeekerDashboard = () => {
           <p style={{ marginTop: 15, color: "#6b7280" }}>
             Resume Status:{" "}
             {resumeUrl ? (
-              <span style={{color:"green"}}>Uploaded ✅</span>
+              <span style={{color:"green"}}>Uploaded</span>
             ) : (
-              <span style={{color:"red"}}>Not Uploaded ❌</span>
+              <span style={{color:"red"}}>Not Uploaded</span>
             )}
           </p>
         </div>

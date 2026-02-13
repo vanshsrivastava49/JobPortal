@@ -3,19 +3,12 @@ const RecruiterBusinessLink = require("../models/RecruiterBusinessLink");
 const s3 = require("../config/s3");
 const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
 
-/* =========================
-   HELPER: PROFILE PROGRESS
-========================= */
 const calculateProgress = (requiredFields, data) => {
   const filled = requiredFields.filter(
     f => data[f] && data[f].toString().trim() !== ""
   ).length;
   return Math.round((filled / requiredFields.length) * 100);
 };
-
-/* =========================
-   COMPLETE PROFILE - ✅ FIXED with updateOne()
-========================= */
 exports.completeProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -47,7 +40,6 @@ exports.completeProfile = async (req, res) => {
         });
       }
       
-      // ✅ FIXED: Direct MongoDB update - NO model.save() crash
       await User.updateOne(
         { _id: user._id },
         {
@@ -63,7 +55,6 @@ exports.completeProfile = async (req, res) => {
       );
     }
 
-    /* ===== RECRUITER ===== */
     if (user.role === "recruiter") {
       required = [
         "companyName", "companyWebsite",
@@ -95,7 +86,6 @@ exports.completeProfile = async (req, res) => {
       );
     }
 
-    /* ===== BUSINESS ===== */
     if (user.role === "business") {
       required = [
         "businessName", "category",
@@ -144,13 +134,13 @@ exports.completeProfile = async (req, res) => {
     
     res.json({
       success: true,
-      message: "Profile completed successfully ✅",
+      message: "Profile completed successfully",
       user: updatedUser,
       progress
     });
 
   } catch (err) {
-    console.error('❌ COMPLETE PROFILE ERROR:', err);
+    console.error('COMPLETE PROFILE ERROR:', err);
     res.status(500).json({
       success: false,
       message: err.message || "Profile update failed"
@@ -158,9 +148,6 @@ exports.completeProfile = async (req, res) => {
   }
 };
 
-/* =========================
-   GET MY PROFILE
-========================= */
 exports.getMyProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
@@ -169,17 +156,13 @@ exports.getMyProfile = async (req, res) => {
     }
     res.json({ success: true, user });
   } catch (err) {
-    console.error('❌ GET PROFILE ERROR:', err);
+    console.error('GET PROFILE ERROR:', err);
     res.status(500).json({ success: false, message: "Profile fetch failed" });
   }
 };
-
-/* =========================
-   UPLOAD RESUME - ✅ FIXED for multer-s3
-========================= */
-exports.uploadResume = async (req, res) => {  // uploadResumeCtrl
+exports.uploadResume = async (req, res) => {
   try {
-    console.log('📤 RESUME UPLOAD HIT - req.file:', !!req.file);
+    console.log('RESUME UPLOAD HIT - req.file:', !!req.file);
 
     if (!req.file) {
       return res.status(400).json({
@@ -195,8 +178,6 @@ exports.uploadResume = async (req, res) => {  // uploadResumeCtrl
         message: "Jobseeker profile required"
       });
     }
-
-    // Delete old resume
     const oldResume = user.jobSeekerProfile?.resume;
     if (oldResume) {
       try {
@@ -206,16 +187,12 @@ exports.uploadResume = async (req, res) => {  // uploadResumeCtrl
           Bucket: process.env.AWS_S3_BUCKET_NAME,
           Key: key
         }));
-        console.log('🗑️ Old resume deleted');
+        console.log('Old resume deleted');
       } catch (e) {
-        console.warn('⚠️ Skip old resume delete:', e.message);
+        console.warn('Skip old resume delete:', e.message);
       }
     }
-
-    // ✅ FIXED: Use req.file.location from multer-s3
     const resumeUrl = req.file.location;
-    
-    // ✅ FIXED: Direct MongoDB update - BYPASS model hooks
     await User.updateOne(
       { _id: user._id },
       {
@@ -227,15 +204,15 @@ exports.uploadResume = async (req, res) => {  // uploadResumeCtrl
       }
     );
 
-    console.log('✅ Resume saved:', resumeUrl);
+    console.log('Resume saved:', resumeUrl);
     res.json({
       success: true,
       resumeUrl,
-      message: "Resume uploaded successfully ✅"
+      message: "Resume uploaded successfully"
     });
 
   } catch (err) {
-    console.error('❌ RESUME ERROR:', err);
+    console.error('RESUME ERROR:', err);
     res.status(500).json({
       success: false,
       message: err.message || "Resume upload failed"
@@ -243,12 +220,9 @@ exports.uploadResume = async (req, res) => {  // uploadResumeCtrl
   }
 };
 
-/* =========================
-   UPLOAD LOGO - ✅ FIXED
-========================= */
-exports.uploadLogo = async (req, res) => {  // uploadLogoCtrl
+exports.uploadLogo = async (req, res) => {
   try {
-    console.log('🏢 LOGO UPLOAD HIT - req.file:', !!req.file);
+    console.log('LOGO UPLOAD HIT - req.file:', !!req.file);
 
     if (!req.file) {
       return res.status(400).json({
@@ -264,8 +238,6 @@ exports.uploadLogo = async (req, res) => {  // uploadLogoCtrl
         message: "Recruiter profile required"
       });
     }
-
-    // Delete old logo
     const oldLogo = user.recruiterProfile?.companyLogo;
     if (oldLogo) {
       try {
@@ -275,9 +247,9 @@ exports.uploadLogo = async (req, res) => {  // uploadLogoCtrl
           Bucket: process.env.AWS_S3_BUCKET_NAME,
           Key: key
         }));
-        console.log('🗑️ Old logo deleted');
+        console.log('Old logo deleted');
       } catch (e) {
-        console.warn('⚠️ Skip old logo delete:', e.message);
+        console.warn('Skip old logo delete:', e.message);
       }
     }
 
@@ -294,28 +266,24 @@ exports.uploadLogo = async (req, res) => {  // uploadLogoCtrl
       }
     );
 
-    console.log('✅ Logo saved:', logoUrl);
+    console.log('Logo saved:', logoUrl);
     res.json({
       success: true,
       logoUrl,
-      message: "Logo uploaded successfully ✅"
+      message: "Logo uploaded successfully"
     });
 
   } catch (err) {
-    console.error('❌ LOGO ERROR:', err);
+    console.error('LOGO ERROR:', err);
     res.status(500).json({
       success: false,
       message: err.message || "Logo upload failed"
     });
   }
 };
-
-/* =========================
-   UPLOAD BUSINESS IMAGES - ✅ FIXED
-========================= */
 exports.uploadBusinessImages = async (req, res) => {
   try {
-    console.log('🏪 BUSINESS IMAGES HIT - req.files:', req.files?.length || 0);
+    console.log('BUSINESS IMAGES HIT - req.files:', req.files?.length || 0);
 
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({
@@ -348,26 +316,22 @@ exports.uploadBusinessImages = async (req, res) => {
       }
     );
 
-    console.log('✅ Business images saved:', newUrls.length, 'Total:', allImages.length);
+    console.log('Business images saved:', newUrls.length, 'Total:', allImages.length);
     res.json({
       success: true,
       images: newUrls,
       totalImages: allImages.length,
-      message: `${newUrls.length} images uploaded successfully ✅`
+      message: `${newUrls.length} images uploaded successfully`
     });
 
   } catch (err) {
-    console.error('❌ BUSINESS IMAGES ERROR:', err);
+    console.error('BUSINESS IMAGES ERROR:', err);
     res.status(500).json({
       success: false,
       message: err.message || "Business images upload failed"
     });
   }
 };
-
-/* =========================
-   ADMIN FUNCTIONS - ✅ NO CHANGES NEEDED
-========================= */
 exports.getPendingBusinesses = async (req, res) => {
   try {
     const list = await User.find({
@@ -421,10 +385,6 @@ exports.getApprovedBusinesses = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
-
-/* =========================
-   RECRUITER-BUSINESS WORKFLOW - ✅ NO CHANGES
-========================= */
 exports.requestBusinessLink = async (req, res) => {
   try {
     console.log("🔥 REQUEST ROUTE HIT");
@@ -440,7 +400,7 @@ exports.requestBusinessLink = async (req, res) => {
       if (existingLink.status === 'approved') {
         return res.json({
           success: true,
-          message: "Already linked ✅",
+          message: "Already linked",
           status: 'approved'
         });
       }
@@ -468,13 +428,13 @@ exports.requestBusinessLink = async (req, res) => {
 
     res.json({
       success: true,
-      message: "✅ Link request sent!",
+      message: "Link request sent!",
       status: 'pending',
       requestId: linkRequest._id
     });
 
   } catch (err) {
-    console.error("❌ Request link ERROR:", err);
+    console.error("Request link ERROR:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -523,7 +483,7 @@ exports.approveRecruiterLink = async (req, res) => {
 
     res.json({
       success: true,
-      message: `✅ ${linkRequest.recruiter.name} linked to your business!`
+      message: `${linkRequest.recruiter.name} linked to your business!`
     });
 
   } catch (err) {
@@ -558,7 +518,7 @@ exports.rejectRecruiterLink = async (req, res) => {
 
     res.json({
       success: true,
-      message: "❌ Recruiter request rejected"
+      message: "Recruiter request rejected"
     });
 
   } catch (err) {
@@ -567,12 +527,9 @@ exports.rejectRecruiterLink = async (req, res) => {
   }
 };
 
-/* =========================
-   OLD FUNCTIONS - ✅ $unset FIXED
-========================= */
 exports.linkRecruiterToBusiness = async (req, res) => {
   try {
-    console.log("🔥 ROUTE HIT - /api/profile/recruiter/link-business");
+    console.log("ROUTE HIT - /api/profile/recruiter/link-business");
     const { businessId } = req.body;
     
     if (!businessId || !req.user.id) {
@@ -609,7 +566,7 @@ exports.linkRecruiterToBusiness = async (req, res) => {
       $set: { "recruiterProfile.linkedBusiness": businessId }
     });
 
-    console.log("✅ Successfully linked recruiter to business:", businessId);
+    console.log("Successfully linked recruiter to business:", businessId);
     res.json({
       success: true,
       message: "Successfully linked to business! Can now post jobs.",
@@ -617,7 +574,7 @@ exports.linkRecruiterToBusiness = async (req, res) => {
     });
 
   } catch (err) {
-    console.error("❌ Link business ERROR:", err);
+    console.error("Link business ERROR:", err);
     res.status(500).json({ 
       success: false, 
       message: "Server error: " + err.message 
@@ -627,7 +584,7 @@ exports.linkRecruiterToBusiness = async (req, res) => {
 
 exports.unlinkRecruiterBusiness = async (req, res) => {
   try {
-    console.log("🔗 Unlink business called");
+    console.log("Unlink business called");
     
     if (!req.user.id) {
       return res.status(400).json({
@@ -635,20 +592,18 @@ exports.unlinkRecruiterBusiness = async (req, res) => {
         message: "User ID missing"
       });
     }
-
-    // ✅ FIXED: $unset syntax - Use 1 OR "" both work
     await User.findByIdAndUpdate(req.user.id, {
       $unset: { "recruiterProfile.linkedBusiness": 1 }
     });
 
-    console.log("✅ Business unlinked successfully");
+    console.log("Business unlinked successfully");
     res.json({
       success: true,
-      message: "Business unlinked successfully ✅"
+      message: "Business unlinked successfully"
     });
 
   } catch (err) {
-    console.error("❌ Unlink business ERROR:", err);
+    console.error("Unlink business ERROR:", err);
     res.status(500).json({ 
       success: false, 
       message: "Server error: " + err.message 
