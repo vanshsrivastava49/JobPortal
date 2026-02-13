@@ -1,7 +1,19 @@
 import React, { useEffect, useState, useCallback } from "react";
 import Navbar from "../components/common/Navbar";
 import { 
-  Building2, Users, Eye, TrendingUp, Briefcase, CheckCircle, Clock, XCircle, Loader2, UserPlus 
+  Building2, 
+  Users, 
+  Eye, 
+  TrendingUp, 
+  Briefcase, 
+  CheckCircle, 
+  Clock, 
+  XCircle, 
+  Loader2, 
+  UserPlus,
+  AlertCircle,
+  MapPin,
+  DollarSign
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -12,12 +24,10 @@ const BusinessOwnerDashboard = () => {
   const { user, token } = useAuth();
   const navigate = useNavigate();
   
-  // Job states - FIXED API ENDPOINT
   const [pendingJobs, setPendingJobs] = useState([]);
   const [loadingJobs, setLoadingJobs] = useState(false);
   const [showJobs, setShowJobs] = useState(false);
 
-  // Recruiter approval states
   const [pendingRecruiters, setPendingRecruiters] = useState([]);
   const [loadingRecruiters, setLoadingRecruiters] = useState(false);
   const [showRecruiters, setShowRecruiters] = useState(false);
@@ -31,26 +41,22 @@ const BusinessOwnerDashboard = () => {
       icon: Building2, 
       label: "Active Listings", 
       value: businessStatus === "approved" ? "1" : "0", 
-      color: "#2563eb" 
+      color: "#3b82f6" 
     },
-    { icon: Users, label: "Total Views", value: "0", color: "#16a34a" },
-    { icon: Eye, label: "Profile Views", value: "0", color: "#ea580c" },
+    { icon: Users, label: "Total Views", value: "0", color: "#10b981" },
+    { icon: Eye, label: "Profile Views", value: "0", color: "#8b5cf6" },
     { 
       icon: TrendingUp, 
       label: "Jobs This Month", 
       value: "0", 
-      color: "#7c3aed" 
+      color: "#f59e0b" 
     },
   ];
 
-  // 🔥 FIXED: Correct API endpoint from job.routes.js
   const fetchPendingJobs = useCallback(async () => {
     if (!token || businessStatus !== "approved") {
-      console.log("❌ Cannot fetch jobs - no token or business not approved");
       return;
     }
-
-    console.log("🔍 BusinessOwnerDashboard - Fetching pending jobs for:", user?._id);
     
     try {
       setLoadingJobs(true);
@@ -62,49 +68,33 @@ const BusinessOwnerDashboard = () => {
         },
         timeout: 10000
       });
-
-      console.log("✅ BusinessOwnerDashboard JOBS RESPONSE:", res.data);
       
-      // ✅ Handle both response formats (controller vs route)
       const jobsData = res.data.jobs || res.data || [];
       setPendingJobs(jobsData);
       
-      if (jobsData.length > 0) {
-        console.log(`✅ Found ${jobsData.length} pending jobs in dashboard`);
-      }
-      
     } catch (err) {
-      console.error("❌ BusinessOwnerDashboard fetchPendingJobs ERROR:", {
-        status: err.response?.status,
-        data: err.response?.data,
-        message: err.message
-      });
+      console.error("Error fetching jobs:", err);
       setPendingJobs([]);
     } finally {
       setLoadingJobs(false);
     }
-  }, [token, businessStatus, user?._id]);
+  }, [token, businessStatus]);
 
-  // Fetch pending recruiter requests
   const fetchPendingRecruiters = useCallback(async () => {
     if (!token) return;
     try {
       setLoadingRecruiters(true);
-      console.log("🔄 Fetching pending recruiters...");
       const res = await axios.get("http://localhost:5000/api/profile/business/pending-recruiters", {
         headers: { Authorization: `Bearer ${token}` }
       });
       setPendingRecruiters(res.data || []);
-      console.log("✅ Pending recruiters loaded:", res.data?.length);
     } catch (err) {
-      console.log("No pending recruiters or error:", err);
       setPendingRecruiters([]);
     } finally {
       setLoadingRecruiters(false);
     }
   }, [token]);
 
-  // Approve recruiter request
   const approveRecruiter = async (requestId) => {
     try {
       const res = await axios.patch(
@@ -112,14 +102,13 @@ const BusinessOwnerDashboard = () => {
         {}, 
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast.success(`✅ ${res.data.recruiter?.name || 'Recruiter'} approved! Can now post jobs.`);
+      toast.success(`${res.data.recruiter?.name || 'Recruiter'} approved!`);
       fetchPendingRecruiters();
     } catch (err) {
       toast.error(err.response?.data?.message || "Approval failed");
     }
   };
 
-  // Reject recruiter request
   const rejectRecruiter = async (requestId, recruiterName) => {
     try {
       const reason = prompt(`Why are you rejecting ${recruiterName}? (Optional)`);
@@ -128,56 +117,49 @@ const BusinessOwnerDashboard = () => {
         { reason: reason || "No reason provided" },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast.success("❌ Recruiter request rejected");
+      toast.success("Recruiter request rejected");
       fetchPendingRecruiters();
     } catch (err) {
       toast.error(err.response?.data?.message || "Rejection failed");
     }
   };
 
-  // 🔥 FIXED: Correct job approval endpoints from job.routes.js
   const approveJob = async (jobId) => {
     try {
-      console.log("✅ Approving job:", jobId);
       await axios.patch(`http://localhost:5000/api/jobs/approve/${jobId}`, {
         status: 'approved'
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      toast.success("✅ Job approved & LIVE!");
-      fetchPendingJobs(); // Refresh immediately
+      toast.success("Job approved & live!");
+      fetchPendingJobs();
     } catch (err) {
-      console.error("❌ Job approval error:", err.response?.data);
+      console.error("Job approval error:", err);
       toast.error(err.response?.data?.message || "Approval failed");
     }
   };
 
   const rejectJob = async (jobId) => {
     try {
-      console.log("❌ Rejecting job:", jobId);
       await axios.patch(`http://localhost:5000/api/jobs/reject/${jobId}`, {
         status: 'rejected_business'
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      toast.success("❌ Job rejected");
-      fetchPendingJobs(); // Refresh immediately
+      toast.success("Job rejected");
+      fetchPendingJobs();
     } catch (err) {
-      console.error("❌ Job rejection error:", err.response?.data);
+      console.error("Job rejection error:", err);
       toast.error(err.response?.data?.message || "Rejection failed");
     }
   };
 
-  // Load data on mount + auto-refresh
   useEffect(() => {
-    console.log("🎯 BusinessOwnerDashboard mounted - Business ID:", user?._id);
     if (token && businessStatus === "approved") {
       fetchPendingJobs();
       fetchPendingRecruiters();
       
-      // Auto-refresh every 30 seconds
       const interval = setInterval(() => {
-        console.log("🔄 Auto-refreshing dashboard data...");
         fetchPendingJobs();
       }, 30000);
       
@@ -186,528 +168,791 @@ const BusinessOwnerDashboard = () => {
   }, [token, businessStatus, fetchPendingJobs, fetchPendingRecruiters]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar title="Business Owner Dashboard" />
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <h2 style={{ marginBottom: "20px", color: "#1f2937", fontSize: "32px", fontWeight: "700" }}>
-          Welcome {user?.name || "Business Owner"}
-        </h2>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
 
-        {/* PROFILE REMINDER */}
-        {!isProfileComplete && (
-          <div style={{
-            background: "#fff7ed",
-            padding: "20px",
-            borderRadius: "12px",
-            marginBottom: "24px",
-            color: "#9a3412",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            border: "1px solid #fed7aa"
-          }}>
-            <span style={{ fontWeight: 500 }}>
-              <strong>⚠️ Profile Incomplete</strong> - Complete to unlock full features
-            </span>
-            <button
-              className="btn btn-primary"
-              style={{ padding: "10px 24px", fontWeight: 600 }}
-              onClick={() => navigate("/complete-profile")}
-            >
-              Complete Now
-            </button>
+        body {
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          background: #f8fafc;
+          color: #0f172a;
+        }
+
+        .dashboard-wrapper {
+          background: #f8fafc;
+          min-height: 100vh;
+        }
+
+        .dashboard-container {
+          max-width: 1280px;
+          margin: 0 auto;
+          padding: 24px;
+        }
+
+        .page-header {
+          margin-bottom: 32px;
+        }
+
+        .page-title {
+          font-size: 28px;
+          font-weight: 700;
+          color: #0f172a;
+          margin-bottom: 4px;
+        }
+
+        .alert-banner {
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 16px;
+          margin-bottom: 16px;
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+        }
+
+        .alert-banner.warning {
+          background: #fffbeb;
+          border-color: #fde047;
+        }
+
+        .alert-banner.success {
+          background: #f0fdf4;
+          border-color: #86efac;
+        }
+
+        .alert-icon {
+          flex-shrink: 0;
+          margin-top: 2px;
+        }
+
+        .alert-content {
+          flex: 1;
+        }
+
+        .alert-title {
+          font-size: 14px;
+          font-weight: 600;
+          color: #0f172a;
+          margin-bottom: 2px;
+        }
+
+        .alert-description {
+          font-size: 13px;
+          color: #64748b;
+        }
+
+        .alert-action {
+          flex-shrink: 0;
+        }
+
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+          gap: 20px;
+          margin-bottom: 32px;
+        }
+
+        .stat-card {
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 20px;
+          transition: all 0.2s;
+        }
+
+        .stat-card:hover {
+          border-color: #cbd5e1;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .stat-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 12px;
+        }
+
+        .stat-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #f1f5f9;
+        }
+
+        .stat-value {
+          font-size: 32px;
+          font-weight: 700;
+          color: #0f172a;
+          margin-bottom: 4px;
+          line-height: 1;
+        }
+
+        .stat-label {
+          font-size: 13px;
+          color: #64748b;
+          font-weight: 500;
+        }
+
+        .section-card {
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 24px;
+          margin-bottom: 24px;
+        }
+
+        .section-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 20px;
+          padding-bottom: 16px;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .section-title {
+          font-size: 18px;
+          font-weight: 700;
+          color: #0f172a;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 4px 10px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .badge-warning {
+          background: #fef3c7;
+          color: #92400e;
+        }
+
+        .badge-danger {
+          background: #fee2e2;
+          color: #991b1b;
+        }
+
+        .action-group {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+
+        .btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 10px 16px;
+          border-radius: 6px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          border: none;
+          outline: none;
+        }
+
+        .btn-primary {
+          background: #3b82f6;
+          color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+          background: #2563eb;
+        }
+
+        .btn-secondary {
+          background: white;
+          color: #475569;
+          border: 1px solid #e2e8f0;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+          background: #f8fafc;
+          border-color: #cbd5e1;
+        }
+
+        .btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .btn-sm {
+          padding: 6px 12px;
+          font-size: 13px;
+        }
+
+        .approval-card {
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 20px;
+          margin-bottom: 16px;
+          transition: all 0.2s;
+        }
+
+        .approval-card:hover {
+          border-color: #cbd5e1;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .approval-title {
+          font-size: 18px;
+          font-weight: 600;
+          color: #0f172a;
+          margin-bottom: 12px;
+        }
+
+        .approval-meta {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 16px;
+          margin-bottom: 16px;
+        }
+
+        .approval-meta-item {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 13px;
+          color: #64748b;
+        }
+
+        .approval-details {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 16px;
+          padding: 16px;
+          background: #f8fafc;
+          border-radius: 6px;
+          margin-bottom: 16px;
+        }
+
+        .detail-label {
+          font-size: 12px;
+          color: #64748b;
+          margin-bottom: 4px;
+          font-weight: 500;
+        }
+
+        .detail-value {
+          font-size: 14px;
+          color: #0f172a;
+          font-weight: 500;
+        }
+
+        .skills-list {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-bottom: 16px;
+        }
+
+        .skill-tag {
+          padding: 6px 12px;
+          background: #eff6ff;
+          color: #1e40af;
+          border-radius: 12px;
+          font-size: 13px;
+          font-weight: 500;
+        }
+
+        .description-box {
+          padding: 16px;
+          background: #f8fafc;
+          border-left: 3px solid #3b82f6;
+          border-radius: 6px;
+          margin-bottom: 16px;
+          font-size: 14px;
+          line-height: 1.6;
+          color: #475569;
+        }
+
+        .approval-actions {
+          display: flex;
+          gap: 12px;
+          justify-content: flex-end;
+          padding-top: 16px;
+          border-top: 1px solid #e2e8f0;
+        }
+
+        .images-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+          gap: 16px;
+        }
+
+        .business-image {
+          width: 100%;
+          height: 160px;
+          object-fit: cover;
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .business-image:hover {
+          transform: scale(1.02);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .empty-state {
+          text-align: center;
+          padding: 48px 24px;
+        }
+
+        .empty-icon {
+          width: 64px;
+          height: 64px;
+          margin: 0 auto 16px;
+          background: #f1f5f9;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .empty-title {
+          font-size: 16px;
+          font-weight: 600;
+          color: #0f172a;
+          margin-bottom: 4px;
+        }
+
+        .empty-description {
+          font-size: 14px;
+          color: #64748b;
+        }
+
+        .loading-state {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 48px 24px;
+          color: #64748b;
+        }
+
+        .spinner {
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+          .dashboard-container {
+            padding: 16px;
+          }
+
+          .page-title {
+            font-size: 24px;
+          }
+
+          .stats-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .action-group {
+            flex-direction: column;
+          }
+
+          .btn {
+            width: 100%;
+          }
+
+          .approval-actions {
+            flex-direction: column;
+          }
+        }
+      `}</style>
+
+      <Navbar />
+
+      <div className="dashboard-wrapper">
+        <div className="dashboard-container">
+          <div className="page-header">
+            <h1 className="page-title">
+              Welcome back, {user?.name?.split(" ")[0] || "Business Owner"}
+            </h1>
           </div>
-        )}
 
-        {/* STATUS BADGE */}
-        <div style={{ marginBottom: 32 }}>
-          <span style={{
-            padding: "12px 24px",
-            borderRadius: 24,
-            fontSize: 16,
-            fontWeight: 600,
-            background: businessStatus === "approved" ? "#dcfce7" : "#fef3c7",
-            color: businessStatus === "approved" ? "#166534" : "#92400e",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
-          }}>
-            {businessStatus === "approved" ? "✅ Approved & Live" : "⏳ Pending Admin Approval"}
-          </span>
-        </div>
-
-        {/* STATS */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: "24px",
-            marginBottom: "40px",
-          }}
-        >
-          {stats.map((stat, index) => {
-            const Icon = stat.icon;
-            return (
-              <div key={index} className="card" style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "20px",
-                padding: "28px",
-                borderRadius: "20px",
-                background: "white",
-                boxShadow: "0 10px 40px rgba(0,0,0,0.1)",
-                border: "1px solid #f1f5f9"
-              }}>
-                <div style={{
-                  width: "72px",
-                  height: "72px",
-                  borderRadius: "16px",
-                  background: `${stat.color}20`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  boxShadow: `0 4px 20px ${stat.color}30`
-                }}>
-                  <Icon size={32} color={stat.color} />
-                </div>
-                <div>
-                  <div style={{ fontSize: "32px", fontWeight: "800", color: "#1f2937", marginBottom: 4 }}>
-                    {stat.value}
-                  </div>
-                  <div style={{ fontSize: "16px", color: "#6b7280", fontWeight: 500 }}>
-                    {stat.label}
-                  </div>
+          {!isProfileComplete && (
+            <div className="alert-banner warning">
+              <div className="alert-icon">
+                <AlertCircle size={20} color="#f59e0b" />
+              </div>
+              <div className="alert-content">
+                <div className="alert-title">Profile Incomplete</div>
+                <div className="alert-description">
+                  Complete your profile to unlock all features
                 </div>
               </div>
-            );
-          })}
-        </div>
+              <div className="alert-action">
+                <button
+                  onClick={() => navigate("/complete-profile")}
+                  className="btn btn-primary btn-sm"
+                >
+                  Complete Now
+                </button>
+              </div>
+            </div>
+          )}
 
-        {/* QUICK ACTIONS */}
-        <div className="card" style={{ 
-          marginBottom: 40, 
-          padding: "32px", 
-          borderRadius: "20px",
-          background: "white",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.1)",
-          border: "1px solid #f1f5f9"
-        }}>
-          <h3 style={{ marginBottom: "24px", color: "#1f2937", fontSize: "24px", fontWeight: "700" }}>
-            Quick Actions
-          </h3>
-          <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
-            <button
-              className="btn btn-primary"
-              onClick={() => navigate("/complete-profile")}
-              disabled={isProfileComplete}
-              style={{ padding: "16px 32px", fontSize: "16px", fontWeight: 600 }}
-            >
-              {isProfileComplete ? "Update Listing" : "Add Business Listing"}
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={() => navigate("/businesses")}
-              style={{ padding: "16px 32px", fontSize: "16px" }}
-            >
-              View Public Listing
-            </button>
-            <button className="btn btn-secondary" style={{ padding: "16px 32px", fontSize: "16px" }}>
-              View Leads
-            </button>
+          {businessStatus === "approved" ? (
+            <div className="alert-banner success">
+              <div className="alert-icon">
+                <CheckCircle size={20} color="#10b981" />
+              </div>
+              <div className="alert-content">
+                <div className="alert-title">Business Approved & Live</div>
+                <div className="alert-description">
+                  Your business is now visible to users
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="alert-banner warning">
+              <div className="alert-icon">
+                <Clock size={20} color="#f59e0b" />
+              </div>
+              <div className="alert-content">
+                <div className="alert-title">Pending Admin Approval</div>
+                <div className="alert-description">
+                  Your business is awaiting admin review
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="stats-grid">
+            {stats.map((stat, i) => {
+              const Icon = stat.icon;
+              return (
+                <div key={i} className="stat-card">
+                  <div className="stat-header">
+                    <div className="stat-icon">
+                      <Icon size={20} color={stat.color} />
+                    </div>
+                  </div>
+                  <div className="stat-value">{stat.value}</div>
+                  <div className="stat-label">{stat.label}</div>
+                </div>
+              );
+            })}
           </div>
-        </div>
 
-        {/* 🔥 PENDING RECRUITERS SECTION */}
-        {businessStatus === "approved" && (
-          <div className="card" style={{ marginBottom: 40 }}>
-            <div style={{ 
-              display: "flex", 
-              justifyContent: "space-between", 
-              alignItems: "center", 
-              marginBottom: 24,
-              paddingBottom: 16,
-              borderBottom: "1px solid #e5e7eb"
-            }}>
-              <h3 style={{ 
-                margin: 0, 
-                fontSize: "24px", 
-                color: "#1f2937",
-                display: "flex",
-                alignItems: "center",
-                gap: 12
-              }}>
-                <UserPlus size={28} />
-                Recruiter Access Requests ({pendingRecruiters.length})
-                {pendingRecruiters.length > 0 && (
-                  <span style={{ 
-                    background: "#fef3c720", 
-                    color: "#f59e0b", 
-                    padding: "6px 16px", 
-                    borderRadius: 20, 
-                    fontSize: 14,
-                    fontWeight: 600
-                  }}>
-                    {pendingRecruiters.length} pending
-                  </span>
-                )}
-              </h3>
-              <button 
-                className="btn btn-secondary" 
-                onClick={() => { 
-                  setShowRecruiters(!showRecruiters); 
-                  if (!showRecruiters) fetchPendingRecruiters(); 
-                }}
-                style={{ padding: "12px 24px" }}
-              >
-                {showRecruiters ? "Hide" : "Show"} Requests
-              </button>
+          <div className="section-card">
+            <div className="section-header">
+              <h2 className="section-title">Quick Actions</h2>
             </div>
 
-            {showRecruiters && (
-              <>
-                {loadingRecruiters ? (
-                  <div style={{ textAlign: "center", padding: 60 }}>
-                    <Loader2 size={40} className="animate-spin mx-auto mb-6 text-blue-500" />
-                    <p style={{ color: "#6b7280", fontSize: 18 }}>Loading recruiter requests...</p>
-                  </div>
-                ) : pendingRecruiters.length === 0 ? (
-                  <div style={{ textAlign: "center", padding: 80 }}>
-                    <UserPlus size={64} style={{ opacity: 0.5, marginBottom: 20, display: "block", margin: "0 auto" }} />
-                    <p style={{ color: "#6b7280", fontSize: 20, marginBottom: 8 }}>No pending recruiter requests</p>
-                    <p style={{ fontSize: 16, color: "#9ca3af" }}>
-                      Recruiters will request access to post jobs for your business here.
-                    </p>
-                  </div>
-                ) : (
-                  <div style={{ display: "grid", gap: 24 }}>
-                    {pendingRecruiters.map((request) => (
-                      <div key={request._id} style={{
-                        padding: 32,
-                        border: "1px solid #e5e7eb",
-                        borderRadius: 20,
-                        background: "white",
-                        boxShadow: "0 10px 40px rgba(0,0,0,0.05)"
-                      }}>
-                        {/* Recruiter card content remains same */}
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
-                          <div style={{ flex: 1 }}>
-                            <h4 style={{ margin: 0, fontSize: "24px", color: "#1f2937", fontWeight: 700 }}>
-                              {request.recruiter?.recruiterProfile?.companyName || request.recruiter?.name || "Unnamed Recruiter"}
-                            </h4>
-                            <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 12 }}>
-                              <span style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 8,
-                                background: "#fef3c720",
-                                color: "#f59e0b",
-                                padding: "10px 16px",
-                                borderRadius: 24,
-                                fontSize: 15,
-                                fontWeight: 600
-                              }}>
-                                <Clock size={20} />
-                                Requested {new Date(request.requestedAt).toLocaleDateString()}
-                              </span>
+            <div className="action-group">
+              <button
+                onClick={() => navigate("/complete-profile")}
+                disabled={!isProfileComplete}
+                className="btn btn-primary"
+              >
+                {isProfileComplete ? "Update Listing" : "Add Business Listing"}
+              </button>
+
+              <button
+                onClick={() => navigate("/businesses")}
+                className="btn btn-secondary"
+              >
+                View Public Listing
+              </button>
+
+              <button className="btn btn-secondary">
+                View Leads
+              </button>
+            </div>
+          </div>
+
+          {businessStatus === "approved" && (
+            <div className="section-card">
+              <div className="section-header">
+                <h2 className="section-title">
+                  <UserPlus size={22} />
+                  Recruiter Requests ({pendingRecruiters.length})
+                  {pendingRecruiters.length > 0 && (
+                    <span className="badge badge-warning">
+                      {pendingRecruiters.length} pending
+                    </span>
+                  )}
+                </h2>
+                <button 
+                  className="btn btn-secondary btn-sm" 
+                  onClick={() => { 
+                    setShowRecruiters(!showRecruiters); 
+                    if (!showRecruiters) fetchPendingRecruiters(); 
+                  }}
+                >
+                  {showRecruiters ? "Hide" : "Show"} Requests
+                </button>
+              </div>
+
+              {showRecruiters && (
+                <>
+                  {loadingRecruiters ? (
+                    <div className="loading-state">
+                      <Loader2 size={20} className="spinner" />
+                      <span>Loading requests...</span>
+                    </div>
+                  ) : pendingRecruiters.length === 0 ? (
+                    <div className="empty-state">
+                      <div className="empty-icon">
+                        <UserPlus size={28} color="#cbd5e1" />
+                      </div>
+                      <div className="empty-title">No pending requests</div>
+                      <div className="empty-description">
+                        Recruiters will request access to post jobs here
+                      </div>
+                    </div>
+                  ) : (
+                    pendingRecruiters.map((request) => (
+                      <div key={request._id} className="approval-card">
+                        <h3 className="approval-title">
+                          {request.recruiter?.recruiterProfile?.companyName || request.recruiter?.name || "Unnamed Recruiter"}
+                        </h3>
+                        
+                        <div className="approval-meta">
+                          <div className="approval-meta-item">
+                            <Clock size={14} />
+                            Requested {new Date(request.requestedAt).toLocaleDateString()}
+                          </div>
+                        </div>
+
+                        <div className="approval-details">
+                          <div>
+                            <div className="detail-label">Recruiter</div>
+                            <div className="detail-value">{request.recruiter?.name}</div>
+                          </div>
+                          <div>
+                            <div className="detail-label">Email</div>
+                            <div className="detail-value">{request.recruiter?.email}</div>
+                          </div>
+                          {request.recruiter?.recruiterProfile?.companyWebsite && (
+                            <div>
+                              <div className="detail-label">Website</div>
+                              <div className="detail-value">{request.recruiter.recruiterProfile.companyWebsite}</div>
                             </div>
-                          </div>
+                          )}
+                          {request.recruiter?.recruiterProfile?.companyLocation && (
+                            <div>
+                              <div className="detail-label">Location</div>
+                              <div className="detail-value">{request.recruiter.recruiterProfile.companyLocation}</div>
+                            </div>
+                          )}
                         </div>
 
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, marginBottom: 32 }}>
-                          <div>
-                            <p style={{ marginBottom: 12 }}><strong>Recruiter:</strong> {request.recruiter?.name}</p>
-                            <p style={{ marginBottom: 12 }}><strong>Email:</strong> {request.recruiter?.email}</p>
-                            {request.recruiter?.recruiterProfile?.companyWebsite && (
-                              <p><strong>Website:</strong> {request.recruiter.recruiterProfile.companyWebsite}</p>
-                            )}
-                          </div>
-                          <div>
-                            {request.recruiter?.recruiterProfile?.companyLocation && (
-                              <p style={{ marginBottom: 12 }}><strong>Location:</strong> {request.recruiter.recruiterProfile.companyLocation}</p>
-                            )}
-                            {request.recruiter?.recruiterProfile?.industryType && (
-                              <p><strong>Industry:</strong> {request.recruiter.recruiterProfile.industryType}</p>
-                            )}
-                          </div>
-                        </div>
-
-                        <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 24 }}>
-                          <div style={{ display: "flex", gap: 16, justifyContent: "flex-end" }}>
-                            <button
-                              className="btn btn-secondary"
-                              onClick={() => rejectRecruiter(request._id, request.recruiter?.name)}
-                              style={{ padding: "16px 32px", fontWeight: 600 }}
-                            >
-                              <XCircle size={20} style={{ marginRight: 8 }} />
-                              Reject
-                            </button>
-                            <button
-                              className="btn btn-primary"
-                              onClick={() => approveRecruiter(request._id)}
-                              style={{ padding: "16px 40px", fontWeight: 600 }}
-                            >
-                              <CheckCircle size={20} style={{ marginRight: 8 }} />
-                              Approve Access
-                            </button>
-                          </div>
+                        <div className="approval-actions">
+                          <button
+                            className="btn btn-secondary"
+                            onClick={() => rejectRecruiter(request._id, request.recruiter?.name)}
+                          >
+                            <XCircle size={16} />
+                            Reject
+                          </button>
+                          <button
+                            className="btn btn-primary"
+                            onClick={() => approveRecruiter(request._id)}
+                          >
+                            <CheckCircle size={16} />
+                            Approve Access
+                          </button>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
-
-        {/* 🔥 FIXED PENDING JOBS SECTION */}
-        {businessStatus === "approved" && (
-          <div className="card" style={{ marginBottom: 40 }}>
-            <div style={{ 
-              display: "flex", 
-              justifyContent: "space-between", 
-              alignItems: "center", 
-              marginBottom: 24,
-              paddingBottom: 16,
-              borderBottom: "1px solid #e5e7eb"
-            }}>
-              <h3 style={{ 
-                margin: 0, 
-                fontSize: "24px", 
-                color: "#1f2937",
-                display: "flex",
-                alignItems: "center",
-                gap: 12
-              }}>
-                <Briefcase size={28} />
-                Job Approvals ({pendingJobs.length})
-                {pendingJobs.length > 0 && (
-                  <span style={{ 
-                    background: "#ef444420", 
-                    color: "#dc2626", 
-                    padding: "6px 16px", 
-                    borderRadius: 20, 
-                    fontSize: 14,
-                    fontWeight: 600
-                  }}>
-                    {pendingJobs.length} pending
-                  </span>
-                )}
-                {pendingJobs.length > 0 && (
-                  <span style={{ fontSize: 14, color: "#059669", fontWeight: 500 }}>
-                    Business ID: {user?._id?.slice(-6)}
-                  </span>
-                )}
-              </h3>
-              <button 
-                className="btn btn-secondary" 
-                onClick={() => { 
-                  setShowJobs(!showJobs); 
-                  if (!showJobs) fetchPendingJobs(); 
-                }}
-                style={{ padding: "12px 24px" }}
-              >
-                {showJobs ? "Hide" : "🔄 Refresh & Show"} Jobs
-              </button>
+                    ))
+                  )}
+                </>
+              )}
             </div>
+          )}
 
-            {showJobs && (
-              <>
-                {loadingJobs ? (
-                  <div style={{ textAlign: "center", padding: 80 }}>
-                    <Loader2 size={48} className="animate-spin mx-auto mb-6 text-blue-500" />
-                    <p style={{ color: "#6b7280", fontSize: 20 }}>Loading pending jobs...</p>
-                    <p style={{ fontSize: 16, color: "#9ca3af", marginTop: 8 }}>
-                      Looking for jobs with status "pending_business"
-                    </p>
-                  </div>
-                ) : pendingJobs.length === 0 ? (
-                  <div style={{ textAlign: "center", padding: 80 }}>
-                    <Briefcase size={64} style={{ opacity: 0.5, marginBottom: 24, display: "block", margin: "0 auto" }} />
-                    <h3 style={{ color: "#6b7280", fontSize: 24, marginBottom: 12 }}>No pending job approvals</h3>
-                    <p style={{ fontSize: 16, color: "#9ca3af", maxWidth: 400, margin: "0 auto" }}>
-                      Recruiters who've been approved can post jobs here for your review.
-                      <br/>
-                      <strong>Business ID:</strong> {user?._id?.slice(-6)} | <strong>Status filter:</strong> pending_business
-                    </p>
-                    <button 
-                      onClick={fetchPendingJobs}
-                      className="btn btn-primary"
-                      style={{ marginTop: 24, padding: "16px 32px" }}
-                    >
-                      🔄 Check Again
-                    </button>
-                  </div>
-                ) : (
-                  <div style={{ display: "grid", gap: 24 }}>
-                    {pendingJobs.map((job) => (
-                      <div key={job._id} style={{
-                        padding: 32,
-                        border: "1px solid #e5e7eb",
-                        borderRadius: 20,
-                        background: "white",
-                        boxShadow: "0 10px 40px rgba(0,0,0,0.05)"
-                      }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
-                          <div style={{ flex: 1 }}>
-                            <h4 style={{ margin: 0, fontSize: "28px", color: "#1f2937", fontWeight: 700 }}>
-                              {job.title}
-                            </h4>
-                            <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 16 }}>
-                              <span style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 8,
-                                background: "#fef3c720",
-                                color: "#f59e0b",
-                                padding: "12px 20px",
-                                borderRadius: 24,
-                                fontSize: 16,
-                                fontWeight: 600
-                              }}>
-                                <Clock size={22} />
-                                Pending Your Approval
-                              </span>
-                            </div>
+          {businessStatus === "approved" && (
+            <div className="section-card">
+              <div className="section-header">
+                <h2 className="section-title">
+                  <Briefcase size={22} />
+                  Job Approvals ({pendingJobs.length})
+                  {pendingJobs.length > 0 && (
+                    <span className="badge badge-danger">
+                      {pendingJobs.length} pending
+                    </span>
+                  )}
+                </h2>
+                <button 
+                  className="btn btn-secondary btn-sm" 
+                  onClick={() => { 
+                    setShowJobs(!showJobs); 
+                    if (!showJobs) fetchPendingJobs(); 
+                  }}
+                >
+                  {showJobs ? "Hide" : "Show"} Jobs
+                </button>
+              </div>
+
+              {showJobs && (
+                <>
+                  {loadingJobs ? (
+                    <div className="loading-state">
+                      <Loader2 size={20} className="spinner" />
+                      <span>Loading jobs...</span>
+                    </div>
+                  ) : pendingJobs.length === 0 ? (
+                    <div className="empty-state">
+                      <div className="empty-icon">
+                        <Briefcase size={28} color="#cbd5e1" />
+                      </div>
+                      <div className="empty-title">No pending job approvals</div>
+                      <div className="empty-description">
+                        Approved recruiters can post jobs here for review
+                      </div>
+                      <button 
+                        onClick={fetchPendingJobs}
+                        className="btn btn-primary"
+                        style={{ marginTop: '16px' }}
+                      >
+                        Check Again
+                      </button>
+                    </div>
+                  ) : (
+                    pendingJobs.map((job) => (
+                      <div key={job._id} className="approval-card">
+                        <h3 className="approval-title">{job.title}</h3>
+                        
+                        <div className="approval-meta">
+                          <div className="approval-meta-item">
+                            <Clock size={14} />
+                            Pending Your Approval
                           </div>
                         </div>
 
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, marginBottom: 32 }}>
+                        <div className="approval-details">
                           <div>
-                            <p style={{ marginBottom: 16, fontSize: 16 }}><strong>📍 Location:</strong> {job.location}</p>
-                            <p style={{ marginBottom: 16, fontSize: 16 }}><strong>💼 Type:</strong> {job.type || job.jobType}</p>
-                            {job.salary && (
-                              <p style={{ fontSize: 16 }}><strong>💰 Salary:</strong> {job.salary}</p>
-                            )}
+                            <div className="detail-label">Location</div>
+                            <div className="detail-value">
+                              <MapPin size={14} style={{ display: 'inline', marginRight: '4px' }} />
+                              {job.location}
+                            </div>
                           </div>
                           <div>
-                            <p style={{ marginBottom: 16, fontSize: 16 }}><strong>👤 Posted by:</strong> {job.recruiter?.name || "Unknown"}</p>
-                            {job.recruiter?.recruiterProfile?.companyName && (
-                              <p style={{ fontSize: 16 }}><strong>🏢 Company:</strong> {job.recruiter.recruiterProfile.companyName}</p>
-                            )}
+                            <div className="detail-label">Type</div>
+                            <div className="detail-value">{job.type || job.jobType}</div>
+                          </div>
+                          {job.salary && (
+                            <div>
+                              <div className="detail-label">Salary</div>
+                              <div className="detail-value">
+                                <DollarSign size={14} style={{ display: 'inline', marginRight: '4px' }} />
+                                {job.salary}
+                              </div>
+                            </div>
+                          )}
+                          <div>
+                            <div className="detail-label">Posted By</div>
+                            <div className="detail-value">{job.recruiter?.name || "Unknown"}</div>
                           </div>
                         </div>
 
                         {job.skills?.length > 0 && (
-                          <div style={{ marginBottom: 32 }}>
-                            <p style={{ marginBottom: 16, fontSize: 18, fontWeight: 600, color: "#374151" }}>
-                              🛠️ Required Skills:
-                            </p>
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+                          <>
+                            <div className="detail-label" style={{ marginBottom: '8px' }}>Required Skills</div>
+                            <div className="skills-list">
                               {job.skills.map((skill, i) => (
-                                <span
-                                  key={i}
-                                  style={{
-                                    padding: "8px 20px",
-                                    background: "#e0e7ff",
-                                    color: "#4338ca",
-                                    borderRadius: 20,
-                                    fontWeight: 500,
-                                    fontSize: 15
-                                  }}
-                                >
-                                  {skill}
-                                </span>
+                                <span key={i} className="skill-tag">{skill}</span>
                               ))}
                             </div>
-                          </div>
+                          </>
                         )}
 
-                        <div style={{ marginBottom: 32 }}>
-                          <p style={{ marginBottom: 20, color: "#6b7280", fontSize: 16 }}>
-                            <strong>📝 Description:</strong>
-                          </p>
-                          <p style={{ 
-                            fontSize: 16, 
-                            lineHeight: 1.7, 
-                            color: "#374151",
-                            padding: "24px",
-                            background: "#f8fafc",
-                            borderRadius: 16,
-                            borderLeft: "4px solid #3b82f6"
-                          }}>
-                            {job.description?.substring(0, 300)}...
-                          </p>
-                        </div>
+                        {job.description && (
+                          <>
+                            <div className="detail-label" style={{ marginBottom: '8px' }}>Description</div>
+                            <div className="description-box">
+                              {job.description.substring(0, 300)}...
+                            </div>
+                          </>
+                        )}
 
-                        <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 24 }}>
-                          <div style={{ display: "flex", gap: 16, justifyContent: "flex-end" }}>
-                            <button
-                              className="btn btn-secondary"
-                              onClick={() => rejectJob(job._id)}
-                              style={{ 
-                                padding: "18px 40px", 
-                                fontSize: 16,
-                                fontWeight: 600 
-                              }}
-                            >
-                              <XCircle size={22} style={{ marginRight: 10 }} />
-                              Reject Job
-                            </button>
-                            <button
-                              className="btn btn-primary"
-                              onClick={() => approveJob(job._id)}
-                              style={{ 
-                                padding: "18px 48px", 
-                                fontSize: 16,
-                                fontWeight: 600 
-                              }}
-                            >
-                              <CheckCircle size={22} style={{ marginRight: 10 }} />
-                              Approve & Go Live
-                            </button>
-                          </div>
+                        <div className="approval-actions">
+                          <button
+                            className="btn btn-secondary"
+                            onClick={() => rejectJob(job._id)}
+                          >
+                            <XCircle size={16} />
+                            Reject Job
+                          </button>
+                          <button
+                            className="btn btn-primary"
+                            onClick={() => approveJob(job._id)}
+                          >
+                            <CheckCircle size={16} />
+                            Approve & Go Live
+                          </button>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
-
-        {/* BUSINESS IMAGES */}
-        <div className="card" style={{ padding: "32px", borderRadius: "20px" }}>
-          <h3 style={{ marginBottom: 24, fontSize: "24px", color: "#1f2937" }}>Your Business Images</h3>
-          {images.length === 0 ? (
-            <p style={{ color: "#6b7280", fontSize: 18 }}>No images uploaded yet.</p>
-          ) : (
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill,minmax(200px,1fr))",
-              gap: "20px"
-            }}>
-              {images.map((img, i) => (
-                <img
-                  key={i}
-                  src={img}
-                  alt="business"
-                  onClick={() => window.open(img, "_blank")}
-                  style={{
-                    width: "100%",
-                    height: "200px",
-                    objectFit: "cover",
-                    borderRadius: "16px",
-                    cursor: "pointer",
-                    border: "2px solid #e5e7eb",
-                    transition: "all 0.3s",
-                    boxShadow: "0 8px 32px rgba(0,0,0,0.1)"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = "scale(1.02)";
-                    e.target.style.boxShadow = "0 16px 48px rgba(0,0,0,0.15)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = "scale(1)";
-                    e.target.style.boxShadow = "0 8px 32px rgba(0,0,0,0.1)";
-                  }}
-                />
-              ))}
+                    ))
+                  )}
+                </>
+              )}
             </div>
           )}
+
+          <div className="section-card">
+            <div className="section-header">
+              <h2 className="section-title">Your Business Images</h2>
+            </div>
+
+            {images.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">
+                  <Building2 size={28} color="#cbd5e1" />
+                </div>
+                <div className="empty-title">No images uploaded</div>
+                <div className="empty-description">
+                  Add images to showcase your business
+                </div>
+              </div>
+            ) : (
+              <div className="images-grid">
+                {images.map((img, i) => (
+                  <img
+                    key={i}
+                    src={img}
+                    alt={`Business ${i + 1}`}
+                    onClick={() => window.open(img, "_blank")}
+                    className="business-image"
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

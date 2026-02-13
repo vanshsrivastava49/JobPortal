@@ -52,7 +52,7 @@ const Navbar = ({ title }) => {
             color: '#1f2937',
             margin: 0
           }}>
-            {title || 'Job Portal'}
+            {title || 'Green Jobs'}
           </h1>
         </div>
 

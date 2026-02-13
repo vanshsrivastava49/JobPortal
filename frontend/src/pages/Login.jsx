@@ -21,9 +21,6 @@ const Login = () => {
     return <Navigate to="/dashboard" replace />;
   }
 
-  /* ======================
-     SEND OTP
-  ====================== */
   const handleSendOtp = async (e) => {
     e.preventDefault();
 
@@ -55,9 +52,6 @@ const Login = () => {
     }
   };
 
-  /* ======================
-     VERIFY OTP
-  ====================== */
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
 
@@ -69,23 +63,12 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const res = await verifyOTP(
-        email,
-        otp,
-        null,
-        null,
-        null,
-        "login"
-      );
+      const res = await verifyOTP(email, otp, null, null, null, "login");
 
       if (res.success) {
         toast.success("Login successful");
-
         login(res.user, res.token);
-
-        // ✅ Always go dashboard (File 2 logic kept)
         navigate("/dashboard");
-
       } else {
         toast.error(res.message || "Invalid OTP");
       }
@@ -97,164 +80,354 @@ const Login = () => {
   };
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-        padding: "20px",
-      }}
-    >
-      <div
-        style={{
-          background: "white",
-          borderRadius: "12px",
-          boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
-          maxWidth: "450px",
-          width: "100%",
-          padding: "40px",
-        }}
-      >
-        {/* HEADER */}
-        <div style={{ textAlign: "center", marginBottom: "30px" }}>
-          <div
-            style={{
-              width: "60px",
-              height: "60px",
-              background: "linear-gradient(135deg, #667eea, #764ba2)",
-              borderRadius: "12px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 20px",
-            }}
-          >
-            <Briefcase size={30} color="white" />
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+
+        body {
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .auth-wrapper {
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #f8fafc;
+          padding: 24px;
+        }
+
+        .auth-container {
+          background: white;
+          border-radius: 12px;
+          border: 1px solid #e2e8f0;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+          max-width: 440px;
+          width: 100%;
+          padding: 40px;
+        }
+
+        .auth-header {
+          text-align: center;
+          margin-bottom: 32px;
+        }
+
+        .auth-icon {
+          width: 56px;
+          height: 56px;
+          background: #3b82f6;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 20px;
+        }
+
+        .auth-title {
+          font-size: 24px;
+          font-weight: 700;
+          color: #0f172a;
+          margin-bottom: 8px;
+        }
+
+        .auth-subtitle {
+          font-size: 14px;
+          color: #64748b;
+        }
+
+        .form-group {
+          margin-bottom: 20px;
+        }
+
+        .form-label {
+          display: block;
+          font-size: 14px;
+          font-weight: 600;
+          color: #0f172a;
+          margin-bottom: 8px;
+        }
+
+        .input-wrapper {
+          position: relative;
+        }
+
+        .input-icon {
+          position: absolute;
+          left: 14px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #94a3b8;
+        }
+
+        .form-input {
+          width: 100%;
+          padding: 12px 16px 12px 44px;
+          font-size: 14px;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          color: #0f172a;
+          outline: none;
+          transition: all 0.2s;
+        }
+
+        .form-input:focus {
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+          background: white;
+        }
+
+        .form-input:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .form-input.otp-input {
+          letter-spacing: 8px;
+          font-size: 18px;
+          font-weight: 600;
+          text-align: center;
+          padding-left: 16px;
+        }
+
+        .recaptcha-wrapper {
+          margin-bottom: 20px;
+          display: flex;
+          justify-content: center;
+        }
+
+        .btn {
+          width: 100%;
+          padding: 12px 20px;
+          font-size: 14px;
+          font-weight: 600;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+
+        .btn-primary {
+          background: #3b82f6;
+          color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+          background: #2563eb;
+        }
+
+        .btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .btn-back {
+          background: none;
+          border: none;
+          padding: 8px 12px;
+          margin-bottom: 16px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 14px;
+          font-weight: 500;
+          color: #64748b;
+          transition: all 0.2s;
+        }
+
+        .btn-back:hover {
+          color: #0f172a;
+        }
+
+        .divider {
+          margin: 24px 0;
+          text-align: center;
+          position: relative;
+        }
+
+        .divider::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          right: 0;
+          top: 50%;
+          height: 1px;
+          background: #e2e8f0;
+        }
+
+        .divider-text {
+          display: inline-block;
+          padding: 0 16px;
+          background: white;
+          font-size: 13px;
+          color: #64748b;
+          position: relative;
+          z-index: 1;
+        }
+
+        .auth-footer {
+          text-align: center;
+          margin-top: 24px;
+          padding-top: 24px;
+          border-top: 1px solid #e2e8f0;
+        }
+
+        .auth-footer-text {
+          font-size: 14px;
+          color: #64748b;
+        }
+
+        .auth-link {
+          color: #3b82f6;
+          font-weight: 600;
+          text-decoration: none;
+          transition: color 0.2s;
+        }
+
+        .auth-link:hover {
+          color: #2563eb;
+        }
+
+        .spinner {
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 480px) {
+          .auth-container {
+            padding: 32px 24px;
+          }
+
+          .auth-title {
+            font-size: 22px;
+          }
+        }
+      `}</style>
+
+      <div className="auth-wrapper">
+        <div className="auth-container">
+          {/* Header */}
+          <div className="auth-header">
+            <div className="auth-icon">
+              <Briefcase size={28} color="white" />
+            </div>
+            <h1 className="auth-title">Welcome Back</h1>
+            <p className="auth-subtitle">
+              Login using OTP sent to your email
+            </p>
           </div>
 
-          <h1 style={{ fontSize: "24px", fontWeight: "700" }}>
-            Welcome Back
-          </h1>
-          <p style={{ color: "#6b7280", fontSize: "14px" }}>
-            Login using OTP sent to your email
-          </p>
-        </div>
+          {/* Step 1: Email */}
+          {step === "email" && (
+            <form onSubmit={handleSendOtp}>
+              <div className="form-group">
+                <label className="form-label">Email Address</label>
+                <div className="input-wrapper">
+                  <Mail size={20} className="input-icon" />
+                  <input
+                    type="email"
+                    className="form-input"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
+              </div>
 
-        {/* STEP 1: EMAIL */}
-        {step === "email" && (
-          <form onSubmit={handleSendOtp}>
-            <label>Email Address</label>
-
-            <div style={{ position: "relative", marginBottom: "20px" }}>
-              <Mail
-                size={20}
-                style={{
-                  position: "absolute",
-                  left: "12px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  color: "#9ca3af",
-                }}
-              />
-              <input
-                type="email"
-                className="input"
-                style={{ paddingLeft: "45px" }}
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-
-            {/* ✅ Added from File 1 */}
-            <ReCAPTCHA
-              sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
-              onChange={(token) => setCaptchaToken(token)}
-            />
-
-            <button
-              className="btn btn-primary"
-              style={{
-                width: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-              }}
-              disabled={loading}
-            >
-              {loading ? <Loader className="spin" /> : "Send OTP"}
-            </button>
-
-            {/* GOOGLE SIGN-IN */}
-            <div style={{ marginTop: "20px", textAlign: "center" }}>
-              <p style={{ marginBottom: "10px", color: "#6b7280" }}>or</p>
-              <GoogleSignIn />
-            </div>
-          </form>
-        )}
-
-        {/* STEP 2: VERIFY OTP */}
-        {step === "verify" && (
-          <>
-            <button
-              onClick={() => setStep("email")}
-              style={{
-                background: "none",
-                border: "none",
-                marginBottom: "10px",
-                cursor: "pointer",
-              }}
-            >
-              <ArrowLeft size={18} /> Back
-            </button>
-
-            <form onSubmit={handleVerifyOtp}>
-              <label>Enter OTP</label>
-
-              <div style={{ position: "relative", marginBottom: "20px" }}>
-                <Shield
-                  size={20}
-                  style={{
-                    position: "absolute",
-                    left: "12px",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    color: "#9ca3af",
-                  }}
-                />
-                <input
-                  className="input"
-                  style={{ paddingLeft: "45px", letterSpacing: "4px" }}
-                  placeholder="000000"
-                  value={otp}
-                  onChange={(e) =>
-                    setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
-                  }
+              <div className="recaptcha-wrapper">
+                <ReCAPTCHA
+                  sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                  onChange={(token) => setCaptchaToken(token)}
                 />
               </div>
 
               <button className="btn btn-primary" disabled={loading}>
-                {loading ? <Loader className="spin" /> : "Verify & Login"}
+                {loading ? (
+                  <>
+                    <Loader size={18} className="spinner" />
+                    Sending...
+                  </>
+                ) : (
+                  "Send OTP"
+                )}
               </button>
-            </form>
-          </>
-        )}
 
-        {/* FOOTER */}
-        <div style={{ textAlign: "center", marginTop: "20px" }}>
-          <p style={{ fontSize: "14px" }}>
-            Don’t have an account?{" "}
-            <Link to="/signup" style={{ color: "#2563eb", fontWeight: 600 }}>
-              Sign Up
-            </Link>
-          </p>
+              <div className="divider">
+                <span className="divider-text">or</span>
+              </div>
+
+              <GoogleSignIn />
+            </form>
+          )}
+
+          {/* Step 2: Verify OTP */}
+          {step === "verify" && (
+            <>
+              <button onClick={() => setStep("email")} className="btn-back">
+                <ArrowLeft size={18} />
+                Back
+              </button>
+
+              <form onSubmit={handleVerifyOtp}>
+                <div className="form-group">
+                  <label className="form-label">Enter OTP</label>
+                  <div className="input-wrapper">
+                    <Shield size={20} className="input-icon" />
+                    <input
+                      className="form-input otp-input"
+                      placeholder="000000"
+                      value={otp}
+                      onChange={(e) =>
+                        setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+                      }
+                      disabled={loading}
+                      maxLength={6}
+                    />
+                  </div>
+                </div>
+
+                <button className="btn btn-primary" disabled={loading}>
+                  {loading ? (
+                    <>
+                      <Loader size={18} className="spinner" />
+                      Verifying...
+                    </>
+                  ) : (
+                    "Verify & Login"
+                  )}
+                </button>
+              </form>
+            </>
+          )}
+
+          {/* Footer */}
+          <div className="auth-footer">
+            <p className="auth-footer-text">
+              Don't have an account?{" "}
+              <Link to="/signup" className="auth-link">
+                Sign Up
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 

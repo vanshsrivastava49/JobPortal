@@ -2,11 +2,20 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import Navbar from "../components/common/Navbar";
 import axios from "axios";
 import {
-  Search, Briefcase, MapPin, DollarSign, Clock, Filter,
-  Bookmark, ExternalLink, Loader2, ArrowLeft, Building2, CheckCircle,
-  Star, Users, Zap, Check, X, Sparkles
+  Search,
+  Briefcase,
+  MapPin,
+  DollarSign,
+  Bookmark,
+  ExternalLink,
+  Loader2,
+  Building2,
+  CheckCircle,
+  Users,
+  X,
+  Sparkles
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 
 const Jobs = () => {
@@ -20,7 +29,6 @@ const Jobs = () => {
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState(null);
   const observerRef = useRef();
-  const navigate = useNavigate();
 
   const fetchJobs = useCallback(async (pageNum = 1, append = false) => {
     if (loading) return;
@@ -29,13 +37,9 @@ const Jobs = () => {
       setLoading(pageNum === 1);
       setError(null);
 
-      console.log(`🔍 Fetching page ${pageNum}...`);
-
       const response = await axios.get(`http://localhost:5000/api/jobs/public?page=${pageNum}&limit=12`, {
         timeout: 10000
       });
-
-      console.log("✅ API SUCCESS:", response.data);
 
       let newJobs = [];
       if (response.data.jobs && Array.isArray(response.data.jobs)) {
@@ -44,17 +48,9 @@ const Jobs = () => {
         newJobs = response.data.jobs;
       } else if (Array.isArray(response.data)) {
         newJobs = response.data;
-      } else {
-        newJobs = [];
       }
 
-      console.log("📊 New jobs found:", newJobs.length);
-
-      const validJobs = newJobs.filter(job =>
-        job && job._id && job.title
-      );
-
-      console.log("✅ Valid jobs:", validJobs.length);
+      const validJobs = newJobs.filter(job => job && job._id && job.title);
 
       if (append && validJobs.length > 0) {
         setJobs(prev => {
@@ -69,21 +65,20 @@ const Jobs = () => {
       setHasMore(validJobs.length === 12);
 
     } catch (err) {
-      console.error("❌ Fetch error:", err.response?.status, err.message);
+      console.error("Fetch error:", err);
 
       if (err.code !== 'ECONNABORTED' && !error) {
         try {
-          console.log("🔄 Trying fallback: /api/jobs");
           const fallback = await axios.get("http://localhost:5000/api/jobs", { timeout: 5000 });
           const fallbackJobs = fallback.data.jobs || fallback.data || [];
           setJobs(fallbackJobs.filter(job => job.status === "approved"));
-          toast.success("✅ Loaded via fallback endpoint");
+          toast.success("Loaded via fallback");
         } catch (fallbackErr) {
-          setError("No live jobs available. Check if recruiters have posted approved jobs.");
-          toast.error("No jobs found - create some approved jobs first!");
+          setError("No jobs available");
+          toast.error("No jobs found");
         }
       } else {
-        setError("Backend not responding at localhost:5000");
+        setError("Backend not responding");
       }
     } finally {
       setLoading(false);
@@ -133,12 +128,6 @@ const Jobs = () => {
     fetchJobs(1, false);
   }, []);
 
-  useEffect(() => {
-    if (page > 1) {
-      fetchJobs(page, true);
-    }
-  }, [page]);
-
   const resetFilters = () => {
     setSearchTerm("");
     setSelectedLocation("All");
@@ -160,225 +149,713 @@ const Jobs = () => {
   const hasActiveFilters = searchTerm || selectedLocation !== "All" || selectedType !== "All";
 
   return (
-    <div className="min-h-screen bg-[#fafbfc]">
-      <Navbar title="Find Jobs" />
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-      {/* Hero Search Section */}
-      <div className="bg-gradient-to-b from-[#0f172a] to-[#1e293b] pt-16 pb-20 px-4">
-        <div className="max-w-4xl mx-auto text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-400 text-sm font-medium mb-6">
-            <Sparkles className="w-3.5 h-3.5" />
-            {filteredJobs.length} open positions
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+
+        body {
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          background: #f8fafc;
+          color: #0f172a;
+        }
+
+        .jobs-wrapper {
+          background: #f8fafc;
+          min-height: 100vh;
+        }
+
+        .hero-section {
+          background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+          padding: 64px 24px 80px;
+        }
+
+        .hero-container {
+          max-width: 900px;
+          margin: 0 auto;
+          text-align: center;
+        }
+
+        .hero-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 16px;
+          background: rgba(16, 185, 129, 0.1);
+          border: 1px solid rgba(16, 185, 129, 0.2);
+          border-radius: 50px;
+          color: #10b981;
+          font-size: 13px;
+          font-weight: 600;
+          margin-bottom: 24px;
+        }
+
+        .hero-title {
+          font-size: 40px;
+          font-weight: 700;
+          color: white;
+          margin-bottom: 16px;
+          line-height: 1.2;
+        }
+
+        .hero-subtitle {
+          font-size: 17px;
+          color: #94a3b8;
+          max-width: 600px;
+          margin: 0 auto 40px;
+        }
+
+        .search-container {
+          max-width: 900px;
+          margin: 0 auto;
+        }
+
+        .search-box {
+          background: white;
+          border-radius: 12px;
+          padding: 8px;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .search-input-wrapper {
+          flex: 1;
+          min-width: 250px;
+          position: relative;
+        }
+
+        .search-icon {
+          position: absolute;
+          left: 16px;
+          top: 50%;
+          transform: translateY(-50%);
+        }
+
+        .search-input {
+          width: 100%;
+          padding: 14px 16px 14px 48px;
+          font-size: 14px;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          outline: none;
+          transition: all 0.2s;
+        }
+
+        .search-input:focus {
+          border-color: #10b981;
+          box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+
+        .search-select {
+          padding: 14px 16px;
+          font-size: 14px;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          color: #475569;
+          cursor: pointer;
+          outline: none;
+          min-width: 140px;
+          font-weight: 500;
+        }
+
+        .search-select:focus {
+          border-color: #10b981;
+          box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+
+        .clear-btn {
+          padding: 14px 20px;
+          font-size: 14px;
+          font-weight: 600;
+          color: #64748b;
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.2s;
+        }
+
+        .clear-btn:hover {
+          background: #f8fafc;
+          color: #475569;
+        }
+
+        .stats-bar {
+          max-width: 1200px;
+          margin: -24px auto 40px;
+          padding: 0 24px;
+        }
+
+        .stats-card {
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 16px 24px;
+          display: flex;
+          align-items: center;
+          gap: 24px;
+          flex-wrap: wrap;
+          font-size: 14px;
+        }
+
+        .stat-item {
+          color: #64748b;
+        }
+
+        .stat-value {
+          font-weight: 600;
+          color: #0f172a;
+        }
+
+        .stat-divider {
+          color: #cbd5e1;
+        }
+
+        .verified-badge {
+          margin-left: auto;
+          color: #10b981;
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 13px;
+        }
+
+        .jobs-container {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 0 24px 80px;
+        }
+
+        .jobs-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+          gap: 20px;
+        }
+
+        .job-card {
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 24px;
+          transition: all 0.2s;
+          cursor: pointer;
+        }
+
+        .job-card:hover {
+          border-color: #10b981;
+          box-shadow: 0 4px 20px rgba(16, 185, 129, 0.1);
+        }
+
+        .job-tags {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 16px;
+        }
+
+        .job-tag {
+          padding: 4px 10px;
+          border-radius: 6px;
+          font-size: 11px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .tag-type {
+          background: #d1fae5;
+          color: #065f46;
+        }
+
+        .tag-live {
+          background: #e0f2fe;
+          color: #075985;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .live-dot {
+          width: 6px;
+          height: 6px;
+          background: #0ea5e9;
+          border-radius: 50%;
+          animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+
+        .job-title {
+          font-size: 18px;
+          font-weight: 700;
+          color: #0f172a;
+          margin-bottom: 16px;
+          line-height: 1.4;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+
+        .job-card:hover .job-title {
+          color: #10b981;
+        }
+
+        .job-company {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+
+        .company-logo {
+          width: 40px;
+          height: 40px;
+          background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .company-info {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .company-name {
+          font-size: 14px;
+          font-weight: 600;
+          color: #0f172a;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .company-verified {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 12px;
+          color: #10b981;
+          margin-top: 2px;
+        }
+
+        .job-meta {
+          display: flex;
+          gap: 16px;
+          font-size: 14px;
+          color: #64748b;
+          margin-bottom: 20px;
+        }
+
+        .job-meta-item {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .job-salary {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 12px;
+          background: #fffbeb;
+          border: 1px solid #fde68a;
+          border-radius: 8px;
+          margin-bottom: 20px;
+        }
+
+        .salary-amount {
+          font-size: 16px;
+          font-weight: 700;
+          color: #0f172a;
+        }
+
+        .salary-period {
+          font-size: 12px;
+          color: #64748b;
+        }
+
+        .job-actions {
+          display: flex;
+          gap: 10px;
+          padding-top: 8px;
+        }
+
+        .btn-view {
+          flex: 1;
+          background: #0f172a;
+          color: white;
+          padding: 12px 16px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          border: none;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          transition: all 0.2s;
+          text-decoration: none;
+        }
+
+        .btn-view:hover {
+          background: #10b981;
+        }
+
+        .btn-bookmark {
+          width: 48px;
+          height: 48px;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .btn-bookmark:hover {
+          background: #f1f5f9;
+          color: #10b981;
+          border-color: #10b981;
+        }
+
+        .loading-state,
+        .error-state,
+        .empty-state {
+          text-align: center;
+          padding: 80px 24px;
+        }
+
+        .state-icon {
+          width: 64px;
+          height: 64px;
+          margin: 0 auto 24px;
+          background: #f1f5f9;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .state-title {
+          font-size: 20px;
+          font-weight: 600;
+          color: #0f172a;
+          margin-bottom: 8px;
+        }
+
+        .state-description {
+          font-size: 15px;
+          color: #64748b;
+          margin-bottom: 24px;
+        }
+
+        .btn-action {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 12px 24px;
+          background: #10b981;
+          color: white;
+          font-size: 14px;
+          font-weight: 600;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .btn-action:hover {
+          background: #059669;
+        }
+
+        .btn-action-secondary {
+          background: #f1f5f9;
+          color: #475569;
+        }
+
+        .btn-action-secondary:hover {
+          background: #e2e8f0;
+        }
+
+        .spinner {
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
+        .load-more {
+          text-align: center;
+          padding: 48px 24px;
+        }
+
+        .load-more-text {
+          font-size: 14px;
+          color: #94a3b8;
+          margin-top: 12px;
+        }
+
+        @media (max-width: 768px) {
+          .hero-section {
+            padding: 48px 16px 64px;
+          }
+
+          .hero-title {
+            font-size: 32px;
+          }
+
+          .search-box {
+            flex-direction: column;
+          }
+
+          .search-input-wrapper {
+            min-width: 100%;
+          }
+
+          .search-select {
+            width: 100%;
+          }
+
+          .jobs-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .stats-card {
+            font-size: 13px;
+            gap: 16px;
+          }
+
+          .verified-badge {
+            margin-left: 0;
+            width: 100%;
+          }
+        }
+      `}</style>
+
+      <Navbar />
+
+      <div className="jobs-wrapper">
+        {/* Hero Section */}
+        <div className="hero-section">
+          <div className="hero-container">
+            <div className="hero-badge">
+              <Sparkles size={14} />
+              {filteredJobs.length} open positions
+            </div>
+            <h1 className="hero-title">Find your next opportunity</h1>
+            <p className="hero-subtitle">
+              Discover verified roles from top companies — updated in real time
+            </p>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 tracking-tight">
-            Find your next opportunity
-          </h1>
-          <p className="text-slate-400 text-lg max-w-xl mx-auto">
-            Discover verified roles from top companies — updated in real time.
-          </p>
+
+          {/* Search Box */}
+          <div className="search-container">
+            <div className="search-box">
+              <div className="search-input-wrapper">
+                <Search className="search-icon" size={20} color="#94a3b8" />
+                <input
+                  type="text"
+                  placeholder="Job title, company, or keyword..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="search-input"
+                />
+              </div>
+              <select
+                value={selectedLocation}
+                onChange={(e) => setSelectedLocation(e.target.value)}
+                className="search-select"
+              >
+                <option>All</option>
+                {locations.map(loc => <option key={loc}>{loc}</option>)}
+              </select>
+              <select
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
+                className="search-select"
+              >
+                <option>All</option>
+                {types.map(type => <option key={type}>{type}</option>)}
+              </select>
+              {hasActiveFilters && (
+                <button onClick={resetFilters} className="clear-btn">
+                  <X size={16} />
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Search Bar */}
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-2xl shadow-black/10 p-2 flex flex-col md:flex-row gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Job title, company, or keyword..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3.5 text-[15px] bg-slate-50 border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/40 placeholder:text-slate-400 transition-all"
-              />
-            </div>
-            <select
-              value={selectedLocation}
-              onChange={(e) => setSelectedLocation(e.target.value)}
-              className="px-4 py-3.5 text-[15px] bg-slate-50 border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/40 text-slate-700 cursor-pointer min-w-[160px]"
-            >
-              <option>All</option>
-              {locations.map(loc => <option key={loc}>{loc}</option>)}
-            </select>
-            <select
-              value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value)}
-              className="px-4 py-3.5 text-[15px] bg-slate-50 border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/40 text-slate-700 cursor-pointer min-w-[140px]"
-            >
-              <option>All</option>
-              {types.map(type => <option key={type}>{type}</option>)}
-            </select>
-            {hasActiveFilters && (
-              <button
-                onClick={resetFilters}
-                className="px-5 py-3.5 text-sm font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors flex items-center gap-1.5 shrink-0"
-              >
-                <X className="w-4 h-4" />
-                Clear
-              </button>
-            )}
+        {/* Stats Bar */}
+        <div className="stats-bar">
+          <div className="stats-card">
+            <span className="stat-item">
+              <span className="stat-value">{filteredJobs.length}</span> jobs
+            </span>
+            <span className="stat-divider">|</span>
+            <span className="stat-item">
+              <span className="stat-value">{locations.length}</span> locations
+            </span>
+            <span className="stat-divider">|</span>
+            <span className="stat-item">
+              <span className="stat-value">{types.length}</span> types
+            </span>
+            <span className="verified-badge">
+              <CheckCircle size={14} />
+              Verified employers
+            </span>
           </div>
         </div>
-      </div>
 
-      {/* Stats Bar */}
-      <div className="max-w-6xl mx-auto px-4 -mt-6 mb-10">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200/80 px-6 py-3.5 flex flex-wrap items-center gap-6 text-sm">
-          <span className="text-slate-500">
-            <span className="font-semibold text-slate-900">{filteredJobs.length}</span> jobs
-          </span>
-          <span className="text-slate-300">|</span>
-          <span className="text-slate-500">
-            <span className="font-semibold text-slate-900">{locations.length}</span> locations
-          </span>
-          <span className="text-slate-300">|</span>
-          <span className="text-slate-500">
-            <span className="font-semibold text-slate-900">{types.length}</span> types
-          </span>
-          <span className="ml-auto text-emerald-600 font-medium flex items-center gap-1.5 text-xs">
-            <CheckCircle className="w-3.5 h-3.5" />
-            Verified employers
-          </span>
-        </div>
-      </div>
-
-      {/* Jobs Grid */}
-      <div className="max-w-6xl mx-auto px-4 pb-20">
-        {loading && filteredJobs.length === 0 ? (
-          <div className="text-center py-32">
-            <Loader2 className="animate-spin mx-auto mb-4 w-10 h-10 text-emerald-500" />
-            <p className="text-slate-500 text-lg">Finding opportunities...</p>
-          </div>
-        ) : error && filteredJobs.length === 0 ? (
-          <div className="text-center py-28 max-w-md mx-auto">
-            <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <Briefcase className="w-8 h-8 text-slate-400" />
+        {/* Jobs Grid */}
+        <div className="jobs-container">
+          {loading && filteredJobs.length === 0 ? (
+            <div className="loading-state">
+              <div className="state-icon">
+                <Loader2 size={32} color="#10b981" className="spinner" />
+              </div>
+              <p className="state-title">Finding opportunities...</p>
             </div>
-            <h3 className="text-xl font-semibold text-slate-900 mb-2">{error}</h3>
-            <p className="text-slate-500 mb-8">Ensure your backend is running and jobs are approved.</p>
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={() => window.location.reload()}
-                className="px-6 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors"
-              >
-                Reload
-              </button>
-              <button
-                onClick={() => fetchJobs(1, false)}
-                className="px-6 py-2.5 bg-slate-100 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors"
-              >
-                Retry
+          ) : error && filteredJobs.length === 0 ? (
+            <div className="error-state">
+              <div className="state-icon">
+                <Briefcase size={32} color="#cbd5e1" />
+              </div>
+              <h3 className="state-title">{error}</h3>
+              <p className="state-description">
+                Ensure your backend is running and jobs are approved
+              </p>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                <button onClick={() => window.location.reload()} className="btn-action">
+                  Reload
+                </button>
+                <button onClick={() => fetchJobs(1, false)} className="btn-action btn-action-secondary">
+                  Retry
+                </button>
+              </div>
+            </div>
+          ) : filteredJobs.length === 0 ? (
+            <div className="empty-state">
+              <div className="state-icon">
+                <Search size={32} color="#cbd5e1" />
+              </div>
+              <h3 className="state-title">No jobs match your search</h3>
+              <p className="state-description">
+                Try different keywords or clear your filters
+              </p>
+              <button onClick={resetFilters} className="btn-action">
+                Clear Filters
               </button>
             </div>
-          </div>
-        ) : filteredJobs.length === 0 ? (
-          <div className="text-center py-28 max-w-md mx-auto">
-            <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <Search className="w-8 h-8 text-slate-400" />
-            </div>
-            <h3 className="text-xl font-semibold text-slate-900 mb-2">No jobs match your search</h3>
-            <p className="text-slate-500 mb-8">Try different keywords or clear your filters.</p>
-            <button
-              onClick={resetFilters}
-              className="px-6 py-2.5 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors"
-            >
-              Clear Filters
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-            {filteredJobs.map((job, index) => {
-              const isLast = index === filteredJobs.length - 1;
-              return (
-                <article
-                  key={job._id}
-                  ref={isLast ? lastJobRef : null}
-                  className="group bg-white rounded-2xl border border-slate-200/80 hover:border-emerald-300 hover:shadow-lg hover:shadow-emerald-500/5 transition-all duration-300 overflow-hidden"
-                >
-                  <div className="p-6">
-                    {/* Tags */}
-                    <div className="flex items-center gap-2 mb-4">
-                      <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-[11px] font-semibold rounded-md uppercase tracking-wide">
-                        {job.type}
-                      </span>
-                      <span className="px-2.5 py-1 bg-sky-50 text-sky-700 text-[11px] font-semibold rounded-md uppercase tracking-wide flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-sky-500 rounded-full animate-pulse" />
+          ) : (
+            <div className="jobs-grid">
+              {filteredJobs.map((job, index) => {
+                const isLast = index === filteredJobs.length - 1;
+                return (
+                  <div
+                    key={job._id}
+                    ref={isLast ? lastJobRef : null}
+                    className="job-card"
+                  >
+                    <div className="job-tags">
+                      <span className="job-tag tag-type">{job.type}</span>
+                      <span className="job-tag tag-live">
+                        <span className="live-dot" />
                         Live
                       </span>
                     </div>
 
-                    {/* Title */}
-                    <h2 className="text-lg font-bold text-slate-900 mb-3 leading-snug group-hover:text-emerald-700 transition-colors line-clamp-2">
-                      {job.title}
-                    </h2>
+                    <h2 className="job-title">{job.title}</h2>
 
-                    {/* Company Row */}
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl flex items-center justify-center shrink-0">
-                        <Building2 className="w-5 h-5 text-white" />
+                    <div className="job-company">
+                      <div className="company-logo">
+                        <Building2 size={20} color="white" />
                       </div>
-                      <div className="min-w-0">
-                        <div className="font-semibold text-slate-900 text-sm truncate">
-                          {job.company || job.business?.businessProfile?.businessName || job.business?.businessProfile?.companyName || "Direct Hire"}
+                      <div className="company-info">
+                        <div className="company-name">
+                          {job.company || 
+                           job.business?.businessProfile?.businessName || 
+                           job.business?.businessProfile?.companyName || 
+                           "Direct Hire"}
                         </div>
-                        <div className="flex items-center gap-1 text-xs text-emerald-600">
-                          <CheckCircle className="w-3 h-3" />
+                        <div className="company-verified">
+                          <CheckCircle size={12} />
                           Verified
                         </div>
                       </div>
                     </div>
 
-                    {/* Meta */}
-                    <div className="flex items-center gap-4 text-sm text-slate-500 mb-5">
-                      <span className="flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5" />
+                    <div className="job-meta">
+                      <div className="job-meta-item">
+                        <MapPin size={14} />
                         {job.location}
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <Users className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="job-meta-item">
+                        <Users size={14} />
                         {job.skills?.length || 0} skills
-                      </span>
+                      </div>
                     </div>
 
-                    {/* Salary */}
                     {job.salary && (
-                      <div className="flex items-center gap-2.5 p-3 bg-amber-50/80 rounded-xl mb-5 border border-amber-100/60">
-                        <DollarSign className="w-5 h-5 text-amber-600 shrink-0" />
+                      <div className="job-salary">
+                        <DollarSign size={20} color="#d97706" />
                         <div>
-                          <span className="text-base font-bold text-slate-900">{formatSalary(job.salary)}</span>
-                          <span className="text-xs text-slate-500 ml-1.5">/ year</span>
+                          <span className="salary-amount">{formatSalary(job.salary)}</span>
+                          <span className="salary-period"> / year</span>
                         </div>
                       </div>
                     )}
 
-                    {/* Actions */}
-                    <div className="flex gap-2.5 pt-2">
-                      <Link
-                        to={`/jobs/${job._id}`}
-                        className="flex-1 bg-slate-900 hover:bg-emerald-600 text-white text-sm font-semibold py-3 px-4 rounded-xl text-center transition-all duration-200 flex items-center justify-center gap-2"
-                      >
+                    <div className="job-actions">
+                      <Link to={`/jobs/${job._id}`} className="btn-view">
                         View Details
-                        <ExternalLink className="w-3.5 h-3.5" />
+                        <ExternalLink size={14} />
                       </Link>
-                      <button className="p-3 bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-emerald-600 rounded-xl transition-all duration-200 group/save">
-                        <Bookmark className="w-5 h-5 group-hover/save:fill-current transition-all" />
+                      <button className="btn-bookmark">
+                        <Bookmark size={20} color="#64748b" />
                       </button>
                     </div>
                   </div>
-                </article>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
 
-        {/* Load More */}
-        {hasMore && jobs.length > 0 && (
-          <div className="text-center py-12">
-            <Loader2 className="animate-spin mx-auto mb-3 w-6 h-6 text-emerald-500" />
-            <p className="text-sm text-slate-400">Loading more...</p>
-          </div>
-        )}
+          {hasMore && jobs.length > 0 && (
+            <div className="load-more">
+              <Loader2 size={24} color="#10b981" className="spinner" />
+              <p className="load-more-text">Loading more...</p>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
