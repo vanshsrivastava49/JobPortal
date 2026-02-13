@@ -1,34 +1,23 @@
 const Job = require("../models/Job");
 const User = require("../models/User");
-
-/* ===============================
-   RECRUITER POSTS JOB → PENDING BUSINESS
-=============================== */
 exports.createJob = async (req, res) => {
   try {
-    console.log('🔥 CREATE JOB - Recruiter:', req.user.id);
-    
+    console.log('CREATE JOB - Recruiter:', req.user.id);
     const recruiter = await User.findById(req.user.id).select('recruiterProfile');
-    
-    // ✅ Check business linkage
     const businessId = recruiter.recruiterProfile?.linkedBusiness;
     if (!businessId) {
       return res.status(400).json({
         success: false,
-        message: "❌ Link to approved business first (Dashboard → Request Access)"
+        message: "Link to approved business first (Dashboard → Request Access)"
       });
     }
-
-    // ✅ Verify business exists & approved
     const business = await User.findById(businessId).select('businessProfile');
     if (!business || business.businessProfile?.status !== 'approved') {
       return res.status(400).json({
         success: false,
-        message: "❌ Linked business not approved"
+        message: "Linked business not approved"
       });
     }
-
-    // ✅ Create job with PENDING status
     const job = await Job.create({
       ...req.body,
       recruiter: req.user.id,
@@ -36,16 +25,16 @@ exports.createJob = async (req, res) => {
       status: "pending_business"
     });
 
-    console.log('✅ Job created:', job._id, 'Business:', businessId);
+    console.log('Job created:', job._id, 'Business:', businessId);
     
     res.json({
       success: true,
-      message: "✅ Job created! Awaiting business owner approval...",
+      message: "Job created! Awaiting business owner approval...",
       jobId: job._id
     });
     
   } catch (err) {
-    console.error('❌ CREATE JOB ERROR:', err);
+    console.error('CREATE JOB ERROR:', err);
     res.status(500).json({ 
       success: false, 
       message: err.message || "Failed to create job" 
@@ -53,9 +42,6 @@ exports.createJob = async (req, res) => {
   }
 };
 
-/* ===============================
-   BUSINESS OWNER - GET PENDING JOBS
-=============================== */
 exports.getBusinessPendingJobs = async (req, res) => {
   try {
     const jobs = await Job.find({ 
@@ -71,14 +57,11 @@ exports.getBusinessPendingJobs = async (req, res) => {
       count: jobs.length
     });
   } catch (err) {
-    console.error('❌ GET PENDING JOBS ERROR:', err);
+    console.error('GET PENDING JOBS ERROR:', err);
     res.status(500).json({ success: false, message: "Failed to fetch jobs" });
   }
 };
 
-/* ===============================
-   BUSINESS OWNER - APPROVE JOB → LIVE
-=============================== */
 exports.businessApproveJob = async (req, res) => {
   try {
     const { jobId } = req.params;
@@ -105,18 +88,15 @@ exports.businessApproveJob = async (req, res) => {
 
     res.json({
       success: true,
-      message: "✅ Job approved and LIVE!",
+      message: "Job approved and LIVE!",
       job
     });
   } catch (err) {
-    console.error('❌ APPROVE JOB ERROR:', err);
+    console.error('APPROVE JOB ERROR:', err);
     res.status(500).json({ success: false, message: "Approval failed" });
   }
 };
 
-/* ===============================
-   BUSINESS OWNER - REJECT JOB
-=============================== */
 exports.businessRejectJob = async (req, res) => {
   try {
     const { jobId } = req.params;
@@ -143,18 +123,15 @@ exports.businessRejectJob = async (req, res) => {
 
     res.json({
       success: true,
-      message: "❌ Job rejected",
+      message: "Job rejected",
       job
     });
   } catch (err) {
-    console.error('❌ REJECT JOB ERROR:', err);
+    console.error('REJECT JOB ERROR:', err);
     res.status(500).json({ success: false, message: "Rejection failed" });
   }
 };
 
-/* ===============================
-   RECRUITER - MY JOBS
-=============================== */
 exports.getMyJobs = async (req, res) => {
   try {
     const jobs = await Job.find({ recruiter: req.user.id })
@@ -163,14 +140,11 @@ exports.getMyJobs = async (req, res) => {
 
     res.json({ success: true, jobs });
   } catch (err) {
-    console.error('❌ MY JOBS ERROR:', err);
+    console.error('MY JOBS ERROR:', err);
     res.status(500).json({ success: false, message: "Failed to fetch jobs" });
   }
 };
 
-/* ===============================
-   JOBSEEKERS - LIVE JOBS ONLY
-=============================== */
 exports.getApprovedJobs = async (req, res) => {
   try {
     const jobs = await Job.find({ status: "approved" })
@@ -180,21 +154,21 @@ exports.getApprovedJobs = async (req, res) => {
 
     res.json({ success: true, jobs });
   } catch (err) {
-    console.error('❌ APPROVED JOBS ERROR:', err);
+    console.error('APPROVED JOBS ERROR:', err);
     res.status(500).json({ success: false, message: "Failed to fetch jobs" });
   }
 };
 exports.getPublicJobs = async (req, res) => {
   try {
-    console.log('🌐 PUBLIC JOBS REQUEST - Page:', req.query.page, 'Limit:', req.query.limit);
+    console.log('PUBLIC JOBS REQUEST - Page:', req.query.page, 'Limit:', req.query.limit);
     const allJobs = await Job.find({}).countDocuments();
-    console.log(`📊 TOTAL JOBS IN DB: ${allJobs}`);
+    console.log(`TOTAL JOBS IN DB: ${allJobs}`);
     const statusCount = await Job.aggregate([
       { $group: { _id: "$status", count: { $sum: 1 } } }
     ]);
-    console.log('📈 JOBS BY STATUS:', JSON.stringify(statusCount, null, 2));
+    console.log('JOBS BY STATUS:', JSON.stringify(statusCount, null, 2));
     const sampleJobs = await Job.find({}).limit(3);
-    console.log('🔍 SAMPLE JOBS:', JSON.stringify(sampleJobs.map(j => ({
+    console.log('SAMPLE JOBS:', JSON.stringify(sampleJobs.map(j => ({
       _id: j._id,
       status: j.status,
       business: j.business,
@@ -215,7 +189,7 @@ exports.getPublicJobs = async (req, res) => {
     .sort({ createdAt: -1 })
     .limit(20);
 
-    console.log(`✅ PUBLIC JOBS FOUND: ${jobs.length}`);
+    console.log(`PUBLIC JOBS FOUND: ${jobs.length}`);
     console.log('FIRST JOB:', jobs[0] ? jobs[0].title : 'NONE');
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 12;
@@ -237,7 +211,7 @@ exports.getPublicJobs = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error('❌ PUBLIC JOBS ERROR:', err);
+    console.error('PUBLIC JOBS ERROR:', err);
     res.status(500).json({ 
       success: false, 
       message: "Failed to fetch public jobs",
