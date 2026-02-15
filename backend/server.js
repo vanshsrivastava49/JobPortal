@@ -4,6 +4,8 @@ const cors = require("cors");
 const connectDB = require("./config/db");
 const app = express();
 const allowedOrigins = ["http://localhost:5173"];
+const adminRoutes = require('./routes/admin.routes');
+app.use('/api', adminRoutes);
 app.use(
   cors({
     origin: function (origin, callback) {

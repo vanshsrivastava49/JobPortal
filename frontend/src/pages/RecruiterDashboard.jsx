@@ -16,6 +16,7 @@ import {
   DollarSign,
   Send,
   Check,
+  LogOut,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -23,7 +24,7 @@ import toast from "react-hot-toast";
 
 const RecruiterDashboard = () => {
   const navigate = useNavigate();
-  const { user, token } = useAuth();
+  const { user, token, refreshUser } = useAuth();
 
   const [showDetails, setShowDetails] = useState(false);
   const [jobs, setJobs] = useState([]);
@@ -117,17 +118,23 @@ const RecruiterDashboard = () => {
           timeout: 10000,
         }
       );
+      
+      console.log("Link request response:", response.data);
+      
       if (response.data.status === "approved") {
         toast.success("Already linked to this business!");
+        setTimeout(() => window.location.reload(), 1500);
       } else {
         toast.success("Request sent successfully!");
         toast("Business owner will review your request within 24 hours", {
           duration: 6000,
           icon: "⏰",
         });
+        setShowBusinessModal(false);
+        // Refresh to show pending status
+        setTimeout(() => window.location.reload(), 1500);
       }
-      setShowBusinessModal(false);
-      setTimeout(() => window.location.reload(), 1500);
+      
     } catch (err) {
       console.error("Request error:", err);
       const errorMsg = err.response?.data?.message || "Failed to send request";
@@ -142,18 +149,41 @@ const RecruiterDashboard = () => {
       toast.error("Not authenticated");
       return;
     }
+
+    // Confirmation dialog
+    const confirmed = window.confirm(
+      "Are you sure you want to unlink from this business? You will need to request access again to post jobs."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
     try {
       setUnlinkingBusiness(true);
-      await axios.post(
+      
+      const response = await axios.post(
         "http://localhost:5000/api/profile/recruiter/unlink-business",
         {},
-        { headers: { Authorization: `Bearer ${token}` }, timeout: 10000 }
+        { 
+          headers: { Authorization: `Bearer ${token}` }, 
+          timeout: 10000 
+        }
       );
-      toast.success("Business unlinked successfully");
-      setTimeout(() => window.location.reload(), 1000);
+
+      console.log("Unlink successful:", response.data);
+      toast.success(response.data.message || "Business unlinked successfully");
+      
+      // Force a hard reload to clear all cached state
+      // This ensures the user sees "Not Linked" status immediately
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+      
     } catch (err) {
       console.error("Unlink error:", err);
-      toast.error(err.response?.data?.message || "Failed to unlink business");
+      const errorMsg = err.response?.data?.message || "Failed to unlink business";
+      toast.error(errorMsg);
     } finally {
       setUnlinkingBusiness(false);
     }
@@ -408,6 +438,17 @@ const RecruiterDashboard = () => {
         .btn-secondary:hover:not(:disabled) {
           background: #f8fafc;
           border-color: #cbd5e1;
+        }
+
+        .btn-danger {
+          background: white;
+          color: #dc2626;
+          border: 1px solid #fecaca;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+          background: #fef2f2;
+          border-color: #fca5a5;
         }
 
         .btn:disabled {
@@ -801,9 +842,19 @@ const RecruiterDashboard = () => {
                 <button
                   onClick={unlinkBusiness}
                   disabled={unlinkingBusiness}
-                  className="btn btn-secondary btn-sm"
+                  className="btn btn-danger btn-sm"
                 >
-                  {unlinkingBusiness ? "Unlinking..." : "Change"}
+                  {unlinkingBusiness ? (
+                    <>
+                      <Loader2 size={14} className="spinner" />
+                      Unlinking...
+                    </>
+                  ) : (
+                    <>
+                      <LogOut size={14} />
+                      Unlink
+                    </>
+                  )}
                 </button>
               </div>
             </div>

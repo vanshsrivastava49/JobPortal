@@ -7,55 +7,75 @@ const User = require("../models/User");
 exports.createJob = async (req, res) => {
   try {
     console.log('🔥 CREATE JOB - Recruiter:', req.user.id);
-    
+
     const recruiter = await User.findById(req.user.id).select('recruiterProfile');
-    
+
     // ✅ Check business linkage
     const businessId = recruiter.recruiterProfile?.linkedBusiness;
     if (!businessId) {
-      return res.status(400).json({
+      return res.status(403).json({
         success: false,
-        message: "❌ Link to approved business first (Dashboard → Request Access)"
+        message: "❌ Link to approved business first (Dashboard → Request Access)",
+        code: "NO_BUSINESS_LINK"
       });
     }
 
-    // ✅ Verify business exists & approved
-    const business = await User.findById(businessId).select('businessProfile');
+    // ✅ Get business details
+    const business = await User.findById(businessId).select('businessProfile name');
     if (!business || business.businessProfile?.status !== 'approved') {
-      return res.status(400).json({
+      return res.status(403).json({
         success: false,
-        message: "❌ Linked business not approved"
+        message: "❌ Linked business not approved",
+        code: "BUSINESS_NOT_APPROVED"
       });
     }
 
-    // ✅ Create job with PENDING status
+    // ✅ AUTO-FILL: Use business name (NOT recruiter input)
+    const companyName = business.businessProfile?.businessName || business.name || "Unknown Company";
+
+    console.log("✅ Using business company name:", companyName);
+
+    // ✅ Create job with BUSINESS company name
     const job = await Job.create({
       ...req.body,
+      company: companyName,  // ✅ Always use business name
       recruiter: req.user.id,
       business: businessId,
       status: "pending_business"
     });
 
-    console.log('✅ Job created:', job._id, 'Business:', businessId);
-    
-    res.json({
+    console.log('✅ Job created:', job._id, 'Company:', companyName, 'Business:', businessId);
+
+    res.status(201).json({
       success: true,
       message: "✅ Job created! Awaiting business owner approval...",
-      jobId: job._id
+      job: {
+        _id: job._id,
+        title: job.title,
+        company: companyName,
+        status: job.status
+      }
     });
-    
+
   } catch (err) {
     console.error('❌ CREATE JOB ERROR:', err);
-    res.status(500).json({ 
-      success: false, 
-      message: err.message || "Failed to create job" 
+
+    // Handle validation errors
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid data provided",
+        code: "VALIDATION_ERROR"
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: err.message || "Failed to create job",
+      code: "SERVER_ERROR"
     });
   }
 };
-
-/* ===============================
-   BUSINESS OWNER - GET PENDING JOBS
-=============================== */
 exports.getBusinessPendingJobs = async (req, res) => {
   try {
     const jobs = await Job.find({ 

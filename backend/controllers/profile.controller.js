@@ -9,6 +9,7 @@ const calculateProgress = (requiredFields, data) => {
   ).length;
   return Math.round((filled / requiredFields.length) * 100);
 };
+
 exports.completeProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -160,6 +161,7 @@ exports.getMyProfile = async (req, res) => {
     res.status(500).json({ success: false, message: "Profile fetch failed" });
   }
 };
+
 exports.uploadResume = async (req, res) => {
   try {
     console.log('RESUME UPLOAD HIT - req.file:', !!req.file);
@@ -178,6 +180,7 @@ exports.uploadResume = async (req, res) => {
         message: "Jobseeker profile required"
       });
     }
+
     const oldResume = user.jobSeekerProfile?.resume;
     if (oldResume) {
       try {
@@ -192,6 +195,7 @@ exports.uploadResume = async (req, res) => {
         console.warn('Skip old resume delete:', e.message);
       }
     }
+
     const resumeUrl = req.file.location;
     await User.updateOne(
       { _id: user._id },
@@ -238,6 +242,7 @@ exports.uploadLogo = async (req, res) => {
         message: "Recruiter profile required"
       });
     }
+
     const oldLogo = user.recruiterProfile?.companyLogo;
     if (oldLogo) {
       try {
@@ -281,6 +286,7 @@ exports.uploadLogo = async (req, res) => {
     });
   }
 };
+
 exports.uploadBusinessImages = async (req, res) => {
   try {
     console.log('BUSINESS IMAGES HIT - req.files:', req.files?.length || 0);
@@ -332,6 +338,7 @@ exports.uploadBusinessImages = async (req, res) => {
     });
   }
 };
+
 exports.getPendingBusinesses = async (req, res) => {
   try {
     const list = await User.find({
@@ -385,22 +392,32 @@ exports.getApprovedBusinesses = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
 exports.requestBusinessLink = async (req, res) => {
   try {
     console.log("🔥 REQUEST ROUTE HIT");
     const { businessId } = req.body;
     const recruiterId = req.user.id;
 
+    if (!businessId) {
+      return res.status(400).json({
+        success: false,
+        message: "Business ID is required"
+      });
+    }
+
+    // Check if recruiter already has a PENDING or APPROVED link
     const existingLink = await RecruiterBusinessLink.findOne({
       recruiter: recruiterId,
-      business: businessId
+      business: businessId,
+      status: { $in: ['pending', 'approved'] }  // Only check pending/approved, not rejected/unlinked
     });
 
     if (existingLink) {
       if (existingLink.status === 'approved') {
         return res.json({
           success: true,
-          message: "Already linked",
+          message: "Already linked to this business",
           status: 'approved'
         });
       }
@@ -412,46 +429,152 @@ exports.requestBusinessLink = async (req, res) => {
       }
     }
 
+    // Validate business
     const business = await User.findById(businessId);
     if (!business || business.role !== 'business' || business.businessProfile?.status !== 'approved') {
       return res.status(400).json({
         success: false,
-        message: "Invalid business"
+        message: "Invalid or unapproved business"
       });
     }
 
+    // Check if there's an old rejected/unlinked/removed request - update it instead of creating new
+    const oldLink = await RecruiterBusinessLink.findOne({
+      recruiter: recruiterId,
+      business: businessId,
+      status: { $in: ['rejected', 'unlinked', 'removed_by_business'] }
+    });
+
+    if (oldLink) {
+      // Reuse existing document by resetting it to pending
+      oldLink.status = 'pending';
+      oldLink.requestedAt = new Date();
+      oldLink.approvedAt = null;
+      oldLink.rejectedAt = null;
+      oldLink.rejectedReason = null;
+      oldLink.unlinkedAt = null;
+      oldLink.removedAt = null;
+      await oldLink.save();
+
+      console.log("🔄 Reactivated old link request:", oldLink._id);
+      return res.json({
+        success: true,
+        message: "Link request sent successfully!",
+        status: 'pending',
+        requestId: oldLink._id
+      });
+    }
+
+    // Create new link request if no previous one exists
     const linkRequest = new RecruiterBusinessLink({
       recruiter: recruiterId,
-      business: businessId
+      business: businessId,
+      status: 'pending'
     });
     await linkRequest.save();
 
+    console.log("✨ Created new link request:", linkRequest._id);
     res.json({
       success: true,
-      message: "Link request sent!",
+      message: "Link request sent successfully!",
       status: 'pending',
       requestId: linkRequest._id
     });
 
   } catch (err) {
     console.error("Request link ERROR:", err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ 
+      success: false, 
+      message: err.message || "Failed to send request" 
+    });
   }
 };
 
 exports.getPendingRecruiters = async (req, res) => {
   try {
-    const businessId = req.user.id;
-    const requests = await RecruiterBusinessLink.find({
-      business: businessId,
-      status: 'pending'
-    })
-    .populate('recruiter', 'name email recruiterProfile')
-    .sort({ requestedAt: -1 });
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "User not found" 
+      });
+    }
+
+    let requests = [];
+
+    if (user.role === 'business') {
+      // Business owner viewing pending recruiter requests
+      requests = await RecruiterBusinessLink.find({
+        business: userId,
+        status: 'pending'
+      })
+      .populate('recruiter', 'name email recruiterProfile')
+      .sort({ requestedAt: -1 });
+    } else if (user.role === 'recruiter') {
+      // Recruiter viewing their own pending requests
+      requests = await RecruiterBusinessLink.find({
+        recruiter: userId,
+        status: 'pending'
+      })
+      .populate('business', 'name businessProfile')
+      .sort({ requestedAt: -1 });
+    }
+
     res.json(requests);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: "Server error" });
+    console.error("Get pending recruiters ERROR:", err);
+    res.status(500).json({ 
+      success: false, 
+      message: "Server error" 
+    });
+  }
+};
+
+exports.getLinkedRecruiters = async (req, res) => {
+  try {
+    console.log("🔍 GET LINKED RECRUITERS CALLED");
+    const businessId = req.user.id;
+    console.log("Business ID:", businessId);
+    
+    const user = await User.findById(businessId);
+
+    if (!user || user.role !== 'business') {
+      console.log("❌ Not a business account");
+      return res.status(403).json({
+        success: false,
+        message: "Business account required"
+      });
+    }
+
+    console.log("✅ Business account verified");
+
+    // Find all approved links for this business
+    const approvedLinks = await RecruiterBusinessLink.find({
+      business: businessId,
+      status: 'approved'
+    })
+    .populate('recruiter', 'name email recruiterProfile')
+    .sort({ approvedAt: -1 });
+
+    console.log("📊 Found approved links:", approvedLinks.length);
+
+    // Extract recruiter info
+    const recruiters = approvedLinks
+      .map(link => link.recruiter)
+      .filter(Boolean); // Remove any null values
+
+    console.log("👥 Recruiters to return:", recruiters.length);
+    console.log("Recruiter data:", recruiters.map(r => ({ id: r._id, name: r.name })));
+
+    res.json(recruiters);
+  } catch (err) {
+    console.error("❌ Get linked recruiters ERROR:", err);
+    res.status(500).json({
+      success: false,
+      message: "Server error: " + err.message
+    });
   }
 };
 
@@ -469,26 +592,32 @@ exports.approveRecruiterLink = async (req, res) => {
     if (!linkRequest) {
       return res.status(404).json({
         success: false,
-        message: "Request not found"
+        message: "Request not found or already processed"
       });
     }
 
+    // Update link request status
     linkRequest.status = 'approved';
     linkRequest.approvedAt = new Date();
     await linkRequest.save();
 
+    // Update recruiter profile with business link
     await User.findByIdAndUpdate(linkRequest.recruiter._id, {
       $set: { "recruiterProfile.linkedBusiness": businessId }
     });
 
     res.json({
       success: true,
-      message: `${linkRequest.recruiter.name} linked to your business!`
+      message: `${linkRequest.recruiter.name} linked to your business!`,
+      recruiter: linkRequest.recruiter
     });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: "Server error" });
+    console.error("Approve recruiter ERROR:", err);
+    res.status(500).json({ 
+      success: false, 
+      message: "Server error" 
+    });
   }
 };
 
@@ -507,10 +636,11 @@ exports.rejectRecruiterLink = async (req, res) => {
     if (!linkRequest) {
       return res.status(404).json({
         success: false,
-        message: "Request not found"
+        message: "Request not found or already processed"
       });
     }
 
+    // Update link request status
     linkRequest.status = 'rejected';
     linkRequest.rejectedAt = new Date();
     linkRequest.rejectedReason = reason || 'No reason provided';
@@ -522,14 +652,17 @@ exports.rejectRecruiterLink = async (req, res) => {
     });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: "Server error" });
+    console.error("Reject recruiter ERROR:", err);
+    res.status(500).json({ 
+      success: false, 
+      message: "Server error" 
+    });
   }
 };
 
 exports.linkRecruiterToBusiness = async (req, res) => {
   try {
-    console.log("ROUTE HIT - /api/profile/recruiter/link-business");
+    console.log("DIRECT LINK ROUTE HIT - /api/profile/recruiter/link-business");
     const { businessId } = req.body;
     
     if (!businessId || !req.user.id) {
@@ -543,14 +676,14 @@ exports.linkRecruiterToBusiness = async (req, res) => {
     if (!recruiter || recruiter.role !== "recruiter") {
       return res.status(403).json({
         success: false,
-        message: "Recruiter not found"
+        message: "Recruiter account required"
       });
     }
 
     if (recruiter.recruiterProfile?.linkedBusiness) {
       return res.status(400).json({
         success: false,
-        message: "Already linked to a business. Unlink first."
+        message: "Already linked to a business. Please unlink first."
       });
     }
 
@@ -562,6 +695,19 @@ exports.linkRecruiterToBusiness = async (req, res) => {
       });
     }
 
+    // Create or update link record
+    await RecruiterBusinessLink.findOneAndUpdate(
+      { recruiter: req.user.id, business: businessId },
+      { 
+        recruiter: req.user.id, 
+        business: businessId,
+        status: 'approved',
+        approvedAt: new Date()
+      },
+      { upsert: true, new: true }
+    );
+
+    // Update recruiter profile
     await User.findByIdAndUpdate(req.user.id, {
       $set: { "recruiterProfile.linkedBusiness": businessId }
     });
@@ -569,7 +715,7 @@ exports.linkRecruiterToBusiness = async (req, res) => {
     console.log("Successfully linked recruiter to business:", businessId);
     res.json({
       success: true,
-      message: "Successfully linked to business! Can now post jobs.",
+      message: "Successfully linked to business!",
       linkedBusiness: businessId
     });
 
@@ -584,29 +730,275 @@ exports.linkRecruiterToBusiness = async (req, res) => {
 
 exports.unlinkRecruiterBusiness = async (req, res) => {
   try {
-    console.log("Unlink business called");
+    console.log("🔓 UNLINK BUSINESS CALLED");
     
-    if (!req.user.id) {
+    const recruiterId = req.user.id;
+
+    if (!recruiterId) {
       return res.status(400).json({
         success: false,
         message: "User ID missing"
       });
     }
-    await User.findByIdAndUpdate(req.user.id, {
-      $unset: { "recruiterProfile.linkedBusiness": 1 }
+
+    // Get recruiter to find linked business
+    const recruiter = await User.findById(recruiterId);
+    
+    if (!recruiter || recruiter.role !== 'recruiter') {
+      return res.status(403).json({
+        success: false,
+        message: "Recruiter account required"
+      });
+    }
+
+    const linkedBusinessId = recruiter.recruiterProfile?.linkedBusiness;
+
+    if (!linkedBusinessId) {
+      return res.status(400).json({
+        success: false,
+        message: "No business currently linked"
+      });
+    }
+
+    // Remove business link from recruiter profile - IMPORTANT: This makes them "not linked"
+    await User.findByIdAndUpdate(recruiterId, {
+      $unset: { "recruiterProfile.linkedBusiness": "" }
     });
 
-    console.log("Business unlinked successfully");
+    // Update the link record to 'unlinked' status for audit trail
+    // This allows us to track history but won't block new requests
+    await RecruiterBusinessLink.updateMany(
+      { 
+        recruiter: recruiterId,
+        business: linkedBusinessId,
+        status: 'approved'
+      },
+      { 
+        $set: { 
+          status: 'unlinked',
+          unlinkedAt: new Date()
+        }
+      }
+    );
+
+    console.log("✅ Business unlinked successfully - Recruiter ID:", recruiterId, "Business ID:", linkedBusinessId);
     res.json({
       success: true,
-      message: "Business unlinked successfully"
+      message: "Business unlinked successfully. You can now request access to any business.",
+      unlinkedBusinessId: linkedBusinessId
     });
 
   } catch (err) {
-    console.error("Unlink business ERROR:", err);
+    console.error("❌ Unlink business ERROR:", err);
     res.status(500).json({ 
       success: false, 
       message: "Server error: " + err.message 
     });
   }
 };
+
+exports.removeRecruiterFromBusiness = async (req, res) => {
+  try {
+    console.log("🚫 REMOVE RECRUITER CALLED");
+    
+    const businessId = req.user.id;
+    const recruiterId = req.params.recruiterId;
+
+    if (!recruiterId) {
+      return res.status(400).json({
+        success: false,
+        message: "Recruiter ID missing"
+      });
+    }
+
+    // Verify the requester is a business owner
+    const business = await User.findById(businessId);
+    if (!business || business.role !== 'business') {
+      return res.status(403).json({
+        success: false,
+        message: "Business account required"
+      });
+    }
+
+    // Verify the recruiter exists and is linked to this business
+    const recruiter = await User.findById(recruiterId);
+    if (!recruiter || recruiter.role !== 'recruiter') {
+      return res.status(404).json({
+        success: false,
+        message: "Recruiter not found"
+      });
+    }
+
+    const linkedBusinessId = recruiter.recruiterProfile?.linkedBusiness?.toString();
+    if (linkedBusinessId !== businessId) {
+      return res.status(400).json({
+        success: false,
+        message: "This recruiter is not linked to your business"
+      });
+    }
+
+    // Remove the business link from recruiter profile
+    await User.findByIdAndUpdate(recruiterId, {
+      $unset: { "recruiterProfile.linkedBusiness": "" }
+    });
+
+    // Update the link record to 'removed_by_business' status
+    await RecruiterBusinessLink.updateMany(
+      {
+        recruiter: recruiterId,
+        business: businessId,
+        status: 'approved'
+      },
+      {
+        $set: {
+          status: 'removed_by_business',
+          removedAt: new Date()
+        }
+      }
+    );
+
+    console.log("✅ Recruiter removed - Recruiter ID:", recruiterId, "Business ID:", businessId);
+    res.json({
+      success: true,
+      message: "Recruiter removed successfully",
+      recruiterId: recruiterId
+    });
+
+  } catch (err) {
+    console.error("❌ Remove recruiter ERROR:", err);
+    res.status(500).json({
+      success: false,
+      message: "Server error: " + err.message
+    });
+  }
+};
+// ============================================================================
+// ADD THESE FUNCTIONS TO YOUR controllers/profile.controller.js FILE
+// ============================================================================
+exports.approveRecruiterLink = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const businessId = req.user.id;
+
+    // Find the link request
+    const linkRequest = await RecruiterBusinessLink.findOne({
+      _id: requestId,
+      business: businessId,
+      status: 'pending'
+    }).populate('recruiter');
+
+    if (!linkRequest) {
+      return res.status(404).json({
+        success: false,
+        message: "Request not found or already processed"
+      });
+    }
+
+    // Get business details
+    const business = await User.findById(businessId).select('businessProfile name');
+    if (!business || business.role !== 'business') {
+      return res.status(404).json({
+        success: false,
+        message: "Business not found"
+      });
+    }
+
+    // ✅ AUTO-SYNC: Prepare company details from business profile
+    const syncedCompanyDetails = {
+      "recruiterProfile.linkedBusiness": businessId,
+      "recruiterProfile.companyName": business.businessProfile?.businessName || business.name || "Unknown Company",
+      "recruiterProfile.companyWebsite": business.businessProfile?.contactDetails || "",
+      "recruiterProfile.companyLocation": business.businessProfile?.address || "",
+      "recruiterProfile.companyDescription": business.businessProfile?.description || "",
+      "recruiterProfile.linkedAt": new Date()
+    };
+
+    console.log("✅ Auto-syncing company details:", syncedCompanyDetails);
+
+    // Update link request status
+    linkRequest.status = 'approved';
+    linkRequest.approvedAt = new Date();
+    await linkRequest.save();
+
+    // ✅ Update recruiter profile with synced business details
+    await User.findByIdAndUpdate(
+      linkRequest.recruiter._id,
+      { $set: syncedCompanyDetails }
+    );
+
+    console.log("✅ Recruiter profile synced with business details");
+
+    res.json({
+      success: true,
+      message: `${linkRequest.recruiter.name} linked successfully! Company details synced.`,
+      recruiter: linkRequest.recruiter,
+      syncedCompanyName: syncedCompanyDetails["recruiterProfile.companyName"]
+    });
+
+  } catch (err) {
+    console.error("Approve recruiter ERROR:", err);
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
+};
+
+// ============================================================================
+// ✅ NEW ENDPOINT: Get linked business details for recruiter
+// ============================================================================
+
+exports.getLinkedBusinessDetails = async (req, res) => {
+  try {
+    const recruiterId = req.user.id;
+    const recruiter = await User.findById(recruiterId);
+
+    if (!recruiter || recruiter.role !== 'recruiter') {
+      return res.status(403).json({
+        success: false,
+        message: "Recruiter account required"
+      });
+    }
+
+    const linkedBusinessId = recruiter.recruiterProfile?.linkedBusiness;
+
+    if (!linkedBusinessId) {
+      return res.json({
+        success: true,
+        linked: false,
+        business: null
+      });
+    }
+
+    const business = await User.findById(linkedBusinessId).select('name businessProfile');
+
+    if (!business) {
+      return res.json({
+        success: true,
+        linked: false,
+        business: null
+      });
+    }
+
+    res.json({
+      success: true,
+      linked: true,
+      business: {
+        _id: business._id,
+        name: business.businessProfile?.businessName || business.name,
+        location: business.businessProfile?.address,
+        category: business.businessProfile?.category,
+        description: business.businessProfile?.description,
+        contactDetails: business.businessProfile?.contactDetails
+      }
+    });
+
+  } catch (err) {
+    console.error("Get linked business ERROR:", err);
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
+};
+module.exports = exports;

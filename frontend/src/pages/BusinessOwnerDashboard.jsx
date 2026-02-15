@@ -13,7 +13,11 @@ import {
   UserPlus,
   AlertCircle,
   MapPin,
-  DollarSign
+  DollarSign,
+  UserMinus,
+  Mail,
+  Globe,
+  MapPinIcon
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -32,6 +36,11 @@ const BusinessOwnerDashboard = () => {
   const [loadingRecruiters, setLoadingRecruiters] = useState(false);
   const [showRecruiters, setShowRecruiters] = useState(false);
 
+  const [linkedRecruiters, setLinkedRecruiters] = useState([]);
+  const [loadingLinkedRecruiters, setLoadingLinkedRecruiters] = useState(false);
+  const [showLinkedRecruiters, setShowLinkedRecruiters] = useState(false);
+  const [removingRecruiter, setRemovingRecruiter] = useState(null);
+
   const images = user?.businessProfile?.images || [];
   const isProfileComplete = user?.profileCompleted;
   const businessStatus = user?.businessProfile?.status || "pending";
@@ -43,12 +52,17 @@ const BusinessOwnerDashboard = () => {
       value: businessStatus === "approved" ? "1" : "0", 
       color: "#3b82f6" 
     },
-    { icon: Users, label: "Total Views", value: "0", color: "#10b981" },
+    { 
+      icon: Users, 
+      label: "Linked Recruiters", 
+      value: linkedRecruiters.length, 
+      color: "#10b981" 
+    },
     { icon: Eye, label: "Profile Views", value: "0", color: "#8b5cf6" },
     { 
       icon: TrendingUp, 
       label: "Jobs This Month", 
-      value: "0", 
+      value: pendingJobs.length, 
       color: "#f59e0b" 
     },
   ];
@@ -95,6 +109,33 @@ const BusinessOwnerDashboard = () => {
     }
   }, [token]);
 
+  const fetchLinkedRecruiters = useCallback(async () => {
+    if (!token || businessStatus !== "approved") return;
+    try {
+      setLoadingLinkedRecruiters(true);
+      console.log("🔍 Fetching linked recruiters...");
+      
+      const res = await axios.get("http://localhost:5000/api/profile/business/linked-recruiters", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      console.log("✅ Linked recruiters response:", res.data);
+      setLinkedRecruiters(res.data || []);
+      
+      // Auto-show if there are linked recruiters
+      if (res.data && res.data.length > 0) {
+        setShowLinkedRecruiters(true);
+      }
+      
+    } catch (err) {
+      console.error("❌ Error fetching linked recruiters:", err);
+      console.error("Error details:", err.response?.data);
+      setLinkedRecruiters([]);
+    } finally {
+      setLoadingLinkedRecruiters(false);
+    }
+  }, [token, businessStatus]);
+
   const approveRecruiter = async (requestId) => {
     try {
       const res = await axios.patch(
@@ -104,6 +145,7 @@ const BusinessOwnerDashboard = () => {
       );
       toast.success(`${res.data.recruiter?.name || 'Recruiter'} approved!`);
       fetchPendingRecruiters();
+      fetchLinkedRecruiters(); // Refresh linked list
     } catch (err) {
       toast.error(err.response?.data?.message || "Approval failed");
     }
@@ -121,6 +163,36 @@ const BusinessOwnerDashboard = () => {
       fetchPendingRecruiters();
     } catch (err) {
       toast.error(err.response?.data?.message || "Rejection failed");
+    }
+  };
+
+  const removeRecruiter = async (recruiterId, recruiterName) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to remove ${recruiterName} from your business? They will lose access to post jobs.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setRemovingRecruiter(recruiterId);
+      
+      await axios.post(
+        `http://localhost:5000/api/profile/business/remove-recruiter/${recruiterId}`,
+        {},
+        { 
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 10000
+        }
+      );
+
+      toast.success(`${recruiterName} removed successfully`);
+      fetchLinkedRecruiters(); // Refresh the list
+      
+    } catch (err) {
+      console.error("Remove recruiter error:", err);
+      toast.error(err.response?.data?.message || "Failed to remove recruiter");
+    } finally {
+      setRemovingRecruiter(null);
     }
   };
 
@@ -158,14 +230,16 @@ const BusinessOwnerDashboard = () => {
     if (token && businessStatus === "approved") {
       fetchPendingJobs();
       fetchPendingRecruiters();
+      fetchLinkedRecruiters(); // This will now run on mount
       
       const interval = setInterval(() => {
         fetchPendingJobs();
+        fetchPendingRecruiters();
       }, 30000);
       
       return () => clearInterval(interval);
     }
-  }, [token, businessStatus, fetchPendingJobs, fetchPendingRecruiters]);
+  }, [token, businessStatus, fetchPendingJobs, fetchPendingRecruiters, fetchLinkedRecruiters]);
 
   return (
     <>
@@ -349,6 +423,11 @@ const BusinessOwnerDashboard = () => {
           color: #991b1b;
         }
 
+        .badge-success {
+          background: #d1fae5;
+          color: #065f46;
+        }
+
         .action-group {
           display: flex;
           gap: 12px;
@@ -388,6 +467,17 @@ const BusinessOwnerDashboard = () => {
         .btn-secondary:hover:not(:disabled) {
           background: #f8fafc;
           border-color: #cbd5e1;
+        }
+
+        .btn-danger {
+          background: white;
+          color: #dc2626;
+          border: 1px solid #fecaca;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+          background: #fef2f2;
+          border-color: #fca5a5;
         }
 
         .btn:disabled {
@@ -492,6 +582,58 @@ const BusinessOwnerDashboard = () => {
           justify-content: flex-end;
           padding-top: 16px;
           border-top: 1px solid #e2e8f0;
+        }
+
+        .recruiter-card {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 20px;
+          margin-bottom: 12px;
+          transition: all 0.2s;
+        }
+
+        .recruiter-card:hover {
+          border-color: #cbd5e1;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .recruiter-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 16px;
+        }
+
+        .recruiter-info {
+          flex: 1;
+        }
+
+        .recruiter-name {
+          font-size: 18px;
+          font-weight: 600;
+          color: #0f172a;
+          margin-bottom: 4px;
+        }
+
+        .recruiter-company {
+          font-size: 14px;
+          color: #64748b;
+          margin-bottom: 8px;
+        }
+
+        .recruiter-details {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 12px;
+        }
+
+        .recruiter-detail-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 13px;
+          color: #64748b;
         }
 
         .images-grid {
@@ -689,6 +831,109 @@ const BusinessOwnerDashboard = () => {
               </button>
             </div>
           </div>
+
+          {businessStatus === "approved" && (
+            <div className="section-card">
+              <div className="section-header">
+                <h2 className="section-title">
+                  <Users size={22} />
+                  Your Recruiters ({linkedRecruiters.length})
+                  {linkedRecruiters.length > 0 && (
+                    <span className="badge badge-success">
+                      {linkedRecruiters.length} active
+                    </span>
+                  )}
+                </h2>
+                <button 
+                  className="btn btn-secondary btn-sm" 
+                  onClick={() => { 
+                    setShowLinkedRecruiters(!showLinkedRecruiters); 
+                    if (!showLinkedRecruiters) fetchLinkedRecruiters(); 
+                  }}
+                >
+                  {showLinkedRecruiters ? "Hide" : "Show"} Recruiters
+                </button>
+              </div>
+
+              {showLinkedRecruiters && (
+                <>
+                  {loadingLinkedRecruiters ? (
+                    <div className="loading-state">
+                      <Loader2 size={20} className="spinner" />
+                      <span>Loading recruiters...</span>
+                    </div>
+                  ) : linkedRecruiters.length === 0 ? (
+                    <div className="empty-state">
+                      <div className="empty-icon">
+                        <Users size={28} color="#cbd5e1" />
+                      </div>
+                      <div className="empty-title">No linked recruiters</div>
+                      <div className="empty-description">
+                        Approve recruiter requests to allow them to post jobs
+                      </div>
+                    </div>
+                  ) : (
+                    linkedRecruiters.map((recruiter) => (
+                      <div key={recruiter._id} className="recruiter-card">
+                        <div className="recruiter-header">
+                          <div className="recruiter-info">
+                            <h3 className="recruiter-name">{recruiter.name}</h3>
+                            {recruiter.recruiterProfile?.companyName && (
+                              <div className="recruiter-company">
+                                {recruiter.recruiterProfile.companyName}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={() => removeRecruiter(recruiter._id, recruiter.name)}
+                            disabled={removingRecruiter === recruiter._id}
+                          >
+                            {removingRecruiter === recruiter._id ? (
+                              <>
+                                <Loader2 size={14} className="spinner" />
+                                Removing...
+                              </>
+                            ) : (
+                              <>
+                                <UserMinus size={14} />
+                                Remove
+                              </>
+                            )}
+                          </button>
+                        </div>
+
+                        <div className="recruiter-details">
+                          <div className="recruiter-detail-item">
+                            <Mail size={14} />
+                            {recruiter.email}
+                          </div>
+                          {recruiter.recruiterProfile?.companyWebsite && (
+                            <div className="recruiter-detail-item">
+                              <Globe size={14} />
+                              {recruiter.recruiterProfile.companyWebsite}
+                            </div>
+                          )}
+                          {recruiter.recruiterProfile?.companyLocation && (
+                            <div className="recruiter-detail-item">
+                              <MapPinIcon size={14} />
+                              {recruiter.recruiterProfile.companyLocation}
+                            </div>
+                          )}
+                          {recruiter.recruiterProfile?.contactNumber && (
+                            <div className="recruiter-detail-item">
+                              <span>📞</span>
+                              {recruiter.recruiterProfile.contactNumber}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           {businessStatus === "approved" && (
             <div className="section-card">
