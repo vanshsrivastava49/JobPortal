@@ -1,175 +1,295 @@
-// ============================================================================
-// Backend: Add this route to get all users (Admin only)
-// ============================================================================
-
-// Add to your routes file (e.g., admin.routes.js or user.routes.js)
-
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const User = require('../models/User');
-const auth = require('../middleware/auth');
-const role = require('../middleware/role');
+const User = require("../models/User");
+const Job  = require("../models/Job");
+const auth = require("../middleware/auth");
+const role = require("../middleware/role");
+
+// ─── helper so every route is [auth, isAdmin] ────────────────────────────────
+const adminOnly = [auth, role("admin")];
 
 // ============================================================================
-// GET /api/admin/users - Get all users (Admin only)
+// GET /api/admin/stats
+// Returns all platform counts in one call
 // ============================================================================
-router.get('/admin/users', auth, role('admin'), async (req, res) => {
-  try {
-    const { role: roleFilter, status, search } = req.query;
-
-    // Build query
-    let query = {};
-
-    // Filter by role
-    if (roleFilter && ['jobseeker', 'recruiter', 'business', 'admin'].includes(roleFilter)) {
-      query.role = roleFilter;
-    }
-
-    // Filter by profile completion status
-    if (status === 'complete') {
-      query.profileCompleted = true;
-    } else if (status === 'incomplete') {
-      query.profileCompleted = false;
-    }
-
-    // Search by name or email
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } }
-      ];
-    }
-
-    // Fetch users
-    const users = await User.find(query)
-      .select('-password') // Exclude password
-      .sort({ createdAt: -1 })
-      .limit(500); // Limit to prevent performance issues
-
-    res.json(users);
-
-  } catch (err) {
-    console.error('GET ALL USERS ERROR:', err);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch users'
-    });
-  }
-});
-
-// ============================================================================
-// GET /api/admin/stats - Get platform statistics (Admin only)
-// ============================================================================
-router.get('/admin/stats', auth, role('admin'), async (req, res) => {
+router.get("/stats", adminOnly, async (req, res) => {
   try {
     const [
       totalUsers,
-      jobseekerCount,
-      recruiterCount,
-      businessCount,
-      approvedBusinessCount,
-      pendingBusinessCount
+      jobseekers,
+      recruiters,
+      businesses,
+      admins,
+      approvedBusinesses,
+      pendingBusinesses,
+      rejectedBusinesses,
+      liveJobs,
+      pendingJobs,
+      rejectedJobs,
+      profilesCompleted,
     ] = await Promise.all([
-      User.countDocuments(),
-      User.countDocuments({ role: 'jobseeker' }),
-      User.countDocuments({ role: 'recruiter' }),
-      User.countDocuments({ role: 'business' }),
-      User.countDocuments({ role: 'business', 'businessProfile.status': 'approved' }),
-      User.countDocuments({ role: 'business', 'businessProfile.status': 'pending' })
+      User.countDocuments({}),
+      User.countDocuments({ role: "jobseeker" }),
+      User.countDocuments({ role: "recruiter" }),
+      User.countDocuments({ role: "business"  }),
+      User.countDocuments({ role: "admin"     }),
+      User.countDocuments({ role: "business", "businessProfile.status": "approved" }),
+      User.countDocuments({ role: "business", "businessProfile.status": "pending"  }),
+      User.countDocuments({ role: "business", "businessProfile.status": "rejected" }),
+      Job.countDocuments({ status: "approved"         }),
+      Job.countDocuments({ status: "pending_business" }),
+      Job.countDocuments({ status: "rejected_business"}),
+      User.countDocuments({ profileCompleted: true    }),
     ]);
 
-    // You can also fetch job stats if you have a Job model
-    // const Job = require('../models/Job');
-    // const liveJobsCount = await Job.countDocuments({ status: 'approved' });
-    // const pendingJobsCount = await Job.countDocuments({ status: 'pending_business' });
-
     res.json({
       success: true,
-      stats: {
-        totalUsers,
-        jobseekers: jobseekerCount,
-        recruiters: recruiterCount,
-        businesses: businessCount,
-        approvedBusinesses: approvedBusinessCount,
-        pendingBusinesses: pendingBusinessCount,
-        // liveJobs: liveJobsCount,
-        // pendingJobs: pendingJobsCount
-      }
+      totalUsers,
+      jobseekers,
+      recruiters,
+      businesses,
+      admins,
+      approvedBusinesses,
+      pendingBusinesses,
+      rejectedBusinesses,
+      liveJobs,
+      pendingJobs,
+      rejectedJobs,
+      profilesCompleted,
     });
-
   } catch (err) {
-    console.error('GET STATS ERROR:', err);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch statistics'
-    });
+    console.error("GET STATS ERROR:", err);
+    res.status(500).json({ success: false, message: "Failed to fetch stats" });
   }
 });
 
 // ============================================================================
-// GET /api/admin/user/:id - Get single user details (Admin only)
+// GET /api/admin/users
+// All users — optional ?role= filter  ?search= filter
 // ============================================================================
-router.get('/admin/user/:id', auth, role('admin'), async (req, res) => {
+router.get("/users", adminOnly, async (req, res) => {
   try {
-    const user = await User.findById(req.params.id).select('-password');
+    const { role: roleFilter, search } = req.query;
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
+    const query = {};
+
+    if (roleFilter && ["jobseeker", "recruiter", "business", "admin"].includes(roleFilter)) {
+      query.role = roleFilter;
     }
 
-    res.json({
-      success: true,
-      user
-    });
+    if (search) {
+      query.$or = [
+        { name:  { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
+    }
 
+    const users = await User.find(query)
+      .select("-password")
+      .sort({ createdAt: -1 })
+      .limit(1000);
+
+    res.json(users);
   } catch (err) {
-    console.error('GET USER DETAILS ERROR:', err);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch user details'
-    });
+    console.error("GET ALL USERS ERROR:", err);
+    res.status(500).json({ success: false, message: "Failed to fetch users" });
   }
 });
 
 // ============================================================================
-// PATCH /api/admin/user/:id/toggle-status - Toggle user active status
+// GET /api/admin/users/:id
+// Single user detail
 // ============================================================================
-router.patch('/admin/user/:id/toggle-status', auth, role('admin'), async (req, res) => {
+router.get("/users/:id", adminOnly, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select("-password");
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    res.json({ success: true, user });
+  } catch (err) {
+    console.error("GET USER ERROR:", err);
+    res.status(500).json({ success: false, message: "Failed to fetch user" });
+  }
+});
+
+// ============================================================================
+// DELETE /api/admin/users/:id
+// Delete a user account
+// ============================================================================
+router.delete("/users/:id", adminOnly, async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
+    if (user.role === "admin") {
+      return res.status(403).json({ success: false, message: "Cannot delete admin accounts" });
     }
 
-    // Toggle active status (you can add an 'isActive' field to User model)
-    // user.isActive = !user.isActive;
-    // await user.save();
+    await User.findByIdAndDelete(req.params.id);
+
+    res.json({ success: true, message: `User "${user.name}" deleted successfully` });
+  } catch (err) {
+    console.error("DELETE USER ERROR:", err);
+    res.status(500).json({ success: false, message: "Failed to delete user" });
+  }
+});
+
+// ============================================================================
+// GET /api/admin/jobs
+// All jobs with optional ?status= filter and ?search=
+// ============================================================================
+router.get("/jobs", adminOnly, async (req, res) => {
+  try {
+    const { status, search } = req.query;
+
+    const query = {};
+    if (status) query.status = status;
+    if (search) {
+      query.$or = [
+        { title:    { $regex: search, $options: "i" } },
+        { company:  { $regex: search, $options: "i" } },
+        { location: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const jobs = await Job.find(query)
+      .populate("recruiter", "name email")
+      .populate("business",  "name businessProfile")
+      .sort({ createdAt: -1 })
+      .limit(500);
+
+    res.json({ success: true, jobs });
+  } catch (err) {
+    console.error("GET ALL JOBS ERROR:", err);
+    res.status(500).json({ success: false, message: "Failed to fetch jobs" });
+  }
+});
+
+// ============================================================================
+// PATCH /api/admin/jobs/:id/status
+// Admin can force-approve or force-reject any job
+// Body: { status: "approved" | "rejected_business" }
+// ============================================================================
+router.patch("/jobs/:id/status", adminOnly, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const allowed = ["approved", "rejected_business", "pending_business"];
+    if (!allowed.includes(status)) {
+      return res.status(400).json({ success: false, message: "Invalid status value" });
+    }
+
+    const job = await Job.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    );
+
+    if (!job) return res.status(404).json({ success: false, message: "Job not found" });
+
+    res.json({ success: true, message: `Job status updated to "${status}"`, job });
+  } catch (err) {
+    console.error("UPDATE JOB STATUS ERROR:", err);
+    res.status(500).json({ success: false, message: "Failed to update job status" });
+  }
+});
+
+// ============================================================================
+// DELETE /api/admin/jobs/:id
+// Hard-delete a job listing
+// ============================================================================
+router.delete("/jobs/:id", adminOnly, async (req, res) => {
+  try {
+    const job = await Job.findByIdAndDelete(req.params.id);
+    if (!job) return res.status(404).json({ success: false, message: "Job not found" });
+
+    res.json({ success: true, message: `Job "${job.title}" deleted` });
+  } catch (err) {
+    console.error("DELETE JOB ERROR:", err);
+    res.status(500).json({ success: false, message: "Failed to delete job" });
+  }
+});
+
+// ============================================================================
+// GET /api/admin/businesses
+// All businesses (approved + pending + rejected) with optional ?status= filter
+// ============================================================================
+router.get("/businesses", adminOnly, async (req, res) => {
+  try {
+    const { status, search } = req.query;
+
+    const query = { role: "business" };
+    if (status) query["businessProfile.status"] = status;
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { "businessProfile.businessName": { $regex: search, $options: "i" } },
+        { "businessProfile.category":     { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const businesses = await User.find(query)
+      .select("-password")
+      .sort({ createdAt: -1 });
+
+    res.json({ success: true, businesses });
+  } catch (err) {
+    console.error("GET ALL BUSINESSES ERROR:", err);
+    res.status(500).json({ success: false, message: "Failed to fetch businesses" });
+  }
+});
+
+// ============================================================================
+// PATCH /api/admin/businesses/:id/approve
+// Approve a business
+// ============================================================================
+router.patch("/businesses/:id/approve", adminOnly, async (req, res) => {
+  try {
+    const business = await User.findOneAndUpdate(
+      { _id: req.params.id, role: "business" },
+      { "businessProfile.status": "approved", "businessProfile.verified": true },
+      { new: true }
+    ).select("-password");
+
+    if (!business) return res.status(404).json({ success: false, message: "Business not found" });
 
     res.json({
       success: true,
-      message: 'User status updated'
+      message: `"${business.businessProfile?.businessName}" approved successfully`,
+      business,
     });
-
   } catch (err) {
-    console.error('TOGGLE USER STATUS ERROR:', err);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update user status'
+    console.error("APPROVE BUSINESS ERROR:", err);
+    res.status(500).json({ success: false, message: "Failed to approve business" });
+  }
+});
+
+// ============================================================================
+// PATCH /api/admin/businesses/:id/reject
+// Reject a business  Body: { reason: "..." }
+// ============================================================================
+router.patch("/businesses/:id/reject", adminOnly, async (req, res) => {
+  try {
+    const { reason } = req.body;
+
+    const business = await User.findOneAndUpdate(
+      { _id: req.params.id, role: "business" },
+      {
+        "businessProfile.status":         "rejected",
+        "businessProfile.rejectedReason": reason || "No reason provided",
+      },
+      { new: true }
+    ).select("-password");
+
+    if (!business) return res.status(404).json({ success: false, message: "Business not found" });
+
+    res.json({
+      success: true,
+      message: `"${business.businessProfile?.businessName}" rejected`,
+      business,
     });
+  } catch (err) {
+    console.error("REJECT BUSINESS ERROR:", err);
+    res.status(500).json({ success: false, message: "Failed to reject business" });
   }
 });
 
 module.exports = router;
-
-// ============================================================================
-// Don't forget to register this router in your main app file (e.g., server.js)
-// ============================================================================
-// const adminRoutes = require('./routes/admin.routes');
-// app.use('/api', adminRoutes);

@@ -36,8 +36,9 @@ const AdminDashboard = () => {
 
   // UI State
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview'); // overview, users, jobs, businesses
+  const [activeTab, setActiveTab] = useState('overview');
   const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all'); // all, jobseeker, recruiter, business
 
   // Fetch all data
   const fetchAllData = useCallback(async () => {
@@ -46,57 +47,47 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
 
-      // Fetch in parallel
-      const [
-        usersRes,
-        liveJobsRes,
-        approvedBizRes,
-        pendingBizRes
-      ] = await Promise.all([
-        axios.get(`${API_BASE_URL}/api/admin/users`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }).catch(() => ({ data: [] })),
-        
-        axios.get(`${API_BASE_URL}/api/jobs/public`).catch(() => ({ data: { jobs: [] } })),
-        
-        axios.get(`${API_BASE_URL}/api/profile/business/approved`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }).catch(() => ({ data: [] })),
-        
-        axios.get(`${API_BASE_URL}/api/profile/business/pending`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }).catch(() => ({ data: [] }))
+      const headers = { Authorization: `Bearer ${token}` };
+
+      // Fetch stats + users + jobs + businesses in parallel
+      const [statsRes, usersRes, liveJobsRes, approvedBizRes, pendingBizRes] = await Promise.all([
+        axios.get(`${API_BASE_URL}/api/admin/stats`, { headers })
+          .catch(() => ({ data: {} })),
+        axios.get(`${API_BASE_URL}/api/admin/users`, { headers })
+          .catch(() => ({ data: [] })),
+        axios.get(`${API_BASE_URL}/api/jobs/public`)
+          .catch(() => ({ data: { jobs: [] } })),
+        axios.get(`${API_BASE_URL}/api/profile/business/approved`, { headers })
+          .catch(() => ({ data: [] })),
+        axios.get(`${API_BASE_URL}/api/profile/business/pending`, { headers })
+          .catch(() => ({ data: [] }))
       ]);
 
-      // Process users data
+      // Process users
       const usersData = Array.isArray(usersRes.data) ? usersRes.data : [];
       setUsers(usersData);
 
-      // Process jobs data
-      const jobsData = liveJobsRes.data.jobs || [];
+      // Process jobs
+      const jobsData = liveJobsRes.data?.jobs || [];
       setLiveJobs(jobsData);
 
-      // Process businesses data
+      // Process businesses
       const approvedBizData = Array.isArray(approvedBizRes.data) ? approvedBizRes.data : [];
       const pendingBizData = Array.isArray(pendingBizRes.data) ? pendingBizRes.data : [];
-      
       setBusinesses(approvedBizData);
       setPendingBusinesses(pendingBizData);
 
-      // Calculate stats
-      const jobseekerCount = usersData.filter(u => u.role === 'jobseeker').length;
-      const recruiterCount = usersData.filter(u => u.role === 'recruiter').length;
-      const businessCount = usersData.filter(u => u.role === 'business').length;
-      
+      // Use stats from API if available, fallback to counting from usersData
+      const statsFromApi = statsRes.data || {};
       setStats({
-        totalUsers: usersData.length,
-        jobseekers: jobseekerCount,
-        recruiters: recruiterCount,
-        businesses: businessCount,
-        liveJobs: jobsData.length,
-        pendingJobs: 0, // You can add endpoint for this
-        pendingBusinesses: pendingBizData.length,
-        approvedBusinesses: approvedBizData.length
+        totalUsers:         statsFromApi.totalUsers        ?? usersData.length,
+        jobseekers:         statsFromApi.jobseekers        ?? usersData.filter(u => u.role === 'jobseeker').length,
+        recruiters:         statsFromApi.recruiters        ?? usersData.filter(u => u.role === 'recruiter').length,
+        businesses:         statsFromApi.businesses        ?? usersData.filter(u => u.role === 'business').length,
+        liveJobs:           statsFromApi.liveJobs          ?? jobsData.length,
+        pendingJobs:        statsFromApi.pendingJobs       ?? 0,
+        pendingBusinesses:  statsFromApi.pendingBusinesses ?? pendingBizData.length,
+        approvedBusinesses: statsFromApi.approvedBusinesses ?? approvedBizData.length
       });
 
     } catch (err) {
@@ -112,11 +103,14 @@ const AdminDashboard = () => {
   }, [fetchAllData]);
 
   // Filter data based on search
-  const filteredUsers = users.filter(user =>
-    user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.role?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredUsers = users.filter(user => {
+    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+    const matchesSearch =
+      user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.role?.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesRole && matchesSearch;
+  });
 
   const filteredJobs = liveJobs.filter(job =>
     job.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -136,28 +130,32 @@ const AdminDashboard = () => {
       label: "Total Users", 
       value: stats.totalUsers, 
       color: "#3b82f6",
-      subtitle: `${stats.jobseekers} seekers, ${stats.recruiters} recruiters`
+      subtitle: `${stats.jobseekers} seekers · ${stats.recruiters} recruiters · ${stats.businesses} businesses`,
+      tab: 'users'
     },
     { 
       icon: Briefcase, 
       label: "Live Jobs", 
       value: stats.liveJobs, 
       color: "#10b981",
-      subtitle: "Active job listings"
+      subtitle: `${stats.pendingJobs} pending approval`,
+      tab: 'jobs'
     },
     { 
       icon: Building, 
       label: "Total Businesses", 
       value: stats.approvedBusinesses + stats.pendingBusinesses, 
       color: "#f59e0b",
-      subtitle: `${stats.approvedBusinesses} approved, ${stats.pendingBusinesses} pending`
+      subtitle: `${stats.approvedBusinesses} approved · ${stats.pendingBusinesses} pending`,
+      tab: 'businesses'
     },
     { 
-      icon: TrendingUp, 
-      label: "Platform Growth", 
-      value: "+12%", 
-      color: "#8b5cf6",
-      subtitle: "This month"
+      icon: Clock, 
+      label: "Pending Approvals", 
+      value: stats.pendingBusinesses, 
+      color: "#ef4444",
+      subtitle: "Businesses awaiting review",
+      tab: 'businesses'
     },
   ];
 
@@ -677,7 +675,7 @@ const AdminDashboard = () => {
             {statsCards.map((stat, i) => {
               const Icon = stat.icon;
               return (
-                <div key={i} className="stat-card">
+                <div key={i} className="stat-card" onClick={() => setActiveTab(stat.tab)}>
                   <div className="stat-header">
                     <div className="stat-icon">
                       <Icon size={24} color={stat.color} />
@@ -735,101 +733,99 @@ const AdminDashboard = () => {
 
           {/* Tabs */}
           <div className="tabs-container">
-            <button 
-              className={`tab-button ${activeTab === 'overview' ? 'active' : ''}`}
-              onClick={() => setActiveTab('overview')}
-            >
-              Overview
-            </button>
-            <button 
-              className={`tab-button ${activeTab === 'users' ? 'active' : ''}`}
-              onClick={() => setActiveTab('users')}
-            >
-              Users ({stats.totalUsers})
-            </button>
-            <button 
-              className={`tab-button ${activeTab === 'jobs' ? 'active' : ''}`}
-              onClick={() => setActiveTab('jobs')}
-            >
-              Live Jobs ({stats.liveJobs})
-            </button>
-            <button 
-              className={`tab-button ${activeTab === 'businesses' ? 'active' : ''}`}
-              onClick={() => setActiveTab('businesses')}
-            >
-              Businesses ({stats.approvedBusinesses + stats.pendingBusinesses})
-            </button>
+            {[
+              { key: 'overview',    label: 'Overview' },
+              { key: 'users',       label: `Users (${stats.totalUsers})` },
+              { key: 'jobs',        label: `Live Jobs (${stats.liveJobs})` },
+              { key: 'businesses',  label: `Businesses (${stats.approvedBusinesses + stats.pendingBusinesses})` },
+            ].map(tab => (
+              <button
+                key={tab.key}
+                className={`tab-button ${activeTab === tab.key ? 'active' : ''}`}
+                onClick={() => { setActiveTab(tab.key); setSearchTerm(''); }}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
 
           {/* Overview Tab */}
           {activeTab === 'overview' && (
-            <div className="section-card">
-              <div className="section-header">
-                <h2 className="section-title">
-                  <TrendingUp size={20} />
-                  Platform Overview
-                </h2>
+            <div>
+              {/* User Breakdown */}
+              <div className="section-card">
+                <div className="section-header">
+                  <h2 className="section-title">
+                    <Users size={20} />
+                    User Breakdown
+                  </h2>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setActiveTab('users')}>
+                    View All Users
+                  </button>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
+                  {[
+                    { label: "Job Seekers",    value: stats.jobseekers,  bg: "#eff6ff", border: "#bfdbfe", text: "#1e40af", dark: "#1e3a8a", icon: "🎯", role: "jobseeker" },
+                    { label: "Recruiters",     value: stats.recruiters,  bg: "#fef3c7", border: "#fde047", text: "#92400e", dark: "#78350f", icon: "💼", role: "recruiter" },
+                    { label: "Business Owners",value: stats.businesses,  bg: "#d1fae5", border: "#6ee7b7", text: "#065f46", dark: "#064e3b", icon: "🏢", role: "business" },
+                    { label: "Total Platform", value: stats.totalUsers,  bg: "#f3e8ff", border: "#e9d5ff", text: "#6b21a8", dark: "#581c87", icon: "📊", role: null }
+                  ].map((item, i) => (
+                    <div
+                      key={i}
+                      onClick={() => item.role && setActiveTab('users')}
+                      style={{
+                        padding: "24px",
+                        background: item.bg,
+                        borderRadius: "12px",
+                        border: `1px solid ${item.border}`,
+                        cursor: item.role ? "pointer" : "default",
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      <div style={{ fontSize: "28px", marginBottom: "8px" }}>{item.icon}</div>
+                      <div style={{ fontSize: "13px", color: item.text, marginBottom: "6px", fontWeight: "600" }}>
+                        {item.label}
+                      </div>
+                      <div style={{ fontSize: "40px", fontWeight: "700", color: item.dark, lineHeight: 1 }}>
+                        {item.value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              
-              <div style={{ 
-                display: "grid", 
-                gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", 
-                gap: "20px" 
-              }}>
-                <div style={{ 
-                  padding: "20px", 
-                  background: "#eff6ff", 
-                  borderRadius: "12px",
-                  border: "1px solid #bfdbfe"
-                }}>
-                  <div style={{ fontSize: "14px", color: "#1e40af", marginBottom: "8px" }}>
-                    Job Seekers
-                  </div>
-                  <div style={{ fontSize: "32px", fontWeight: "700", color: "#1e3a8a" }}>
-                    {stats.jobseekers}
-                  </div>
+
+              {/* Platform Summary */}
+              <div className="section-card">
+                <div className="section-header">
+                  <h2 className="section-title">
+                    <TrendingUp size={20} />
+                    Platform Summary
+                  </h2>
                 </div>
 
-                <div style={{ 
-                  padding: "20px", 
-                  background: "#fef3c7", 
-                  borderRadius: "12px",
-                  border: "1px solid #fde047"
-                }}>
-                  <div style={{ fontSize: "14px", color: "#92400e", marginBottom: "8px" }}>
-                    Recruiters
-                  </div>
-                  <div style={{ fontSize: "32px", fontWeight: "700", color: "#78350f" }}>
-                    {stats.recruiters}
-                  </div>
-                </div>
-
-                <div style={{ 
-                  padding: "20px", 
-                  background: "#d1fae5", 
-                  borderRadius: "12px",
-                  border: "1px solid #6ee7b7"
-                }}>
-                  <div style={{ fontSize: "14px", color: "#065f46", marginBottom: "8px" }}>
-                    Business Owners
-                  </div>
-                  <div style={{ fontSize: "32px", fontWeight: "700", color: "#064e3b" }}>
-                    {stats.businesses}
-                  </div>
-                </div>
-
-                <div style={{ 
-                  padding: "20px", 
-                  background: "#fae8ff", 
-                  borderRadius: "12px",
-                  border: "1px solid #e9d5ff"
-                }}>
-                  <div style={{ fontSize: "14px", color: "#6b21a8", marginBottom: "8px" }}>
-                    Pending Approvals
-                  </div>
-                  <div style={{ fontSize: "32px", fontWeight: "700", color: "#581c87" }}>
-                    {stats.pendingBusinesses}
-                  </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
+                  {[
+                    { label: "Live Jobs",           value: stats.liveJobs,           bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d", icon: "✅" },
+                    { label: "Pending Jobs",         value: stats.pendingJobs,        bg: "#fefce8", border: "#fef08a", text: "#a16207", icon: "⏳" },
+                    { label: "Approved Businesses",  value: stats.approvedBusinesses, bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d", icon: "🏆" },
+                    { label: "Pending Businesses",   value: stats.pendingBusinesses,  bg: "#fef2f2", border: "#fecaca", text: "#dc2626", icon: "🔔" },
+                  ].map((item, i) => (
+                    <div key={i} style={{
+                      padding: "20px",
+                      background: item.bg,
+                      borderRadius: "12px",
+                      border: `1px solid ${item.border}`,
+                    }}>
+                      <div style={{ fontSize: "22px", marginBottom: "6px" }}>{item.icon}</div>
+                      <div style={{ fontSize: "12px", color: item.text, marginBottom: "4px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                        {item.label}
+                      </div>
+                      <div style={{ fontSize: "36px", fontWeight: "700", color: item.text, lineHeight: 1 }}>
+                        {item.value}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -853,6 +849,35 @@ const AdminDashboard = () => {
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
+              </div>
+
+              {/* Role Filter Pills */}
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "20px" }}>
+                {[
+                  { key: 'all',       label: `All (${stats.totalUsers})`,        bg: "#f1f5f9", active: "#0f172a" },
+                  { key: 'jobseeker', label: `Job Seekers (${stats.jobseekers})`, bg: "#dbeafe", active: "#1e40af" },
+                  { key: 'recruiter', label: `Recruiters (${stats.recruiters})`,  bg: "#fef3c7", active: "#92400e" },
+                  { key: 'business',  label: `Businesses (${stats.businesses})`,  bg: "#d1fae5", active: "#065f46" },
+                ].map(f => (
+                  <button
+                    key={f.key}
+                    onClick={() => setRoleFilter(f.key)}
+                    style={{
+                      padding: "6px 14px",
+                      borderRadius: "20px",
+                      border: "none",
+                      fontSize: "13px",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                      background: roleFilter === f.key ? f.bg : "#f8fafc",
+                      color: roleFilter === f.key ? f.active : "#64748b",
+                      outline: roleFilter === f.key ? `2px solid ${f.active}` : "none",
+                      transition: "all 0.15s"
+                    }}
+                  >
+                    {f.label}
+                  </button>
+                ))}
               </div>
 
               {filteredUsers.length === 0 ? (

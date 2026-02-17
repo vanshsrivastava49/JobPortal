@@ -24,7 +24,6 @@ const EmailSignup = ({ onOTPSent }) => {
     setLoading(true);
 
     try {
-      // ✅ IMPORTANT: signup OTP
       const response = await sendOTP(email, "signup");
 
       if (response.success) {
