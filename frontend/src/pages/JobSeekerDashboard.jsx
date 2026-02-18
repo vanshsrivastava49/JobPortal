@@ -33,7 +33,6 @@ const JobSeekerDashboard = () => {
   const profileProgress   = user?.profileProgress  || 0;
   const isProfileComplete = user?.profileCompleted;
 
-  // Build display name: prefer firstName+lastName, fall back to user.name
   const firstName = profile.firstName || user?.name?.split(' ')[0] || 'User';
   const fullName  =
     profile.firstName && profile.lastName
@@ -47,7 +46,6 @@ const JobSeekerDashboard = () => {
     { icon: User,        label: 'Profile Completion',   value: `${profileProgress}%`, color: '#f59e0b' },
   ];
 
-  // Detail rows — only render if value exists
   const detailSections = [
     {
       heading: 'Personal Info',
