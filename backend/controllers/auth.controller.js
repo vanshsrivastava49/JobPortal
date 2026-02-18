@@ -6,6 +6,7 @@ const sendOtpEmail = require("../utils/sendOtpEmail");
 const { OAuth2Client } = require("google-auth-library");
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
 const createToken = (user) => {
   return jwt.sign(
     { id: user._id, role: user.role },
@@ -31,7 +32,6 @@ exports.sendSignupOtp = async (req, res) => {
     const otp = generateOtp();
 
     await Otp.deleteMany({ email, purpose: "signup" });
-
     await Otp.create({
       email,
       otp,
@@ -43,59 +43,86 @@ exports.sendSignupOtp = async (req, res) => {
 
     res.json({ success: true, message: "OTP sent" });
   } catch (err) {
-    console.error(err);
+    console.error("sendSignupOtp error:", err);
     res.status(500).json({ success: false, message: "Failed to send OTP" });
   }
 };
 
 exports.verifySignupOtp = async (req, res) => {
   try {
-    const { email, otp, role, name, mobile } = req.body;
+    const { email, otp, role, firstName, lastName, mobile } = req.body;
 
-    if (!email || !otp || !role || !name)
+    console.log("verifySignupOtp body:", req.body);
+
+    if (!email || !otp || !role || !firstName || !lastName) {
       return res.status(400).json({
         success: false,
-        message: "Missing required fields",
+        message: `Missing fields: ${!email ? "email " : ""}${!otp ? "otp " : ""}${!role ? "role " : ""}${!firstName ? "firstName " : ""}${!lastName ? "lastName" : ""}`,
       });
+    }
 
-    const otpDoc = await Otp.findOne({
+    const fullName = `${firstName.trim()} ${lastName.trim()}`;
+
+    const otpDoc = await Otp.findOne({ email, otp, purpose: "signup" });
+    if (!otpDoc) {
+      return res.status(400).json({ success: false, message: "Invalid OTP" });
+    }
+    if (otpDoc.expiresAt < new Date()) {
+      await otpDoc.deleteOne();
+      return res.status(400).json({ success: false, message: "OTP expired" });
+    }
+
+    const existing = await User.findOne({ email });
+    if (existing) {
+      return res.status(400).json({ success: false, message: "User already exists. Please login." });
+    }
+
+    // Only set jobSeekerProfile for jobseekers with actual data
+    // Do NOT spread empty {} objects for other roles — it triggers pre-save hook unnecessarily
+    const userData = {
       email,
-      otp,
-      purpose: "signup",
-    });
-
-    if (!otpDoc || otpDoc.expiresAt < new Date())
-      return res.status(400).json({
-        success: false,
-        message: "Invalid or expired OTP",
-      });
-
-    const user = await User.create({
-      email,
-      name,
+      name:     fullName,
       role,
-      mobile,
+      mobile:   mobile || "",
       password: "OTP_AUTH",
       isVerified: true,
-      status: "active",
-    });
+      status:   "active",
+    };
+
+    if (role === "jobseeker") {
+      userData.jobSeekerProfile = {
+        firstName: firstName.trim(),
+        lastName:  lastName.trim(),
+        fullName,
+      };
+    }
+
+    const user = await User.create(userData);
 
     await otpDoc.deleteOne();
 
-    const token = createToken(user);
-
+    const token   = createToken(user);
     const fullUser = await User.findById(user._id).select("-password");
 
-    res.json({
+    return res.json({
       success: true,
       message: "Signup successful",
-      user: fullUser,
+      user:    fullUser,
       token,
     });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: "Signup failed" });
+    console.error("verifySignupOtp error:", err);
+
+    if (err.name === "ValidationError") {
+      const messages = Object.values(err.errors).map((e) => e.message);
+      return res.status(400).json({ success: false, message: messages.join(", ") });
+    }
+    if (err.code === 11000) {
+      return res.status(400).json({ success: false, message: "Email already registered. Please login." });
+    }
+
+    return res.status(500).json({ success: false, message: err.message || "Signup failed. Please try again." });
   }
 };
 
@@ -105,15 +132,11 @@ exports.sendLoginOtp = async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user)
-      return res.status(400).json({
-        success: false,
-        message: "User not found",
-      });
+      return res.status(400).json({ success: false, message: "User not found" });
 
     const otp = generateOtp();
 
     await Otp.deleteMany({ email, purpose: "login" });
-
     await Otp.create({
       email,
       otp,
@@ -125,7 +148,7 @@ exports.sendLoginOtp = async (req, res) => {
 
     res.json({ success: true, message: "OTP sent" });
   } catch (err) {
-    console.error(err);
+    console.error("sendLoginOtp error:", err);
     res.status(500).json({ success: false, message: "Failed to send OTP" });
   }
 };
@@ -135,42 +158,31 @@ exports.verifyLoginOtp = async (req, res) => {
     const { email, otp } = req.body;
 
     if (!email || !otp)
-      return res.status(400).json({
-        success: false,
-        message: "Email & OTP required",
-      });
+      return res.status(400).json({ success: false, message: "Email & OTP required" });
 
-    const otpDoc = await Otp.findOne({
-      email,
-      otp,
-      purpose: "login",
-    });
+    const otpDoc = await Otp.findOne({ email, otp, purpose: "login" });
 
-    if (!otpDoc || otpDoc.expiresAt < new Date())
-      return res.status(400).json({
-        success: false,
-        message: "Invalid or expired OTP",
-      });
+    if (!otpDoc)
+      return res.status(400).json({ success: false, message: "Invalid OTP" });
+
+    if (otpDoc.expiresAt < new Date()) {
+      await otpDoc.deleteOne();
+      return res.status(400).json({ success: false, message: "OTP expired" });
+    }
 
     const user = await User.findOne({ email }).select("-password");
+    if (!user)
+      return res.status(400).json({ success: false, message: "User not found" });
 
     await otpDoc.deleteOne();
 
     const token = createToken(user);
 
-    res.json({
-      success: true,
-      message: "Login successful",
-      user,
-      token,
-    });
+    res.json({ success: true, message: "Login successful", user, token });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      success: false,
-      message: "Login failed",
-    });
+    console.error("verifyLoginOtp error:", err);
+    res.status(500).json({ success: false, message: "Login failed" });
   }
 };
 
@@ -179,17 +191,14 @@ exports.googleAuth = async (req, res) => {
     const { token, role } = req.body;
 
     if (!token)
-      return res.status(400).json({
-        success: false,
-        message: "Google token required",
-      });
+      return res.status(400).json({ success: false, message: "Google token required" });
 
     const ticket = await googleClient.verifyIdToken({
-      idToken: token,
+      idToken:  token,
       audience: process.env.GOOGLE_CLIENT_ID,
     });
 
-    const payload = ticket.getPayload();
+    const payload        = ticket.getPayload();
     const { email, name } = payload;
 
     let user = await User.findOne({ email });
@@ -197,47 +206,41 @@ exports.googleAuth = async (req, res) => {
     if (!user) {
       if (!role)
         return res.json({
-          success: false,
+          success:     false,
           requireRole: true,
-          message: "Role required for first-time signup",
+          message:     "Role required for first-time signup",
         });
 
+      // No empty profile objects — just core fields
       user = await User.create({
         email,
         name,
         role,
-        password: "GOOGLE_AUTH",
+        password:   "GOOGLE_AUTH",
         isVerified: true,
-        status: "active",
+        status:     "active",
       });
     }
 
     const jwtToken = createToken(user);
-
-    const fullUser = await User.findById(user._id).select("-password");
+    const fullUser  = await User.findById(user._id).select("-password");
 
     res.json({
       success: true,
       message: "Google authentication successful",
-      user: fullUser,
-      token: jwtToken,
+      user:    fullUser,
+      token:   jwtToken,
     });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      success: false,
-      message: "Google authentication failed",
-    });
+    console.error("googleAuth error:", err);
+    res.status(500).json({ success: false, message: "Google authentication failed" });
   }
 };
 
 exports.logout = async (req, res) => {
   try {
-    res.json({
-      success: true,
-      message: "Logged out successfully",
-    });
+    res.json({ success: true, message: "Logged out successfully" });
   } catch (err) {
     res.status(500).json({ success: false, message: "Logout failed" });
   }

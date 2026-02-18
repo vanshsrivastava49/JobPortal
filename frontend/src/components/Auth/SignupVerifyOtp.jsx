@@ -11,7 +11,7 @@ const SignupVerifyOtp = ({ email, onBack }) => {
   const [lastName,  setLastName]  = useState("");
   const [role,      setRole]      = useState("jobseeker");
   const [mobile,    setMobile]    = useState("");
-  const [loading,   setLoading]   = useState(false)``;
+  const [loading,   setLoading]   = useState(false);
 
   const { login } = useAuth();
   const navigate  = useNavigate();
@@ -54,13 +54,14 @@ const SignupVerifyOtp = ({ email, onBack }) => {
 
     try {
       const res = await verifyOTP(
-        email,
-        otp,
-        roleMap[role],
-        mobile,
-        fullName,   // ← backend receives combined name as before
-        "signup"
-      );
+  email,
+  otp,
+  roleMap[role],
+  mobile,
+  firstName.trim(),   // ← separate
+  lastName.trim(),    // ← separate
+  "signup"
+);
 
       if (res.success) {
         toast.success("Account created successfully");
