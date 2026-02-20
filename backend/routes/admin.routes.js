@@ -3,6 +3,7 @@ const router = express.Router();
 const User = require("../models/User");
 const Job  = require("../models/Job");
 const RecruiterBusinessLink = require("../models/RecruiterBusinessLink");
+const sendEmail = require("../utils/sendEmail");  // ✅ ADD THIS
 const auth = require("../middleware/auth");
 const role = require("../middleware/role");
 
@@ -293,18 +294,22 @@ router.patch("/businesses/:id/reject", adminOnly, async (req, res) => {
   }
 });
 
-// ============================================================================
-// PATCH /api/admin/businesses/:id/revoke
-// Revoke a previously approved business — resets to pending + unverified
-// Also disconnects all linked recruiters
-// ============================================================================
 router.patch("/businesses/:id/revoke", adminOnly, async (req, res) => {
   try {
+    console.log("🔥 REVOKE ROUTE HIT");
+
     const businessId = req.params.id;
 
-    const business = await User.findOne({ _id: businessId, role: "business" });
+    const business = await User.findOne({
+      _id: businessId,
+      role: "business",
+    });
+
     if (!business) {
-      return res.status(404).json({ success: false, message: "Business not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Business not found",
+      });
     }
 
     if (business.businessProfile?.status !== "approved") {
@@ -314,42 +319,55 @@ router.patch("/businesses/:id/revoke", adminOnly, async (req, res) => {
       });
     }
 
-    // 1️⃣  Reset business status back to pending + unverified
-    const updatedBusiness = await User.findByIdAndUpdate(
-      businessId,
-      {
-        "businessProfile.status":   "pending",
-        "businessProfile.verified": false,
-      },
-      { new: true }
-    ).select("-password");
+    // 1️⃣ Reset business status
+    business.businessProfile.status = "pending";
+    business.businessProfile.verified = false;
+    await business.save();
 
-    // 2️⃣  Remove linkedBusiness reference from all linked recruiters
+    // 2️⃣ Remove linked recruiters
     await User.updateMany(
       { role: "recruiter", "recruiterProfile.linkedBusiness": businessId },
       { $unset: { "recruiterProfile.linkedBusiness": "" } }
     );
 
-    // 3️⃣  Mark all approved link records as removed_by_business
+    // 3️⃣ Update link records
     await RecruiterBusinessLink.updateMany(
       { business: businessId, status: "approved" },
       {
         $set: {
-          status:    "removed_by_business",
+          status: "removed_by_business",
           removedAt: new Date(),
         },
       }
     );
 
+    // 4️⃣ SEND EMAIL
+    console.log("📧 Sending revoke email to:", business.email);
+
+    await sendEmail({
+      to: business.email,
+      subject: "⚠️ Business Verification Revoked",
+      html: `
+        <h2>Hello ${business.name},</h2>
+        <p>Your business <strong>${business.businessProfile?.businessName}</strong> verification has been revoked by admin.</p>
+        <p>Your account is now set back to <strong>Pending</strong>.</p>
+        <p>Please update your details and re-apply.</p>
+      `,
+    });
+
+    console.log("✅ Revocation email sent successfully");
+
     res.json({
       success: true,
-      message: `"${updatedBusiness.businessProfile?.businessName}" verification revoked. They must re-apply for approval.`,
-      business: updatedBusiness,
+      message: "Business verification revoked successfully",
     });
+
   } catch (err) {
-    console.error("REVOKE BUSINESS ERROR:", err);
-    res.status(500).json({ success: false, message: "Failed to revoke business" });
+    console.error("❌ REVOKE BUSINESS ERROR:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to revoke business",
+    });
   }
 });
-
 module.exports = router;

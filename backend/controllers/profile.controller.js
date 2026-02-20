@@ -1,3 +1,4 @@
+const sendEmail = require("../utils/sendEmail");
 const User = require("../models/User");
 const RecruiterBusinessLink = require("../models/RecruiterBusinessLink");
 const s3 = require("../config/s3");
@@ -88,35 +89,68 @@ exports.completeProfile = async (req, res) => {
     }
 
     if (user.role === "business") {
-      required = [
-        "businessName", "category",
-        "address", "contactDetails",
-        "description", "images"
-      ];
-      progress = calculateProgress(required, data);
+  required = [
+    "businessName", "category",
+    "address", "contactDetails",
+    "description", "images"
+  ];
 
-      if (!data.images || !Array.isArray(data.images) || data.images.length < 1) {
-        return res.status(400).json({
-          success: false,
-          message: "At least one image URL required"
-        });
+  progress = calculateProgress(required, data);
+
+  if (progress < 100) {
+    return res.status(400).json({
+      success: false,
+      message: "Fill all required fields"
+    });
+  }
+
+  if (!data.images || !Array.isArray(data.images) || data.images.length < 1) {
+    return res.status(400).json({
+      success: false,
+      message: "At least one image URL required"
+    });
+  }
+
+  // ✅ UPDATE USER
+  await User.updateOne(
+    { _id: user._id },
+    {
+      $set: {
+        businessProfile: {
+          ...user.businessProfile,
+          ...data,
+          status: "pending"
+        },
+        profileCompleted: true,
+        profileProgress: progress
       }
-
-      await User.updateOne(
-        { _id: user._id },
-        {
-          $set: {
-            businessProfile: {
-              ...user.businessProfile,
-              ...data,
-              status: "pending"
-            },
-            profileCompleted: true,
-            profileProgress: progress
-          }
-        }
-      );
     }
+  );
+
+  // ✅ SEND EMAIL TO ADMIN
+  await sendEmail({
+    to: process.env.ADMIN_EMAIL,
+    subject: "New Business Awaiting Approval",
+    html: `
+      <h2>New Business Profile Submitted</h2>
+      <p><strong>Name:</strong> ${user.name}</p>
+      <p><strong>Email:</strong> ${user.email}</p>
+      <p><strong>Business Name:</strong> ${data.businessName}</p>
+      <p>Status: Pending Approval</p>
+    `,
+  });
+
+  // ✅ SEND EMAIL TO BUSINESS OWNER
+  await sendEmail({
+    to: user.email,
+    subject: "Profile Submitted - Awaiting Approval",
+    html: `
+      <h2>Hello ${user.name},</h2>
+      <p>Your business profile has been submitted successfully.</p>
+      <p>Our admin team will review it shortly.</p>
+    `,
+  });
+}
 
     if (user.role === "admin") {
       progress = 100;
@@ -354,15 +388,45 @@ exports.getPendingBusinesses = async (req, res) => {
 
 exports.approveBusiness = async (req, res) => {
   try {
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { "businessProfile.status": "approved" },
-      { new: true }
-    ).select("-password");
-    res.json({ success: true, user });
+    const { id } = req.params;
+
+    const user = await User.findById(id);
+
+    if (!user || user.role !== "business") {
+      return res.status(404).json({
+        success: false,
+        message: "Business not found",
+      });
+    }
+
+    // ✅ Update status
+    user.businessProfile.status = "approved";
+    await user.save();
+
+    // ✅ SEND APPROVAL EMAIL
+    await sendEmail({
+      to: user.email,
+      subject: "🎉 Business Approved!",
+      html: `
+        <h2>Congratulations ${user.name}!</h2>
+        <p>Your business <strong>${user.businessProfile.businessName}</strong> has been approved.</p>
+        <p>You can now start posting jobs.</p>
+      `,
+    });
+
+    console.log("✅ Approval email triggered for:", user.email);
+
+    res.json({
+      success: true,
+      message: "Business approved successfully",
+    });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: "Server error" });
+    console.error("APPROVE BUSINESS ERROR:", err);
+    res.status(500).json({
+      success: false,
+      message: "Approval failed",
+    });
   }
 };
 
