@@ -17,6 +17,8 @@ import {
   Send,
   Check,
   LogOut,
+  ToggleRight, // Added for toggle icon
+  ToggleLeft,  // Added for toggle icon
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -37,6 +39,7 @@ const RecruiterDashboard = () => {
   const [unlinkingBusiness, setUnlinkingBusiness] = useState(false);
   const [pendingRequests, setPendingRequests] = useState([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
+  const [togglingJob, setTogglingJob] = useState(null); // Track which job is being toggled
 
   const profileProgress = user?.profileProgress || 0;
   const isProfileComplete = user?.profileCompleted;
@@ -100,6 +103,52 @@ const RecruiterDashboard = () => {
     }
   }, [token]);
 
+  // New function to toggle job status (open/close)
+  // Proper toggle using isOpen boolean
+const toggleJobStatus = async (jobId, currentIsOpen) => {
+  if (!token || !jobId) {
+    toast.error("Missing token or job ID");
+    return;
+  }
+
+  setTogglingJob(jobId);
+
+  try {
+    const response = await axios.patch(
+      `http://localhost:5000/api/jobs/${jobId}/toggle-status`,
+      { isOpen: !currentIsOpen }, // ✅ Send boolean
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    // ✅ Optimistic UI update (no refresh required)
+    setJobs((prevJobs) =>
+      prevJobs.map((job) =>
+        job._id === jobId
+          ? { ...job, isOpen: !currentIsOpen }
+          : job
+      )
+    );
+
+    toast.success(
+      !currentIsOpen
+        ? "Job reopened successfully!"
+        : "Job closed successfully!"
+    );
+  } catch (err) {
+    console.error("Toggle job status error:", err);
+    const errorMsg =
+      err.response?.data?.message || "Failed to toggle job status";
+    toast.error(errorMsg);
+  } finally {
+    setTogglingJob(null);
+  }
+};
+
   const linkToBusiness = async (businessId) => {
     if (!token || !businessId) {
       toast.error("Missing token or business ID");
@@ -131,10 +180,8 @@ const RecruiterDashboard = () => {
           icon: "⏰",
         });
         setShowBusinessModal(false);
-        // Refresh to show pending status
         setTimeout(() => window.location.reload(), 1500);
       }
-      
     } catch (err) {
       console.error("Request error:", err);
       const errorMsg = err.response?.data?.message || "Failed to send request";
@@ -150,7 +197,6 @@ const RecruiterDashboard = () => {
       return;
     }
 
-    // Confirmation dialog
     const confirmed = window.confirm(
       "Are you sure you want to unlink from this business? You will need to request access again to post jobs."
     );
@@ -161,7 +207,6 @@ const RecruiterDashboard = () => {
 
     try {
       setUnlinkingBusiness(true);
-      
       const response = await axios.post(
         "http://localhost:5000/api/profile/recruiter/unlink-business",
         {},
@@ -173,13 +218,9 @@ const RecruiterDashboard = () => {
 
       console.log("Unlink successful:", response.data);
       toast.success(response.data.message || "Business unlinked successfully");
-      
-      // Force a hard reload to clear all cached state
-      // This ensures the user sees "Not Linked" status immediately
       setTimeout(() => {
         window.location.reload();
       }, 1000);
-      
     } catch (err) {
       console.error("Unlink error:", err);
       const errorMsg = err.response?.data?.message || "Failed to unlink business";
@@ -200,7 +241,7 @@ const RecruiterDashboard = () => {
     {
       icon: Briefcase,
       label: "Active Jobs",
-      value: jobs.filter((j) => j.status === "approved").length,
+      value: jobs.filter((j) => j.status === "approved" && j.isOpen).length,
       color: "#3b82f6",
     },
     {
@@ -529,6 +570,48 @@ const RecruiterDashboard = () => {
           display: flex;
           align-items: center;
           justify-content: space-between;
+          gap: 12px;
+        }
+
+        /* New toggle button styles */
+        .toggle-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 600;
+          border: none;
+          cursor: pointer;
+          transition: all 0.2s;
+          min-width: 90px;
+          justify-content: center;
+        }
+
+        .toggle-btn.open {
+          background: #d1fae5;
+          color: #065f46;
+          border: 1px solid #86efac;
+        }
+
+        .toggle-btn.open:hover:not(:disabled) {
+          background: #a7f3d0;
+        }
+
+        .toggle-btn.closed {
+          background: #fee2e2;
+          color: #991b1b;
+          border: 1px solid #fecaca;
+        }
+
+        .toggle-btn.closed:hover:not(:disabled) {
+          background: #fecaca;
+        }
+
+        .toggle-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
         }
 
         .status-badge {
@@ -554,6 +637,16 @@ const RecruiterDashboard = () => {
         .status-rejected {
           background: #fee2e2;
           color: #991b1b;
+        }
+
+        .status-open {
+          background: #dbeafe;
+          color: #1e40af;
+        }
+
+        .status-closed {
+          background: #fef2f2;
+          color: #dc2626;
         }
 
         .info-note {
@@ -732,6 +825,16 @@ const RecruiterDashboard = () => {
           }
 
           .btn {
+            width: 100%;
+          }
+
+          .job-footer {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+          }
+
+          .toggle-btn {
             width: 100%;
           }
         }
@@ -946,7 +1049,7 @@ const RecruiterDashboard = () => {
 
             <div className="info-note">
               <AlertCircle size={16} />
-              <span>Jobs require business owner approval before going live</span>
+              <span>Jobs require business owner approval before going live. Use toggle to open/close jobs anytime.</span>
             </div>
           </div>
 
@@ -998,24 +1101,56 @@ const RecruiterDashboard = () => {
                       )}
                     </div>
                     <div className="job-footer">
-                      {job.status === "pending_business" && (
-                        <span className="status-badge status-pending">
-                          <Clock size={12} />
-                          Business Review
-                        </span>
-                      )}
+                      <div>
+                        {job.status === "pending_business" && (
+                          <span className="status-badge status-pending">
+                            <Clock size={12} />
+                            Business Review
+                          </span>
+                        )}
+                        {job.status === "approved" && !job.isOpen && (
+                          <span className="status-badge status-closed">
+                            <XCircle size={12} />
+                            Closed
+                          </span>
+                        )}
+                        {job.status === "approved" && job.isOpen && (
+                          <span className="status-badge status-open">
+                            <CheckCircle size={12} />
+                            Open
+                          </span>
+                        )}
+                        {job.status === "rejected_business" && (
+                          <span className="status-badge status-rejected">
+                            <XCircle size={12} />
+                            Rejected
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* New Toggle Button - only for approved jobs */}
                       {job.status === "approved" && (
-                        <span className="status-badge status-approved">
-                          <CheckCircle size={12} />
-                          Live
-                        </span>
-                      )}
-                      {job.status === "rejected_business" && (
-                        <span className="status-badge status-rejected">
-                          <XCircle size={12} />
-                          Rejected
-                        </span>
-                      )}
+  <button
+    onClick={() => toggleJobStatus(job._id, job.isOpen)}
+    disabled={togglingJob === job._id}
+    className={`toggle-btn ${job.isOpen ? "open" : "closed"}`}
+    title={`Click to ${job.isOpen ? "close" : "open"} this job`}
+  >
+    {togglingJob === job._id ? (
+      <Loader2 size={14} className="spinner" />
+    ) : job.isOpen ? (
+      <>
+        <ToggleLeft size={14} />
+        Close Job
+      </>
+    ) : (
+      <>
+        <ToggleRight size={14} />
+        Open Job
+      </>
+    )}
+  </button>
+)}
                     </div>
                   </div>
                 ))}

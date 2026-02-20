@@ -1,5 +1,7 @@
+// ✅ ADD THIS LINE AT THE TOP
 const mongoose = require('mongoose');
 
+// Your existing roundSchema (if you have it)
 const roundSchema = new mongoose.Schema({
   order: { type: Number, required: true },
   type: {
@@ -16,6 +18,7 @@ const roundSchema = new mongoose.Schema({
   duration: { type: String, trim: true, default: '' },
 }, { _id: true });
 
+// ✅ YOUR MAIN JOB SCHEMA with NEW isOpen field
 const jobSchema = new mongoose.Schema({
   title: { 
     type: String, 
@@ -33,7 +36,6 @@ const jobSchema = new mongoose.Schema({
     type: String, 
     required: [true, "Location is required"] 
   },
-  // kept for backward compat — new jobs use stipend
   salary: String,
   type: {
     type: String,
@@ -50,6 +52,13 @@ const jobSchema = new mongoose.Schema({
     enum: ['monthly', 'yearly', 'weekly', 'hourly', 'project', ''],
     default: 'monthly'
   },
+
+  // ── NEW: Open/Closed toggle ────────────── ✅ REQUIRED
+  isOpen: { 
+    type: Boolean, 
+    default: true 
+  },
+  closedAt: Date,
 
   // ── Hiring pipeline ──────────────────────
   rounds: [roundSchema],
@@ -69,7 +78,7 @@ const jobSchema = new mongoose.Schema({
   // ── Lifecycle ────────────────────────────
   status: { 
     type: String, 
-    enum: ['pending_business', 'approved', 'rejected_business', 'taken_down'],
+    enum: ['pending_business', 'approved', 'rejected_business', 'taken_down', 'revoked'],
     default: 'pending_business'
   },
   approvedAt: Date,
@@ -80,7 +89,9 @@ const jobSchema = new mongoose.Schema({
   timestamps: true 
 });
 
+// Indexes
 jobSchema.index({ status: 1, createdAt: -1 });
+jobSchema.index({ status: 1, isOpen: 1, createdAt: -1 });
 jobSchema.index({ skills: 1 });
 
 module.exports = mongoose.model('Job', jobSchema);

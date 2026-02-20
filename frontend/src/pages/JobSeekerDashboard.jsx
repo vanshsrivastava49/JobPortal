@@ -361,14 +361,6 @@ const JobSeekerDashboard = () => {
                 Browse Jobs
               </button>
 
-              <button
-                className="btn btn-secondary"
-                onClick={() => setShowDetails((v) => !v)}
-              >
-                {showDetails ? <EyeOff size={16} /> : <Eye size={16} />}
-                {showDetails ? 'Hide Details' : 'View Details'}
-              </button>
-
               {resumeUrl ? (
                 <button
                   className="btn btn-secondary"

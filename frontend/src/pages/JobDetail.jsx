@@ -26,7 +26,10 @@ import {
   AlertCircle,
   BadgeCheck,
 } from "lucide-react";
-
+// Rupee icon component
+const RupeeIcon = ({ size = 20, color = "#065f46" }) => (
+  <span style={{ fontSize: size, fontWeight: 700, color }}>{'\u20B9'}</span>
+);
 const API_BASE_URL = "http://localhost:5000";
 
 const ROUND_TYPE_LABELS = {
@@ -132,14 +135,44 @@ const JobDetail = () => {
   };
 
   const formatPay = (job) => {
-    if (!job) return null;
-    if (!job.isPaid) return { label: "Unpaid / Volunteer", color: "#64748b", bg: "#f1f5f9", border: "#e2e8f0", icon: Gift };
-    if (job.stipend) {
-      const period = { monthly: "per month", yearly: "per year", weekly: "per week", hourly: "per hour", project: "per project" };
-      return { label: `${job.stipend} ${period[job.stipendPeriod] || ""}`.trim(), color: "#065f46", bg: "#d1fae5", border: "#6ee7b7", icon: DollarSign };
-    }
-    return { label: "Paid", color: "#065f46", bg: "#d1fae5", border: "#6ee7b7", icon: DollarSign };
+  if (!job) return null;
+
+  if (!job.isPaid) {
+    return {
+      label: "Unpaid / Volunteer",
+      color: "#64748b",
+      bg: "#f1f5f9",
+      border: "#e2e8f0",
+      icon: Gift,
+    };
+  }
+
+  if (job.stipend) {
+    const period = {
+      monthly: "per month",
+      yearly: "per year",
+      weekly: "per week",
+      hourly: "per hour",
+      project: "per project",
+    };
+
+    return {
+      label: `${job.stipend} ${period[job.stipendPeriod] || ""}`.trim(),
+      color: "#065f46",
+      bg: "#d1fae5",
+      border: "#6ee7b7",
+      icon: RupeeIcon,
+    };
+  }
+
+  return {
+    label: "Paid",
+    color: "#065f46",
+    bg: "#d1fae5",
+    border: "#6ee7b7",
+    icon: RupeeIcon,
   };
+};
 
   if (loading) {
     return (
@@ -528,14 +561,14 @@ const JobDetail = () => {
               {/* Right CTA */}
               <div className="jd-cta-card">
                 {pay && (
-                  <div className="jd-pay-display" style={{ background: pay.bg, border: `1px solid ${pay.border}` }}>
-                    <PayIcon size={20} color={pay.color} />
-                    <div>
-                      <div className="jd-pay-amount" style={{ color: pay.color }}>{pay.label}</div>
-                      <div className="jd-pay-label" style={{ color: pay.color }}>Compensation</div>
-                    </div>
-                  </div>
-                )}
+  <div className="jd-pay-display" style={{ background: pay.bg, border: `1px solid ${pay.border}` }}>
+    <PayIcon size={20} color={pay.color} />
+    <div>
+      <div className="jd-pay-amount" style={{ color: pay.color }}>{pay.label}</div>
+      <div className="jd-pay-label" style={{ color: pay.color }}>Compensation</div>
+    </div>
+  </div>
+)}
 
                 {applied ? (
                   <div className="jd-applied-badge">
@@ -685,7 +718,7 @@ const JobDetail = () => {
                   { icon: MapPin, label: "Location", value: job.location },
                   { icon: Clock, label: "Employment", value: job.type },
                   {
-                    icon: job.isPaid ? DollarSign : Gift,
+                    icon: job.isPaid ? RupeeIcon : Gift,
                     label: "Compensation",
                     value: pay?.label || "Not specified"
                   },

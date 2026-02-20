@@ -85,7 +85,7 @@ const Jobs = () => {
         newJobs = response.data;
       }
 
-      const validJobs = newJobs.filter(job => job && job._id && job.title);
+      const validJobs = newJobs.filter(job => job && job._id && job.title && job.status === "approved");
 
       if (append && validJobs.length > 0) {
         setJobs(prev => {

@@ -3,28 +3,36 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const role = require('../middleware/role');
 const { 
-  createJob, updateJob, takedownJob, getJobById,  // recruiter
+  createJob, updateJob, takedownJob, getJobById,
   getBusinessPendingJobs, businessApproveJob, businessRejectJob,
-  getMyJobs, getApprovedJobs, getPublicJobs, getPublicJobById  // ← ADD THIS
+  getMyJobs, getApprovedJobs, getPublicJobs, getPublicJobById,
+  toggleJobStatus // ← NEW IMPORT
 } = require('../controllers/job.controller');
 
-// 🔥 PUBLIC ROUTES (NO AUTH) - TOP
-router.get('/public', getPublicJobs);           // List
-router.get('/public/:jobId', getPublicJobById); // ← NEW SINGLE JOB
+// PUBLIC ROUTES (no auth)
+router.get('/public', getPublicJobs);
+router.get('/public/:jobId', getPublicJobById);
 
 // Authenticated list
 router.get('/', getApprovedJobs);
 
-// 🔥 RECRUITER SINGLE JOB (for edit)
+// ✅ Named routes BEFORE /:jobId
+router.get('/pending', auth, role('business'), getBusinessPendingJobs);
+router.get('/my', auth, role('recruiter'), getMyJobs);
+
+// ✅ NEW TOGGLE ROUTE (before dynamic :jobId)
+router.patch('/:jobId/toggle-status', auth, role('recruiter'), toggleJobStatus);
+
+// ✅ Dynamic route AFTER named routes
 router.get('/:jobId', auth, role('recruiter'), getJobById);
 
-// Protected routes...
+// Recruiter actions
 router.post('/', auth, role('recruiter'), createJob);
 router.patch('/:jobId', auth, role('recruiter'), updateJob);
 router.patch('/takedown/:jobId', auth, role('recruiter'), takedownJob);
-router.get('/pending', auth, role('business'), getBusinessPendingJobs);
+
+// Business actions
 router.patch('/approve/:jobId', auth, role('business'), businessApproveJob);
 router.patch('/reject/:jobId', auth, role('business'), businessRejectJob);
-router.get('/my', auth, role('recruiter'), getMyJobs);
 
 module.exports = router;
