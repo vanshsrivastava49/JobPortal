@@ -1,4 +1,4 @@
-# JobPortal 🚀
+# JobPortal
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Frontend: React](https://img.shields.io/badge/Frontend-React-61DAFB.svg)](https://reactjs.org)
@@ -7,34 +7,34 @@
 
 A **production-ready job portal** connecting **job seekers**, **recruiters**, and **business owners** with a modern UI, infinite scroll, and complete hiring workflow.
 
-## ✨ **Key Features**
+## **Key Features**
 
-### 🎯 **Job Seekers**
+### **Job Seekers**
 - **Infinite scroll job listings** with real-time filtering (location, type, pay, skills)
 - **Detailed job pages** showing full hiring process (interview rounds)
 - **One-click applications** with cover letter support
 - **Responsive design** - Mobile-first experience
 - **Verified employers** badge system
 
-### 💼 **Recruiters**
+### **Recruiters**
 - **Post jobs** linked to approved businesses
 - **Multi-stage hiring process** (resume → technical → HR → offer)
 - **Edit & take down** live jobs
 - **Business approval workflow**
 
-### 🏢 **Business Owners**
+### **Business Owners**
 - **Review & approve** recruiter job posts
 - **Reject unwanted listings**
 - **Pending job dashboard**
 
-### 🔧 **Technical Highlights**
+### **Technical Highlights**
 - **Client-side filtering** - Instant search without API calls
 - **Infinite scroll** - IntersectionObserver API
 - **Public APIs** - No-auth job browsing
 - **Role-based routes** - Recruiter vs Public separation
 - **Production-grade error handling**
 
-## 🛠 **Tech Stack**
+## **Tech Stack**
 
 | **Frontend** | **Backend** | **Database** | **Other** |
 |--------------|-------------|--------------|-----------|
@@ -42,6 +42,3 @@ A **production-ready job portal** connecting **job seekers**, **recruiters**, an
 | React Router | Axios | TailwindCSS (inline) | React Hot Toast |
 | Lucide React Icons | CORS | Lucide Icons | Vite |
 | React Hot Toast | Helmet |  |  |
-
-## 🎮 **Live Demo Features**
-
