@@ -3,7 +3,7 @@ import Navbar from "../components/common/Navbar";
 import { 
   Users, Briefcase, Building, TrendingUp, CheckCircle, 
   Clock, XCircle, Eye, RefreshCw, Loader2, Search,
-  UserCheck, MapPin, Mail, Calendar, ArrowUpRight
+  UserCheck, MapPin, Mail, Calendar, ArrowUpRight, ShieldOff
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -38,7 +38,8 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all'); // all, jobseeker, recruiter, business
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [revokingId, setRevokingId] = useState(null);
 
   // Fetch all data
   const fetchAllData = useCallback(async () => {
@@ -49,7 +50,6 @@ const AdminDashboard = () => {
 
       const headers = { Authorization: `Bearer ${token}` };
 
-      // Fetch stats + users + jobs + businesses in parallel
       const [statsRes, usersRes, liveJobsRes, approvedBizRes, pendingBizRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/api/admin/stats`, { headers })
           .catch(() => ({ data: {} })),
@@ -63,21 +63,17 @@ const AdminDashboard = () => {
           .catch(() => ({ data: [] }))
       ]);
 
-      // Process users
       const usersData = Array.isArray(usersRes.data) ? usersRes.data : [];
       setUsers(usersData);
 
-      // Process jobs
       const jobsData = liveJobsRes.data?.jobs || [];
       setLiveJobs(jobsData);
 
-      // Process businesses
       const approvedBizData = Array.isArray(approvedBizRes.data) ? approvedBizRes.data : [];
       const pendingBizData = Array.isArray(pendingBizRes.data) ? pendingBizRes.data : [];
       setBusinesses(approvedBizData);
       setPendingBusinesses(pendingBizData);
 
-      // Use stats from API if available, fallback to counting from usersData
       const statsFromApi = statsRes.data || {};
       setStats({
         totalUsers:         statsFromApi.totalUsers        ?? usersData.length,
@@ -101,6 +97,28 @@ const AdminDashboard = () => {
   useEffect(() => {
     fetchAllData();
   }, [fetchAllData]);
+
+  // ─── Revoke Handler ────────────────────────────────────────────────────────
+  const handleRevokeBusiness = async (bizId, bizName) => {
+    if (!window.confirm(
+      `Revoke verification for "${bizName}"?\n\nThis will:\n• Reset their status back to pending\n• Disconnect all linked recruiters\n• Require them to re-apply for approval`
+    )) return;
+
+    try {
+      setRevokingId(bizId);
+      await axios.patch(
+        `${API_BASE_URL}/api/admin/businesses/${bizId}/revoke`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(`"${bizName}" verification revoked successfully`);
+      fetchAllData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to revoke business");
+    } finally {
+      setRevokingId(null);
+    }
+  };
 
   // Filter data based on search
   const filteredUsers = users.filter(user => {
@@ -159,7 +177,6 @@ const AdminDashboard = () => {
     },
   ];
 
-  // Role badge helper
   const getRoleBadge = (role) => {
     const styles = {
       jobseeker: { bg: "#dbeafe", color: "#1e40af", label: "Job Seeker" },
@@ -182,11 +199,10 @@ const AdminDashboard = () => {
     );
   };
 
-  // Status badge helper
   const getStatusBadge = (status) => {
     const styles = {
       approved: { bg: "#d1fae5", color: "#065f46", icon: <CheckCircle size={14} /> },
-      pending: { bg: "#fef3c7", color: "#92400e", icon: <Clock size={14} /> },
+      pending:  { bg: "#fef3c7", color: "#92400e", icon: <Clock size={14} /> },
       rejected: { bg: "#fee2e2", color: "#991b1b", icon: <XCircle size={14} /> }
     };
     const style = styles[status] || styles.pending;
@@ -450,12 +466,17 @@ const AdminDashboard = () => {
           outline: none;
         }
 
+        .btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
         .btn-primary {
           background: #3b82f6;
           color: white;
         }
 
-        .btn-primary:hover {
+        .btn-primary:hover:not(:disabled) {
           background: #2563eb;
         }
 
@@ -465,9 +486,20 @@ const AdminDashboard = () => {
           border: 1px solid #e2e8f0;
         }
 
-        .btn-secondary:hover {
+        .btn-secondary:hover:not(:disabled) {
           background: #f8fafc;
           border-color: #cbd5e1;
+        }
+
+        .btn-danger {
+          background: white;
+          color: #dc2626;
+          border: 1px solid #fecaca;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+          background: #fef2f2;
+          border-color: #fca5a5;
         }
 
         .data-table {
@@ -514,6 +546,7 @@ const AdminDashboard = () => {
           color: white;
           font-weight: 600;
           font-size: 16px;
+          flex-shrink: 0;
         }
 
         .user-details {
@@ -578,11 +611,25 @@ const AdminDashboard = () => {
           box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
 
+        .business-card.approved {
+          border-left: 4px solid #10b981;
+        }
+
+        .business-card.pending {
+          border-left: 4px solid #f59e0b;
+        }
+
+        .business-card.rejected {
+          border-left: 4px solid #ef4444;
+        }
+
         .business-header {
           display: flex;
           justify-content: space-between;
           align-items: start;
           margin-bottom: 12px;
+          flex-wrap: wrap;
+          gap: 12px;
         }
 
         .business-name {
@@ -595,6 +642,26 @@ const AdminDashboard = () => {
         .business-category {
           font-size: 13px;
           color: #64748b;
+        }
+
+        .business-actions {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+          align-items: center;
+        }
+
+        .revoke-banner {
+          margin-top: 12px;
+          padding: 10px 14px;
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          border-radius: 8px;
+          font-size: 13px;
+          color: #991b1b;
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
 
         .empty-state {
@@ -759,17 +826,17 @@ const AdminDashboard = () => {
                     <Users size={20} />
                     User Breakdown
                   </h2>
-                  <button className="btn btn-secondary btn-sm" onClick={() => setActiveTab('users')}>
+                  <button className="btn btn-secondary" onClick={() => setActiveTab('users')}>
                     View All Users
                   </button>
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
                   {[
-                    { label: "Job Seekers",    value: stats.jobseekers,  bg: "#eff6ff", border: "#bfdbfe", text: "#1e40af", dark: "#1e3a8a", icon: "🎯", role: "jobseeker" },
-                    { label: "Recruiters",     value: stats.recruiters,  bg: "#fef3c7", border: "#fde047", text: "#92400e", dark: "#78350f", icon: "💼", role: "recruiter" },
-                    { label: "Business Owners",value: stats.businesses,  bg: "#d1fae5", border: "#6ee7b7", text: "#065f46", dark: "#064e3b", icon: "🏢", role: "business" },
-                    { label: "Total Platform", value: stats.totalUsers,  bg: "#f3e8ff", border: "#e9d5ff", text: "#6b21a8", dark: "#581c87", icon: "📊", role: null }
+                    { label: "Job Seekers",     value: stats.jobseekers, bg: "#eff6ff", border: "#bfdbfe", text: "#1e40af", dark: "#1e3a8a", icon: "🎯", role: "jobseeker" },
+                    { label: "Recruiters",      value: stats.recruiters, bg: "#fef3c7", border: "#fde047", text: "#92400e", dark: "#78350f", icon: "💼", role: "recruiter" },
+                    { label: "Business Owners", value: stats.businesses, bg: "#d1fae5", border: "#6ee7b7", text: "#065f46", dark: "#064e3b", icon: "🏢", role: "business" },
+                    { label: "Total Platform",  value: stats.totalUsers, bg: "#f3e8ff", border: "#e9d5ff", text: "#6b21a8", dark: "#581c87", icon: "📊", role: null }
                   ].map((item, i) => (
                     <div
                       key={i}
@@ -806,10 +873,10 @@ const AdminDashboard = () => {
 
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
                   {[
-                    { label: "Live Jobs",           value: stats.liveJobs,           bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d", icon: "✅" },
-                    { label: "Pending Jobs",         value: stats.pendingJobs,        bg: "#fefce8", border: "#fef08a", text: "#a16207", icon: "⏳" },
-                    { label: "Approved Businesses",  value: stats.approvedBusinesses, bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d", icon: "🏆" },
-                    { label: "Pending Businesses",   value: stats.pendingBusinesses,  bg: "#fef2f2", border: "#fecaca", text: "#dc2626", icon: "🔔" },
+                    { label: "Live Jobs",          value: stats.liveJobs,           bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d", icon: "✅" },
+                    { label: "Pending Jobs",        value: stats.pendingJobs,        bg: "#fefce8", border: "#fef08a", text: "#a16207", icon: "⏳" },
+                    { label: "Approved Businesses", value: stats.approvedBusinesses, bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d", icon: "🏆" },
+                    { label: "Pending Businesses",  value: stats.pendingBusinesses,  bg: "#fef2f2", border: "#fecaca", text: "#dc2626", icon: "🔔" },
                   ].map((item, i) => (
                     <div key={i} style={{
                       padding: "20px",
@@ -854,10 +921,10 @@ const AdminDashboard = () => {
               {/* Role Filter Pills */}
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "20px" }}>
                 {[
-                  { key: 'all',       label: `All (${stats.totalUsers})`,        bg: "#f1f5f9", active: "#0f172a" },
-                  { key: 'jobseeker', label: `Job Seekers (${stats.jobseekers})`, bg: "#dbeafe", active: "#1e40af" },
-                  { key: 'recruiter', label: `Recruiters (${stats.recruiters})`,  bg: "#fef3c7", active: "#92400e" },
-                  { key: 'business',  label: `Businesses (${stats.businesses})`,  bg: "#d1fae5", active: "#065f46" },
+                  { key: 'all',       label: `All (${stats.totalUsers})`,         bg: "#f1f5f9", active: "#0f172a" },
+                  { key: 'jobseeker', label: `Job Seekers (${stats.jobseekers})`,  bg: "#dbeafe", active: "#1e40af" },
+                  { key: 'recruiter', label: `Recruiters (${stats.recruiters})`,   bg: "#fef3c7", active: "#92400e" },
+                  { key: 'business',  label: `Businesses (${stats.businesses})`,   bg: "#d1fae5", active: "#065f46" },
                 ].map(f => (
                   <button
                     key={f.key}
@@ -1035,6 +1102,22 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
+              {/* Legend */}
+              <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", marginBottom: "20px", fontSize: "13px", color: "#64748b" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ width: 12, height: 12, borderRadius: 2, background: "#10b981", display: "inline-block" }} />
+                  Approved
+                </span>
+                <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ width: 12, height: 12, borderRadius: 2, background: "#f59e0b", display: "inline-block" }} />
+                  Pending
+                </span>
+                <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ width: 12, height: 12, borderRadius: 2, background: "#ef4444", display: "inline-block" }} />
+                  Rejected
+                </span>
+              </div>
+
               {filteredBusinesses.length === 0 ? (
                 <div className="empty-state">
                   <div className="empty-icon">
@@ -1046,48 +1129,80 @@ const AdminDashboard = () => {
                   </div>
                 </div>
               ) : (
-                filteredBusinesses.map((biz) => (
-                  <div key={biz._id} className="business-card">
-                    <div className="business-header">
-                      <div>
-                        <div className="business-name">
-                          {biz.businessProfile?.businessName || biz.name}
-                        </div>
-                        <div className="business-category">
-                          {biz.businessProfile?.category || "Uncategorized"}
-                        </div>
-                      </div>
-                      {getStatusBadge(biz.businessProfile?.status || 'pending')}
-                    </div>
-                    
-                    {biz.businessProfile?.address && (
-                      <div style={{ 
-                        fontSize: "13px", 
-                        color: "#64748b", 
-                        display: "flex", 
-                        alignItems: "center", 
-                        gap: "6px",
-                        marginBottom: "8px"
-                      }}>
-                        <MapPin size={14} />
-                        {biz.businessProfile.address}
-                      </div>
-                    )}
+                filteredBusinesses.map((biz) => {
+                  const status = biz.businessProfile?.status || 'pending';
+                  const bizName = biz.businessProfile?.businessName || biz.name;
+                  const isRevoking = revokingId === biz._id;
 
-                    {biz.businessProfile?.contactDetails && (
-                      <div style={{ 
-                        fontSize: "13px", 
-                        color: "#64748b", 
-                        display: "flex", 
-                        alignItems: "center", 
-                        gap: "6px"
-                      }}>
-                        <Mail size={14} />
-                        {biz.businessProfile.contactDetails}
+                  return (
+                    <div key={biz._id} className={`business-card ${status}`}>
+                      <div className="business-header">
+                        <div>
+                          <div className="business-name">{bizName}</div>
+                          <div className="business-category">
+                            {biz.businessProfile?.category || "Uncategorized"}
+                          </div>
+                        </div>
+
+                        <div className="business-actions">
+                          {getStatusBadge(status)}
+
+                          {/* Revoke button — only for approved businesses */}
+                          {status === 'approved' && (
+                            <button
+                              className="btn btn-danger"
+                              style={{ padding: "6px 12px", fontSize: "13px" }}
+                              disabled={isRevoking}
+                              onClick={() => handleRevokeBusiness(biz._id, bizName)}
+                            >
+                              {isRevoking ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : (
+                                <ShieldOff size={14} />
+                              )}
+                              {isRevoking ? "Revoking..." : "Revoke"}
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    )}
-                  </div>
-                ))
+
+                      {biz.businessProfile?.address && (
+                        <div style={{ 
+                          fontSize: "13px", 
+                          color: "#64748b", 
+                          display: "flex", 
+                          alignItems: "center", 
+                          gap: "6px",
+                          marginBottom: "8px"
+                        }}>
+                          <MapPin size={14} />
+                          {biz.businessProfile.address}
+                        </div>
+                      )}
+
+                      {biz.businessProfile?.contactDetails && (
+                        <div style={{ 
+                          fontSize: "13px", 
+                          color: "#64748b", 
+                          display: "flex", 
+                          alignItems: "center", 
+                          gap: "6px"
+                        }}>
+                          <Mail size={14} />
+                          {biz.businessProfile.contactDetails}
+                        </div>
+                      )}
+
+                      {/* Info banner shown after revoke (status just changed to pending) */}
+                      {status === 'pending' && biz.businessProfile?.verified === false && (
+                        <div className="revoke-banner">
+                          <ShieldOff size={14} />
+                          Verification revoked — awaiting re-approval from business
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
               )}
             </div>
           )}

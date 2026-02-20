@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
 const Job  = require("../models/Job");
+const RecruiterBusinessLink = require("../models/RecruiterBusinessLink");
 const auth = require("../middleware/auth");
 const role = require("../middleware/role");
 
@@ -289,6 +290,65 @@ router.patch("/businesses/:id/reject", adminOnly, async (req, res) => {
   } catch (err) {
     console.error("REJECT BUSINESS ERROR:", err);
     res.status(500).json({ success: false, message: "Failed to reject business" });
+  }
+});
+
+// ============================================================================
+// PATCH /api/admin/businesses/:id/revoke
+// Revoke a previously approved business — resets to pending + unverified
+// Also disconnects all linked recruiters
+// ============================================================================
+router.patch("/businesses/:id/revoke", adminOnly, async (req, res) => {
+  try {
+    const businessId = req.params.id;
+
+    const business = await User.findOne({ _id: businessId, role: "business" });
+    if (!business) {
+      return res.status(404).json({ success: false, message: "Business not found" });
+    }
+
+    if (business.businessProfile?.status !== "approved") {
+      return res.status(400).json({
+        success: false,
+        message: "Only approved businesses can be revoked",
+      });
+    }
+
+    // 1️⃣  Reset business status back to pending + unverified
+    const updatedBusiness = await User.findByIdAndUpdate(
+      businessId,
+      {
+        "businessProfile.status":   "pending",
+        "businessProfile.verified": false,
+      },
+      { new: true }
+    ).select("-password");
+
+    // 2️⃣  Remove linkedBusiness reference from all linked recruiters
+    await User.updateMany(
+      { role: "recruiter", "recruiterProfile.linkedBusiness": businessId },
+      { $unset: { "recruiterProfile.linkedBusiness": "" } }
+    );
+
+    // 3️⃣  Mark all approved link records as removed_by_business
+    await RecruiterBusinessLink.updateMany(
+      { business: businessId, status: "approved" },
+      {
+        $set: {
+          status:    "removed_by_business",
+          removedAt: new Date(),
+        },
+      }
+    );
+
+    res.json({
+      success: true,
+      message: `"${updatedBusiness.businessProfile?.businessName}" verification revoked. They must re-apply for approval.`,
+      business: updatedBusiness,
+    });
+  } catch (err) {
+    console.error("REVOKE BUSINESS ERROR:", err);
+    res.status(500).json({ success: false, message: "Failed to revoke business" });
   }
 });
 

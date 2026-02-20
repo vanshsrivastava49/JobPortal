@@ -14,13 +14,14 @@ import AdminDashboard from "./pages/AdminDashboard";
 import CompleteProfile from "./pages/CompleteProfile";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
-
+import Myprofile from "./pages/Myprofile";
 import PostJob from "./pages/PostJob";
 import PendingJobs from "./pages/PendingJobs";
 import PendingBusinesses from "./pages/PendingBusinesses";
 import Businesses from "./pages/Businesses";
 import ApprovedBusinesses from "./pages/ApprovedBusinesses";
 import Jobs from "./pages/Jobs";
+import JobDetail from "./pages/JobDetail";
 function App() {
   return (
     <AuthProvider>
@@ -32,7 +33,8 @@ function App() {
           {/* ================= AUTH ================= */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-
+          <Route path="/profile" element={<Myprofile/>}/>
+          <Route path="/jobs/:jobId" element={<JobDetail />}/>
           {/* ================= MAIN DASHBOARD REDIRECT ================= */}
           <Route
             path="/dashboard"
