@@ -2,6 +2,7 @@ const User = require("../models/User");
 const RecruiterBusinessLink = require("../models/RecruiterBusinessLink");
 const s3 = require("../config/s3");
 const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
+const email = require("../services/emailService");
 
 const calculateProgress = (requiredFields, data) => {
   const filled = requiredFields.filter(
@@ -151,11 +152,49 @@ exports.getPendingBusinesses = async (req, res) => {
   }
 };
 
+// ✅ FIXED: Now sends approval/re-approval email
 exports.approveBusiness = async (req, res) => {
   try {
-    const user = await User.findByIdAndUpdate(req.params.id, { "businessProfile.status": "approved" }, { new: true }).select("-password");
+    // Fetch BEFORE update to preserve email and detect re-approval
+    const businessBefore = await User.findOne({ _id: req.params.id, role: "business" });
+    if (!businessBefore) return res.status(404).json({ success: false, message: "Business not found" });
+
+    // Detect if this is a re-approval after a previous revoke
+    const wasRevoked = await RecruiterBusinessLink.exists({
+      business: req.params.id,
+      status: "removed_by_business",
+    });
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { "businessProfile.status": "approved", "businessProfile.verified": true },
+      { new: true }
+    ).select("-password");
+
+    const businessName = businessBefore.businessProfile?.businessName || businessBefore.name;
+
+    console.log(`📧 Sending approval email to: ${businessBefore.email} | wasRevoked: ${!!wasRevoked}`);
+
+    if (wasRevoked) {
+      await email.sendBusinessReApprovedEmail(
+        businessBefore.email,
+        businessBefore.name,
+        businessName,
+        0 // job restoration is handled by admin controller; profile route doesn't restore jobs
+      ).catch(err => console.error("❌ Re-approval email failed:", err));
+    } else {
+      await email.sendBusinessApprovedEmail(
+        businessBefore.email,
+        businessBefore.name,
+        businessName
+      ).catch(err => console.error("❌ Approval email failed:", err));
+    }
+
+    console.log(`✅ Approval email sent to ${businessBefore.email}`);
+
     res.json({ success: true, user });
   } catch (err) {
+    console.error("APPROVE BUSINESS ERROR:", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
@@ -185,6 +224,9 @@ exports.requestBusinessLink = async (req, res) => {
 
     if (!businessId) return res.status(400).json({ success: false, message: "Business ID is required" });
 
+    const recruiter = await User.findById(recruiterId).select("name email recruiterProfile");
+    if (!recruiter) return res.status(404).json({ success: false, message: "Recruiter not found" });
+
     const existingLink = await RecruiterBusinessLink.findOne({
       recruiter: recruiterId,
       business: businessId,
@@ -196,10 +238,12 @@ exports.requestBusinessLink = async (req, res) => {
       if (existingLink.status === 'pending') return res.status(400).json({ success: false, message: "Request already pending ⏳" });
     }
 
-    const business = await User.findById(businessId);
+    const business = await User.findById(businessId).select("name email businessProfile role");
     if (!business || business.role !== 'business' || business.businessProfile?.status !== 'approved') {
       return res.status(400).json({ success: false, message: "Invalid or unapproved business" });
     }
+
+    const businessName = business.businessProfile?.businessName || business.name;
 
     const oldLink = await RecruiterBusinessLink.findOne({
       recruiter: recruiterId,
@@ -216,11 +260,19 @@ exports.requestBusinessLink = async (req, res) => {
       oldLink.unlinkedAt = null;
       oldLink.removedAt = null;
       await oldLink.save();
+
+      email.sendRecruiterRequestConfirmation(recruiter.email, recruiter.name, businessName).catch(console.error);
+      email.sendRecruiterRequestToBusiness(business.email, business.name, businessName, recruiter.name, recruiter.email, recruiter.recruiterProfile?.companyName).catch(console.error);
+
       return res.json({ success: true, message: "Link request sent successfully!", status: 'pending', requestId: oldLink._id });
     }
 
     const linkRequest = new RecruiterBusinessLink({ recruiter: recruiterId, business: businessId, status: 'pending' });
     await linkRequest.save();
+
+    email.sendRecruiterRequestConfirmation(recruiter.email, recruiter.name, businessName).catch(console.error);
+    email.sendRecruiterRequestToBusiness(business.email, business.name, businessName, recruiter.name, recruiter.email, recruiter.recruiterProfile?.companyName).catch(console.error);
+
     res.json({ success: true, message: "Link request sent successfully!", status: 'pending', requestId: linkRequest._id });
 
   } catch (err) {
@@ -284,54 +336,50 @@ exports.approveRecruiterLink = async (req, res) => {
       _id: requestId,
       business: businessId,
       status: 'pending'
-    }).populate('recruiter');
+    }).populate('recruiter', 'name email recruiterProfile');
 
     if (!linkRequest) {
       return res.status(404).json({ success: false, message: "Request not found or already processed" });
     }
 
-    const business = await User.findById(businessId).select('businessProfile name role');
+    const business = await User.findById(businessId).select('businessProfile name role email');
     if (!business || business.role !== 'business') {
       return res.status(404).json({ success: false, message: "Business not found" });
     }
 
+    const businessName = business.businessProfile?.businessName || business.name;
+
     const syncedCompanyDetails = {
       "recruiterProfile.linkedBusiness": businessId,
-      "recruiterProfile.companyName": business.businessProfile?.businessName || business.name || "Unknown Company",
+      "recruiterProfile.companyName": businessName,
       "recruiterProfile.companyWebsite": business.businessProfile?.contactDetails || "",
       "recruiterProfile.companyLocation": business.businessProfile?.address || "",
       "recruiterProfile.companyDescription": business.businessProfile?.description || "",
     };
 
-    // 1. Approve the link
     linkRequest.status = 'approved';
     linkRequest.approvedAt = new Date();
     await linkRequest.save();
 
-    // 2. Re-link recruiter and sync company details
     await User.findByIdAndUpdate(linkRequest.recruiter._id, { $set: syncedCompanyDetails });
 
-    // 3. ✅ Restore previously revoked jobs back to pending_business
     const Job = require("../models/Job");
     const restoredJobs = await Job.updateMany(
-      {
-        recruiter: linkRequest.recruiter._id,
-        business: businessId,
-        status: "revoked",
-      },
-      {
-        $set: {
-          status: "pending_business",
-          business: businessId,  // ensure business ref is correct
-        }
-      }
+      { recruiter: linkRequest.recruiter._id, business: businessId, status: "revoked" },
+      { $set: { status: "pending_business", business: businessId } }
     );
+
+    email.sendRecruiterApprovedEmail(linkRequest.recruiter.email, linkRequest.recruiter.name, businessName, restoredJobs.modifiedCount).catch(console.error);
+
+    if (restoredJobs.modifiedCount > 0) {
+      email.sendRestoredJobsNotification(business.email, business.name, businessName, linkRequest.recruiter.name, restoredJobs.modifiedCount).catch(console.error);
+    }
 
     res.json({
       success: true,
       message: `${linkRequest.recruiter.name} linked successfully! ${restoredJobs.modifiedCount} previously revoked job(s) restored for your review.`,
       recruiter: linkRequest.recruiter,
-      syncedCompanyName: syncedCompanyDetails["recruiterProfile.companyName"],
+      syncedCompanyName: businessName,
       jobsRestored: restoredJobs.modifiedCount,
     });
 
@@ -340,19 +388,30 @@ exports.approveRecruiterLink = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
+
 exports.rejectRecruiterLink = async (req, res) => {
   try {
     const { requestId } = req.params;
     const { reason } = req.body;
     const businessId = req.user.id;
 
-    const linkRequest = await RecruiterBusinessLink.findOne({ _id: requestId, business: businessId, status: 'pending' });
+    const linkRequest = await RecruiterBusinessLink.findOne({
+      _id: requestId,
+      business: businessId,
+      status: 'pending'
+    }).populate('recruiter', 'name email');
+
     if (!linkRequest) return res.status(404).json({ success: false, message: "Request not found or already processed" });
 
     linkRequest.status = 'rejected';
     linkRequest.rejectedAt = new Date();
     linkRequest.rejectedReason = reason || 'No reason provided';
     await linkRequest.save();
+
+    const business = await User.findById(businessId).select('name businessProfile');
+    const businessName = business?.businessProfile?.businessName || business?.name || "the business";
+
+    email.sendRecruiterRejectedEmail(linkRequest.recruiter.email, linkRequest.recruiter.name, businessName, reason).catch(console.error);
 
     res.json({ success: true, message: "Recruiter request rejected" });
 
@@ -427,10 +486,10 @@ exports.removeRecruiterFromBusiness = async (req, res) => {
 
     if (!recruiterId) return res.status(400).json({ success: false, message: "Recruiter ID missing" });
 
-    const business = await User.findById(businessId);
+    const business = await User.findById(businessId).select('name email businessProfile role');
     if (!business || business.role !== 'business') return res.status(403).json({ success: false, message: "Business account required" });
 
-    const recruiter = await User.findById(recruiterId);
+    const recruiter = await User.findById(recruiterId).select('name email role recruiterProfile');
     if (!recruiter || recruiter.role !== 'recruiter') return res.status(404).json({ success: false, message: "Recruiter not found" });
 
     const linkedBusinessId = recruiter.recruiterProfile?.linkedBusiness?.toString();
@@ -442,6 +501,11 @@ exports.removeRecruiterFromBusiness = async (req, res) => {
       { recruiter: recruiterId, business: businessId, status: 'approved' },
       { $set: { status: 'removed_by_business', removedAt: new Date() } }
     );
+
+    const businessName = business.businessProfile?.businessName || business.name;
+
+    email.sendRecruiterRemovedEmail(recruiter.email, recruiter.name, businessName).catch(console.error);
+    email.sendBusinessRecruiterRemovedConfirmation(business.email, business.name, businessName, recruiter.name).catch(console.error);
 
     res.json({ success: true, message: "Recruiter removed successfully", recruiterId });
 

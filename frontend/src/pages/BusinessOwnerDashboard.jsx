@@ -209,35 +209,42 @@ const approveRecruiter = async (requestId) => {
     }
   };
 
-  const approveJob = async (jobId) => {
-    try {
-      await axios.patch(`http://localhost:5000/api/jobs/approve/${jobId}`, {
-        status: 'approved'
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      toast.success("Job approved & live!");
-      fetchPendingJobs();
-    } catch (err) {
-      console.error("Job approval error:", err);
-      toast.error(err.response?.data?.message || "Approval failed");
-    }
-  };
+const approveJob = async (jobId) => {
+  try {
+    const res = await axios.patch(
+      `http://localhost:5000/api/jobs/${jobId}/business-approve`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
-  const rejectJob = async (jobId) => {
-    try {
-      await axios.patch(`http://localhost:5000/api/jobs/reject/${jobId}`, {
-        status: 'rejected_business'
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      toast.success("Job rejected");
-      fetchPendingJobs();
-    } catch (err) {
-      console.error("Job rejection error:", err);
-      toast.error(err.response?.data?.message || "Rejection failed");
-    }
-  };
+    toast.success("Job approved & live! 🎉");
+    fetchPendingJobs();
+
+    // ✅ Also notify admin via backend — already handled server-side
+    // ✅ Email to recruiter — already handled server-side
+  } catch (err) {
+    console.error("Job approval error:", err);
+    toast.error(err.response?.data?.message || "Approval failed");
+  }
+};
+
+const rejectJob = async (jobId, jobTitle) => {
+  try {
+    const reason = prompt(`Reason for rejecting "${jobTitle}"? (Optional)`);
+
+    await axios.patch(
+      `http://localhost:5000/api/jobs/${jobId}/business-reject`,
+      { reason: reason || "" },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    toast.success("Job rejected");
+    fetchPendingJobs();
+  } catch (err) {
+    console.error("Job rejection error:", err);
+    toast.error(err.response?.data?.message || "Rejection failed");
+  }
+};
 
   useEffect(() => {
     if (token && businessStatus === "approved") {
@@ -1156,21 +1163,21 @@ const approveRecruiter = async (requestId) => {
                         )}
 
                         <div className="approval-actions">
-                          <button
-                            className="btn btn-secondary"
-                            onClick={() => rejectJob(job._id)}
-                          >
-                            <XCircle size={16} />
-                            Reject Job
-                          </button>
-                          <button
-                            className="btn btn-primary"
-                            onClick={() => approveJob(job._id)}
-                          >
-                            <CheckCircle size={16} />
-                            Approve & Go Live
-                          </button>
-                        </div>
+  <button
+    className="btn btn-secondary"
+    onClick={() => rejectJob(job._id, job.title)}
+  >
+    <XCircle size={16} />
+    Reject Job
+  </button>
+  <button
+    className="btn btn-primary"
+    onClick={() => approveJob(job._id)}
+  >
+    <CheckCircle size={16} />
+    Approve & Go Live
+  </button>
+</div>
                       </div>
                     ))
                   )}

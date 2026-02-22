@@ -6,33 +6,28 @@ const {
   createJob, updateJob, takedownJob, getJobById,
   getBusinessPendingJobs, businessApproveJob, businessRejectJob,
   getMyJobs, getApprovedJobs, getPublicJobs, getPublicJobById,
-  toggleJobStatus // ← NEW IMPORT
+  toggleJobStatus
 } = require('../controllers/job.controller');
 
-// PUBLIC ROUTES (no auth)
-router.get('/public', getPublicJobs);
+// ─── PUBLIC (no auth) ───────────────────────────────────────
+router.get('/public',        getPublicJobs);
 router.get('/public/:jobId', getPublicJobById);
 
-// Authenticated list
-router.get('/', getApprovedJobs);
+// ─── NAMED STATIC ROUTES FIRST ─────────────────────────────
+router.get('/',        getApprovedJobs);
+router.get('/pending', auth, role('business'),  getBusinessPendingJobs);
+router.get('/my',      auth, role('recruiter'), getMyJobs);
 
-// ✅ Named routes BEFORE /:jobId
-router.get('/pending', auth, role('business'), getBusinessPendingJobs);
-router.get('/my', auth, role('recruiter'), getMyJobs);
-
-// ✅ NEW TOGGLE ROUTE (before dynamic :jobId)
-router.patch('/:jobId/toggle-status', auth, role('recruiter'), toggleJobStatus);
-
-// ✅ Dynamic route AFTER named routes
-router.get('/:jobId', auth, role('recruiter'), getJobById);
-
+// ─── DYNAMIC :jobId ROUTES ─────────────────────────────────
 // Recruiter actions
-router.post('/', auth, role('recruiter'), createJob);
-router.patch('/:jobId', auth, role('recruiter'), updateJob);
-router.patch('/takedown/:jobId', auth, role('recruiter'), takedownJob);
+router.post('/',                        auth, role('recruiter'), createJob);
+router.get('/:jobId',                   auth, role('recruiter'), getJobById);
+router.patch('/:jobId',                 auth, role('recruiter'), updateJob);
+router.patch('/:jobId/toggle-status',   auth, role('recruiter'), toggleJobStatus);
+router.patch('/:jobId/takedown',        auth, role('recruiter'), takedownJob);
 
-// Business actions
-router.patch('/approve/:jobId', auth, role('business'), businessApproveJob);
-router.patch('/reject/:jobId', auth, role('business'), businessRejectJob);
+// Business actions  
+router.patch('/:jobId/business-approve', auth, role('business'), businessApproveJob);
+router.patch('/:jobId/business-reject',  auth, role('business'), businessRejectJob);
 
 module.exports = router;
