@@ -275,7 +275,6 @@ exports.getLinkedRecruiters = async (req, res) => {
   }
 };
 
-// ✅ SINGLE approveRecruiterLink — duplicate removed, 'role' added to select
 exports.approveRecruiterLink = async (req, res) => {
   try {
     const { requestId } = req.params;
@@ -291,7 +290,6 @@ exports.approveRecruiterLink = async (req, res) => {
       return res.status(404).json({ success: false, message: "Request not found or already processed" });
     }
 
-    // ✅ FIX: 'role' included in select so the role check doesn't fail
     const business = await User.findById(businessId).select('businessProfile name role');
     if (!business || business.role !== 'business') {
       return res.status(404).json({ success: false, message: "Business not found" });
@@ -305,17 +303,36 @@ exports.approveRecruiterLink = async (req, res) => {
       "recruiterProfile.companyDescription": business.businessProfile?.description || "",
     };
 
+    // 1. Approve the link
     linkRequest.status = 'approved';
     linkRequest.approvedAt = new Date();
     await linkRequest.save();
 
+    // 2. Re-link recruiter and sync company details
     await User.findByIdAndUpdate(linkRequest.recruiter._id, { $set: syncedCompanyDetails });
+
+    // 3. ✅ Restore previously revoked jobs back to pending_business
+    const Job = require("../models/Job");
+    const restoredJobs = await Job.updateMany(
+      {
+        recruiter: linkRequest.recruiter._id,
+        business: businessId,
+        status: "revoked",
+      },
+      {
+        $set: {
+          status: "pending_business",
+          business: businessId,  // ensure business ref is correct
+        }
+      }
+    );
 
     res.json({
       success: true,
-      message: `${linkRequest.recruiter.name} linked successfully! Company details synced.`,
+      message: `${linkRequest.recruiter.name} linked successfully! ${restoredJobs.modifiedCount} previously revoked job(s) restored for your review.`,
       recruiter: linkRequest.recruiter,
-      syncedCompanyName: syncedCompanyDetails["recruiterProfile.companyName"]
+      syncedCompanyName: syncedCompanyDetails["recruiterProfile.companyName"],
+      jobsRestored: restoredJobs.modifiedCount,
     });
 
   } catch (err) {
@@ -323,7 +340,6 @@ exports.approveRecruiterLink = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
-
 exports.rejectRecruiterLink = async (req, res) => {
   try {
     const { requestId } = req.params;

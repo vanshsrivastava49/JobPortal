@@ -255,3 +255,120 @@ exports.approveBusiness = async (req, res) => {
     res.status(500).json({ success: false, message: "Failed to approve business" });
   }
 };
+/* =========================================================
+   GET ALL BUSINESSES
+========================================================= */
+exports.getBusinesses = async (req, res) => {
+  try {
+    const { status, search } = req.query;
+    const query = { role: "business" };
+
+    if (status) query["businessProfile.status"] = status;
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { "businessProfile.businessName": { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const businesses = await User.find(query)
+      .select("-password")
+      .sort({ createdAt: -1 })
+      .limit(500);
+
+    res.json({ success: true, businesses });
+  } catch (err) {
+    console.error("GET BUSINESSES ERROR:", err);
+    res.status(500).json({ success: false, message: "Failed to fetch businesses" });
+  }
+};
+
+/* =========================================================
+   REJECT BUSINESS
+========================================================= */
+exports.rejectBusiness = async (req, res) => {
+  try {
+    const business = await User.findOneAndUpdate(
+      { _id: req.params.id, role: "business" },
+      { "businessProfile.status": "rejected", "businessProfile.verified": false },
+      { new: true }
+    ).select("-password");
+
+    if (!business) return res.status(404).json({ success: false, message: "Business not found" });
+
+    res.json({ success: true, message: `"${business.businessProfile?.businessName}" rejected.`, business });
+  } catch (err) {
+    console.error("REJECT BUSINESS ERROR:", err);
+    res.status(500).json({ success: false, message: "Failed to reject business" });
+  }
+};
+
+/* =========================================================
+   REVOKE BUSINESS — reset to pending + revoke linked jobs
+========================================================= */
+exports.revokeBusiness = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // 1. Reset business back to pending
+    const business = await User.findOneAndUpdate(
+      { _id: id, role: "business" },
+      {
+        "businessProfile.status": "pending",
+        "businessProfile.verified": false,
+      },
+      { new: true }
+    ).select("-password");
+
+    if (!business) return res.status(404).json({ success: false, message: "Business not found" });
+
+    // 2. Find all recruiters linked to this business
+    const linkedRecruiters = await User.find({
+      role: "recruiter",
+      "recruiterProfile.linkedBusiness": id,
+    }).select("_id");
+
+    const recruiterIds = linkedRecruiters.map(r => r._id);
+    let jobsRevoked = 0;
+
+    if (recruiterIds.length > 0) {
+      // 3. Revoke their active/pending jobs
+      const jobResult = await Job.updateMany(
+        {
+          recruiter: { $in: recruiterIds },
+          status: { $in: ["approved", "pending_business"] },
+        },
+        { $set: { status: "revoked" } }
+      );
+      jobsRevoked = jobResult.modifiedCount;
+
+      // 4. ✅ UNLINK recruiters — clear linkedBusiness from their profile
+      await User.updateMany(
+        { _id: { $in: recruiterIds } },
+        { $unset: { "recruiterProfile.linkedBusiness": "" } }
+      );
+
+      // 5. ✅ Mark all approved links as revoked in RecruiterBusinessLink
+      await RecruiterBusinessLink.updateMany(
+        {
+          recruiter: { $in: recruiterIds },
+          business: id,
+          status: "approved",
+        },
+        { $set: { status: "removed_by_business", removedAt: new Date() } }
+      );
+    }
+
+    res.json({
+      success: true,
+      message: `"${business.businessProfile?.businessName}" revoked. ${recruiterIds.length} recruiter(s) unlinked, ${jobsRevoked} job(s) revoked.`,
+      business,
+      jobsRevoked,
+      recruitersUnlinked: recruiterIds.length,
+    });
+  } catch (err) {
+    console.error("REVOKE BUSINESS ERROR:", err);
+    res.status(500).json({ success: false, message: "Failed to revoke business" });
+  }
+};

@@ -136,20 +136,33 @@ const BusinessOwnerDashboard = () => {
     }
   }, [token, businessStatus]);
 
-  const approveRecruiter = async (requestId) => {
-    try {
-      const res = await axios.patch(
-        `http://localhost:5000/api/profile/business/approve-recruiter/${requestId}`, 
-        {}, 
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      toast.success(`${res.data.recruiter?.name || 'Recruiter'} approved!`);
-      fetchPendingRecruiters();
-      fetchLinkedRecruiters(); // Refresh linked list
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Approval failed");
+const approveRecruiter = async (requestId) => {
+  try {
+    const res = await axios.patch(
+      `http://localhost:5000/api/profile/business/approve-recruiter/${requestId}`, 
+      {}, 
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    toast.success(`${res.data.recruiter?.name || 'Recruiter'} approved!`);
+
+    // ✅ Show job restoration notice if any revoked jobs were restored
+    if (res.data.jobsRestored > 0) {
+      toast(`${res.data.jobsRestored} previously revoked job(s) restored — review them in Job Approvals below.`, {
+        duration: 6000,
+        icon: '📋',
+      });
+      // Auto-open the jobs section so they see it immediately
+      setShowJobs(true);
     }
-  };
+
+    fetchPendingRecruiters();
+    fetchLinkedRecruiters();
+    fetchPendingJobs(); // ✅ Refresh so restored jobs appear right away
+  } catch (err) {
+    toast.error(err.response?.data?.message || "Approval failed");
+  }
+};
 
   const rejectRecruiter = async (requestId, recruiterName) => {
     try {
