@@ -4,6 +4,7 @@ import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import toast from "react-hot-toast";
+import ApplyModal from "./ApplyModal";
 import {
   ArrowLeft,
   MapPin,
@@ -66,11 +67,8 @@ const JobDetail = () => {
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
-  const [coverLetter, setCoverLetter] = useState("");
-  const [coverLetterError, setCoverLetterError] = useState("");
 
   const isJobSeeker = user?.role === "jobseeker";
   const isLoggedIn = !!token;
@@ -89,15 +87,11 @@ const JobDetail = () => {
         // Check if already applied
         if (token && user?.role === "jobseeker") {
           try {
-            const appRes = await axios.get(`${API_BASE_URL}/api/applications/my`, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            const apps = appRes.data.applications || appRes.data || [];
-            const alreadyApplied = apps.some(
-              (a) => (a.job?._id || a.job) === jobId
-            );
-            setApplied(alreadyApplied);
-          } catch { /* silently ignore */ }
+            const checkRes = await axios.get(`${API_BASE_URL}/api/applications/check/${jobId}`, {
+  headers: { Authorization: `Bearer ${token}` },
+});
+setApplied(checkRes.data.applied || false);
+          } catch (err) { /* silently ignore */ }
         }
       } catch (err) {
         setError(err.response?.data?.message || "Job not found");
@@ -753,55 +747,16 @@ const JobDetail = () => {
       </div>
 
       {/* ── Apply Modal ── */}
-      {showApplyModal && (
-        <div className="jd-modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowApplyModal(false)}>
-          <div className="jd-modal">
-            <button className="jd-modal-close" onClick={() => setShowApplyModal(false)}>
-              <X size={16} color="#64748b" />
-            </button>
-
-            <div className="jd-modal-title">Apply for this Job</div>
-            <div className="jd-modal-sub">Write a short cover letter to stand out</div>
-
-            <div className="jd-modal-job-pill">
-              <div style={{ width: 36, height: 36, background: "#0f172a", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Building2 size={18} color="white" />
-              </div>
-              <div>
-                <div className="jd-modal-job-name">{job.title}</div>
-                <div className="jd-modal-company">{job.company || "Direct Hire"} · {job.location}</div>
-              </div>
-            </div>
-
-            <label className="jd-modal-label">Cover Letter <span style={{ color: "#ef4444" }}>*</span></label>
-            <textarea
-              className={`jd-modal-textarea ${coverLetterError ? "error" : ""}`}
-              placeholder="Tell us why you're a great fit for this role. Mention relevant experience, skills, or projects..."
-              value={coverLetter}
-              onChange={(e) => { setCoverLetter(e.target.value); if (coverLetterError) setCoverLetterError(""); }}
-              rows={5}
-            />
-            {coverLetterError
-              ? <div className="jd-modal-error"><AlertCircle size={12} />{coverLetterError}</div>
-              : <div className="jd-modal-hint">{coverLetter.length} chars · min 30 required</div>
-            }
-
-            <div className="jd-modal-actions">
-              <button className="jd-modal-cancel" onClick={() => setShowApplyModal(false)}>Cancel</button>
-              <button
-                className="jd-modal-submit"
-                onClick={handleApply}
-                disabled={applying}
-              >
-                {applying
-                  ? <><Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> Submitting…</>
-                  : <><Send size={15} /> Submit Application</>
-                }
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+{showApplyModal && (
+  <ApplyModal
+    job={job}
+    onClose={() => setShowApplyModal(false)}
+    onSuccess={() => {
+      setApplied(true);
+      setShowApplyModal(false);
+    }}
+  />
+)}
     </>
   );
 };

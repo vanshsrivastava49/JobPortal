@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Navbar from '../components/common/Navbar';
+import MyApplications from './MyApplications';
 import {
   Briefcase,
   FileText,
@@ -39,12 +40,10 @@ const JobSeekerDashboard = () => {
       ? `${profile.firstName} ${profile.lastName}`
       : profile.fullName || user?.name || '—';
 
-  const stats = [
-    { icon: Briefcase,   label: 'Jobs Applied',        value: '0',              color: '#3b82f6' },
-    { icon: FileText,    label: 'Profile Views',        value: '0',              color: '#10b981' },
-    { icon: TrendingUp,  label: 'Shortlisted',          value: '0',              color: '#8b5cf6' },
-    { icon: User,        label: 'Profile Completion',   value: `${profileProgress}%`, color: '#f59e0b' },
-  ];
+const stats = [
+  { icon: Briefcase,   label: 'Profile Completion',  value: `${profileProgress}%`, color: '#3b82f6' },
+  { icon: User,        label: 'Profile Status',       value: isProfileComplete ? 'Complete' : 'Incomplete', color: '#10b981' },
+];
 
   const detailSections = [
     {
@@ -468,7 +467,7 @@ const JobSeekerDashboard = () => {
               </div>
             )}
           </div>
-
+          <MyApplications />
         </div>
       </div>
     </>

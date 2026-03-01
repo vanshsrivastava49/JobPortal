@@ -722,6 +722,298 @@ const sendBusinessRecruiterRemovedConfirmation = async (businessEmail, businessO
   });
 };
 
+
+// ════════════════════════════════════════════════════════════
+//   APPLICATION WORKFLOW EMAILS
+// ════════════════════════════════════════════════════════════
+
+// 19. Jobseeker — application submitted confirmation
+const sendApplicationConfirmation = async (email, applicantName, jobTitle, companyName) => {
+  const html = baseTemplate(`
+    ${greeting(applicantName)}
+    ${paragraph(`Your application has been successfully submitted. The recruiter will review it and get back to you soon.`)}
+
+    <div style="margin:20px 0;">
+      ${statusBadge("Application Received", "info")}
+    </div>
+
+    ${infoBox([
+      { label: "Role Applied For", value: jobTitle },
+      { label: "Company",          value: companyName },
+      { label: "Status",           value: "Under Review" },
+      { label: "Submitted At",     value: new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) },
+    ])}
+
+    ${paragraph("You can track the live status of your application anytime from your dashboard under <strong>My Applications</strong>.")}
+    ${paragraph("Good luck! 🤞")}
+
+    ${ctaButton("Track My Applications", `${FRONTEND_URL}/dashboard`)}
+    ${signOff()}
+  `);
+
+  await transporter.sendMail({
+    from: `"${APP_NAME}" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: `✅ Application Received — ${jobTitle} at ${companyName}`,
+    html,
+  });
+};
+
+// 20. Recruiter — new application alert
+const sendNewApplicationAlert = async (email, recruiterName, jobTitle, applicantName, applicantEmail) => {
+  const html = baseTemplate(`
+    ${greeting(recruiterName)}
+    ${paragraph(`You have received a new application for one of your active job listings.`)}
+
+    <div style="margin:20px 0;">
+      ${statusBadge("New Application", "info")}
+    </div>
+
+    ${infoBox([
+      { label: "Applicant Name",  value: applicantName },
+      { label: "Applicant Email", value: applicantEmail },
+      { label: "Applied For",     value: jobTitle },
+      { label: "Received At",     value: new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) },
+    ])}
+
+    ${paragraph("Log into your dashboard to review their profile, read the cover letter, view their resume, and take action.")}
+
+    ${ctaButton("Review Application", `${FRONTEND_URL}/dashboard`)}
+    ${signOff()}
+  `);
+
+  await transporter.sendMail({
+    from: `"${APP_NAME}" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: `📥 New Application — ${jobTitle}`,
+    html,
+  });
+};
+
+// 21. Jobseeker — shortlisted notification
+const sendShortlistEmail = async (email, applicantName, jobTitle, companyName, firstRoundName, note) => {
+  const html = baseTemplate(`
+    ${greeting(applicantName)}
+    <p style="margin:0 0 20px;color:#0f172a;font-size:22px;font-weight:700;">🎉 You've been shortlisted!</p>
+
+    ${paragraph(`Exciting news — you have been <strong>shortlisted</strong> for the position of <strong>${jobTitle}</strong> at <strong>${companyName}</strong>.`)}
+
+    <div style="margin:20px 0;">
+      ${statusBadge("Shortlisted ✓", "success")}
+    </div>
+
+    ${infoBox([
+      { label: "Role",        value: jobTitle },
+      { label: "Company",     value: companyName },
+      { label: "Status",      value: "Shortlisted" },
+      ...(firstRoundName ? [{ label: "First Round", value: firstRoundName }] : []),
+    ])}
+
+    ${note ? `
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#fef3c7;border:1px solid #fde047;border-radius:8px;margin:20px 0;">
+        <tr><td style="padding:16px 20px;">
+          <p style="margin:0 0 6px;color:#92400e;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Message from Recruiter</p>
+          <p style="margin:0;color:#78350f;font-size:14px;line-height:1.6;">${note}</p>
+        </td></tr>
+      </table>
+    ` : ""}
+
+    ${paragraph("The recruiter will reach out with further details. Keep an eye on your dashboard for real-time round updates.")}
+    ${paragraph("Best of luck with the next steps! 💪")}
+
+    ${ctaButton("Track My Application", `${FRONTEND_URL}/dashboard`)}
+    ${signOff()}
+  `);
+
+  await transporter.sendMail({
+    from: `"${APP_NAME}" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: `🎉 You've Been Shortlisted! — ${jobTitle} at ${companyName}`,
+    html,
+  });
+};
+
+// 22. Jobseeker — round passed, advancing to next round
+const sendRoundPassedEmail = async (email, applicantName, jobTitle, companyName, passedRound, nextRound, nextRoundNumber, note) => {
+  const html = baseTemplate(`
+    ${greeting(applicantName)}
+    <p style="margin:0 0 20px;color:#0f172a;font-size:22px;font-weight:700;">✅ Round Cleared — Keep Going!</p>
+
+    ${paragraph(`Well done! You have successfully cleared a round in the hiring process for <strong>${jobTitle}</strong> at <strong>${companyName}</strong>.`)}
+
+    ${infoBox([
+      { label: "Round Cleared", value: `${passedRound} ✓` },
+      { label: "Next Round",    value: `Round ${nextRoundNumber}: ${nextRound}` },
+      { label: "Status",        value: "Advancing" },
+    ])}
+
+    ${note ? `
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#fef3c7;border:1px solid #fde047;border-radius:8px;margin:20px 0;">
+        <tr><td style="padding:16px 20px;">
+          <p style="margin:0 0 6px;color:#92400e;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Message from Recruiter</p>
+          <p style="margin:0;color:#78350f;font-size:14px;line-height:1.6;">${note}</p>
+        </td></tr>
+      </table>
+    ` : ""}
+
+    ${paragraph("Stay prepared and keep up the great work. You're getting closer! 🚀")}
+
+    ${ctaButton("View Application Status", `${FRONTEND_URL}/dashboard`)}
+    ${signOff()}
+  `);
+
+  await transporter.sendMail({
+    from: `"${APP_NAME}" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: `✅ Round Passed — Moving to Round ${nextRoundNumber} | ${jobTitle}`,
+    html,
+  });
+};
+
+// 23. Jobseeker — rejected at a specific round
+const sendRoundRejectedEmail = async (email, applicantName, jobTitle, companyName, roundName, note) => {
+  const html = baseTemplate(`
+    ${greeting(applicantName)}
+    ${paragraph(`Thank you for your time and effort during the hiring process for <strong>${jobTitle}</strong> at <strong>${companyName}</strong>.`)}
+
+    <div style="margin:20px 0;">
+      ${statusBadge("Not Selected at This Stage", "danger")}
+    </div>
+
+    ${infoBox([
+      { label: "Role",         value: jobTitle },
+      { label: "Company",      value: companyName },
+      { label: "Stage",        value: roundName },
+      { label: "Decision",     value: "Not selected to proceed further" },
+    ])}
+
+    ${note ? `
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin:20px 0;">
+        <tr><td style="padding:16px 20px;">
+          <p style="margin:0 0 6px;color:#64748b;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Feedback from Recruiter</p>
+          <p style="margin:0;color:#475569;font-size:14px;line-height:1.6;">${note}</p>
+        </td></tr>
+      </table>
+    ` : ""}
+
+    ${paragraph("We encourage you to keep applying — the right opportunity is out there. Every interview is a learning experience!")}
+
+    ${ctaButton("Browse More Jobs", `${FRONTEND_URL}/jobs`)}
+    ${signOff()}
+  `);
+
+  await transporter.sendMail({
+    from: `"${APP_NAME}" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: `Update on Your Application — ${jobTitle} at ${companyName}`,
+    html,
+  });
+};
+
+// 24. Jobseeker — outright rejection (before or without rounds)
+const sendRejectionEmail = async (email, applicantName, jobTitle, companyName, reason) => {
+  const html = baseTemplate(`
+    ${greeting(applicantName)}
+    ${paragraph(`Thank you for your interest in the <strong>${jobTitle}</strong> role at <strong>${companyName}</strong> and for taking the time to apply.`)}
+
+    <div style="margin:20px 0;">
+      ${statusBadge("Application Not Selected", "danger")}
+    </div>
+
+    ${infoBox([
+      { label: "Role",    value: jobTitle },
+      { label: "Company", value: companyName },
+      { label: "Status",  value: "Not Selected" },
+      ...(reason ? [{ label: "Reason", value: reason }] : []),
+    ])}
+
+    ${paragraph("After careful consideration, we have decided not to move forward with your application at this time. This was a competitive process and we appreciate your effort.")}
+    ${paragraph("Don't be discouraged — keep exploring other opportunities on our platform. We wish you all the best! 🌟")}
+
+    ${ctaButton("Browse More Jobs", `${FRONTEND_URL}/jobs`)}
+    ${signOff()}
+  `);
+
+  await transporter.sendMail({
+    from: `"${APP_NAME}" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: `Update on Your Application — ${jobTitle} at ${companyName}`,
+    html,
+  });
+};
+
+// 25. Jobseeker — hired / offer extended
+const sendHiredEmail = async (email, applicantName, jobTitle, companyName, note) => {
+  const html = baseTemplate(`
+    ${greeting(applicantName)}
+    <p style="margin:0 0 20px;color:#0f172a;font-size:22px;font-weight:700;">🎊 Congratulations — You've Been Selected!</p>
+
+    ${paragraph(`We are absolutely thrilled to inform you that you have been <strong>selected</strong> for the position of <strong>${jobTitle}</strong> at <strong>${companyName}</strong>!`)}
+
+    <div style="margin:20px 0;">
+      ${statusBadge("Offer Extended 🏆", "success")}
+    </div>
+
+    ${infoBox([
+      { label: "Role",    value: jobTitle },
+      { label: "Company", value: companyName },
+      { label: "Status",  value: "Offer Extended ✓" },
+    ])}
+
+    ${note ? `
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#fef3c7;border:1px solid #fde047;border-radius:8px;margin:20px 0;">
+        <tr><td style="padding:16px 20px;">
+          <p style="margin:0 0 6px;color:#92400e;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Message from the Team</p>
+          <p style="margin:0;color:#78350f;font-size:14px;line-height:1.6;">${note}</p>
+        </td></tr>
+      </table>
+    ` : ""}
+
+    ${paragraph("The recruiter will be in touch shortly with the formal offer letter and onboarding details. Welcome aboard! 🚀")}
+
+    ${ctaButton("View Application Details", `${FRONTEND_URL}/dashboard`)}
+    ${signOff()}
+  `);
+
+  await transporter.sendMail({
+    from: `"${APP_NAME}" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: `🎊 Offer Extended — ${jobTitle} at ${companyName}!`,
+    html,
+  });
+};
+
+// 26. Recruiter — applicant withdrew their application
+const sendApplicationWithdrawnNotice = async (email, recruiterName, jobTitle, applicantName) => {
+  const html = baseTemplate(`
+    ${greeting(recruiterName)}
+    ${paragraph(`An applicant has withdrawn their application for <strong>${jobTitle}</strong>.`)}
+
+    <div style="margin:20px 0;">
+      ${statusBadge("Application Withdrawn", "info")}
+    </div>
+
+    ${infoBox([
+      { label: "Applicant",   value: applicantName },
+      { label: "Role",        value: jobTitle },
+      { label: "Withdrawn At", value: new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) },
+    ])}
+
+    ${paragraph("No action is required from your end. The application has been automatically marked as withdrawn in your dashboard.")}
+
+    ${ctaButton("View All Applications", `${FRONTEND_URL}/dashboard`)}
+    ${signOff()}
+  `);
+
+  await transporter.sendMail({
+    from: `"${APP_NAME}" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: `Application Withdrawn — ${jobTitle}`,
+    html,
+  });
+};
+
+
 // ════════════════════════════════════════════════════════════
 //   EXPORTS
 // ════════════════════════════════════════════════════════════
@@ -729,10 +1021,11 @@ module.exports = {
   // Business
   sendBusinessPendingEmail,
   sendBusinessApprovedEmail,
-  sendBusinessReApprovedEmail,       // ← NEW
+  sendBusinessReApprovedEmail,
   sendBusinessRejectedEmail,
   sendBusinessRevokedEmail,
   sendBusinessRecruiterRemovedConfirmation,
+
   // Recruiter ↔ Business
   sendRecruiterRequestToBusiness,
   sendRecruiterRequestConfirmation,
@@ -749,4 +1042,14 @@ module.exports = {
   sendRestoredJobsNotification,
   sendAdminNewBusinessAlert,
   sendAdminJobLiveAlert,
+
+  // Applications
+  sendApplicationConfirmation,
+  sendNewApplicationAlert,
+  sendShortlistEmail,
+  sendRoundPassedEmail,
+  sendRoundRejectedEmail,
+  sendRejectionEmail,
+  sendHiredEmail,
+  sendApplicationWithdrawnNotice,
 };
