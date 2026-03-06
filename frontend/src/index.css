@@ -1,8 +1,15 @@
 @import "tailwindcss";
-* {
+
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+html {
+  overflow-x: hidden;
 }
 
 body {
@@ -12,13 +19,36 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #f5f5f5;
+  display: block;
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 #root {
+  width: 100%;
   min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  overflow-x: hidden;
 }
 
-/* Utility classes */
+/* ── Reset bare button/input so Tailwind classes take full control ── */
+button {
+  all: unset;
+  cursor: pointer;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+input {
+  all: unset;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+/* ── Utility classes — used by Login, Signup, Dashboard etc. ── */
 .container {
   max-width: 1200px;
   margin: 0 auto;
@@ -32,13 +62,15 @@ body {
   cursor: pointer;
   font-size: 16px;
   font-weight: 500;
+  font-family: inherit;
   transition: all 0.3s ease;
+  display: inline-block;
 }
 
 .btn-primary {
   background-color: #2563eb;
   color: white;
-      margin: 10px 0px;
+  margin: 10px 0px;
 }
 
 .btn-primary:hover {
@@ -60,12 +92,16 @@ body {
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 16px;
+  font-family: inherit;
   transition: border-color 0.3s ease;
+  background-color: white;
+  color: #111;
 }
 
 .input:focus {
   outline: none;
   border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
 .card {

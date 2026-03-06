@@ -25,10 +25,9 @@ const Navbar = ({ title }) => {
 
   const role = roleConfig[user?.role] || roleConfig.jobseeker;
 
-  // Nav links per role
   const navLinks = {
     admin: [
-      { label: 'Dashboard',  path: '/admin',                   icon: LayoutDashboard },
+      { label: 'Dashboard',  path: '/admin',                    icon: LayoutDashboard },
       { label: 'Businesses', path: '/admin/pending-businesses', icon: Building },
     ],
     recruiter: [
@@ -40,7 +39,7 @@ const Navbar = ({ title }) => {
       { label: 'Requests',  path: '/business/requests',  icon: Clock },
     ],
     jobseeker: [
-      { label: 'Jobs',      path: '/jobs',               icon: Briefcase },
+      { label: 'Jobs',      path: '/jobs',                icon: Briefcase },
       { label: 'Dashboard', path: '/jobseeker/dashboard', icon: LayoutDashboard },
     ],
   };
@@ -53,72 +52,141 @@ const Navbar = ({ title }) => {
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
 
         .nav-root {
-          background: rgba(255, 255, 255, 0.96);
-          backdrop-filter: blur(12px);
+          background: #ffffff;
           border-bottom: 1px solid #e2e8f0;
           position: sticky;
           top: 0;
           z-index: 100;
           font-family: 'DM Sans', sans-serif;
+          width: 100%;
         }
 
-        .nav-inner {
+        /* ── TOP ROW ── */
+        .nav-top {
+          border-bottom: 1px solid #ececec;
+          width: 100%;
+        }
+
+        .nav-top-inner {
           max-width: 1400px;
           margin: 0 auto;
-          padding: 0 24px;
           display: flex;
-          align-items: center;
-          justify-content: space-between;
-          height: 62px;
-          gap: 24px;
+          align-items: stretch;
+          min-height: 90px;
         }
 
-        /* ── Brand ── */
-        .nav-brand {
+        /* Left: logo + company */
+        .nav-brand-block {
           display: flex;
           align-items: center;
-          gap: 10px;
-          cursor: pointer;
-          text-decoration: none;
+          gap: 20px;
+          padding: 16px 48px;
           flex-shrink: 0;
         }
 
-        .nav-brand-icon {
-          width: 34px;
-          height: 34px;
-          border-radius: 9px;
-          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 16px;
-          box-shadow: 0 2px 8px rgba(16,185,129,0.3);
+        .nav-brand {
+          cursor: pointer;
+          text-decoration: none;
         }
 
         .nav-brand-text {
-          font-size: 17px;
-          font-weight: 700;
-          color: #0f172a;
-          letter-spacing: -0.3px;
+          font-size: 2rem;
+          font-weight: 800;
+          letter-spacing: -0.03em;
+          line-height: 1;
         }
 
-        /* ── Links ── */
-        .nav-links {
+        .nav-brand-text .green { color: #108a42; }
+        .nav-brand-text .dark  { color: #1a1a1a; }
+
+        .nav-divider-v {
+          width: 1px;
+          height: 40px;
+          background: #ddd;
+          flex-shrink: 0;
+          align-self: center;
+        }
+
+        .nav-divider-v-full {
+          width: 1px;
+          background: #e8e8e8;
+          flex-shrink: 0;
+          align-self: stretch;
+        }
+
+        .nav-company-name {
+          font-size: 13px;
+          color: #444;
+          font-weight: 500;
+          white-space: nowrap;
+        }
+
+        /* Right: banner image area */
+        .nav-banner-area {
+          flex: 1;
+          background: #f5f5f5;
           display: flex;
           align-items: center;
-          gap: 2px;
-          flex: 1;
+          justify-content: center;
+          position: relative;
+          overflow: hidden;
+          min-height: 90px;
         }
 
+        .nav-banner-placeholder {
+          position: absolute;
+          inset: 8px;
+          border: 2px dashed #c8d8c8;
+          border-radius: 6px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 5px;
+        }
+
+        .nav-banner-placeholder span {
+          font-size: 11px;
+          color: #999;
+          font-weight: 500;
+        }
+
+        .nav-banner-placeholder small {
+          font-size: 10px;
+          color: #bbb;
+        }
+
+        /* ── BOTTOM ROW ── */
+        .nav-bottom {
+          width: 100%;
+        }
+
+        .nav-bottom-inner {
+          max-width: 1400px;
+          margin: 0 auto;
+          padding: 0 48px;
+          height: 50px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .nav-links-group {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        /* Nav links */
         .nav-link {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          padding: 7px 14px;
+          padding: 6px 12px;
           border-radius: 8px;
           font-size: 14px;
           font-weight: 500;
-          color: #64748b;
+          color: #2b2b2b;
           cursor: pointer;
           background: none;
           border: none;
@@ -128,26 +196,14 @@ const Navbar = ({ title }) => {
           white-space: nowrap;
         }
 
-        .nav-link:hover {
-          background: #f1f5f9;
-          color: #0f172a;
-        }
+        .nav-link:hover { color: #108a42; }
 
         .nav-link.active {
-          background: #f1f5f9;
-          color: #0f172a;
+          color: #108a42;
           font-weight: 600;
         }
 
-        /* ── Right side ── */
-        .nav-right {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          flex-shrink: 0;
-        }
-
-        /* ── User menu ── */
+        /* User menu */
         .nav-user-wrap {
           position: relative;
         }
@@ -216,7 +272,7 @@ const Navbar = ({ title }) => {
         }
         .nav-chevron.open { transform: rotate(180deg); }
 
-        /* ── Dropdown ── */
+        /* Dropdown */
         .nav-dropdown {
           position: absolute;
           top: calc(100% + 8px);
@@ -279,83 +335,177 @@ const Navbar = ({ title }) => {
         }
         .nav-dropdown-item.danger:hover { background: #fef2f2; }
 
-        /* ── Overlay to close dropdown ── */
         .nav-overlay {
           position: fixed;
           inset: 0;
           z-index: 99;
         }
 
-        @media (max-width: 640px) {
-          .nav-links { display: none; }
+        @media (max-width: 768px) {
+          .nav-brand-block { padding: 12px 20px; gap: 12px; }
+          .nav-bottom-inner { padding: 0 20px; gap: 16px; }
           .nav-user-email { max-width: 110px; }
-          .nav-inner { padding: 0 16px; }
+          .nav-company-name { display: none; }
+          .nav-divider-v { display: none; }
+        }
+
+        /* ── Auth buttons (public/logged-out) ── */
+        .nav-auth-btn {
+          border-radius: 9999px;
+          padding: 8px 26px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          font-family: 'DM Sans', sans-serif;
+          transition: all 0.15s;
+        }
+
+        .nav-auth-btn--outline {
+          background: white;
+          border: 1.5px solid #c8e6c9;
+          color: #108a42;
+        }
+
+        .nav-auth-btn--outline:hover {
+          background: #f0faf2;
+        }
+
+        .nav-auth-btn--solid {
+          background: #9dffc1;
+          border: none;
+          color: #1a6b35;
+        }
+
+        .nav-auth-btn--solid:hover {
+          background: #7dfaab;
         }
       `}</style>
 
       <nav className="nav-root">
-        <div className="nav-inner">
 
-          {/* Brand */}
-          <div className="nav-brand" onClick={() => navigate('/')}>
-            <span className="nav-brand-text">{title || 'Green Jobs'}</span>
-          </div>
+        {/* ── TOP ROW: Logo + Company | Banner Image ── */}
+        <div className="nav-top">
+          <div className="nav-top-inner">
 
-          {/* Right */}
-          <div className="nav-right">
-            <div className="nav-user-wrap">
-              <button
-                className="nav-user-btn"
-                onClick={() => setUserMenuOpen(v => !v)}
-              >
-                <div className="nav-avatar">
-                  {user?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || <User size={13} />}
+            {/* Left: GreenJobs + company */}
+            <div className="nav-brand-block">
+              <div className="nav-brand" onClick={() => navigate('/')}>
+                <div className="nav-brand-text">
+                  <span className="green">Green</span>
+                  <span className="dark">Jobs</span>
                 </div>
-                <div className="nav-user-info">
-                  <span className="nav-user-email">
-                    {user?.name || user?.email}
-                  </span>
-                  <span
-                    className="nav-role-badge"
-                    style={{ background: role.bg, color: role.color, border: `1px solid ${role.border}` }}
-                  >
-                    {role.label}
-                  </span>
-                </div>
-                <ChevronDown size={14} className={`nav-chevron ${userMenuOpen ? 'open' : ''}`} />
-              </button>
-
-              {userMenuOpen && (
-                <>
-                  <div className="nav-overlay" onClick={() => setUserMenuOpen(false)} />
-                  <div className="nav-dropdown">
-                    <div className="nav-dropdown-header">
-                      <div className="nav-dropdown-name">{user?.name || 'User'}</div>
-                      <div className="nav-dropdown-email">{user?.email}</div>
-                    </div>
-
-                    <button
-                      className="nav-dropdown-item"
-                      onClick={() => { setUserMenuOpen(false); navigate('/profile'); }}
-                    >
-                      <User size={15} />
-                      My Profile
-                    </button>
-
-                    <button
-                      className="nav-dropdown-item danger"
-                      onClick={() => { setUserMenuOpen(false); handleLogout(); }}
-                    >
-                      <LogOut size={15} />
-                      Sign Out
-                    </button>
-                  </div>
-                </>
-              )}
+              </div>
+              <div className="nav-divider-v" />
+              <span className="nav-company-name">Renewables India Pvt Ltd</span>
             </div>
-          </div>
 
+            {/* Separator */}
+            <div className="nav-divider-v-full" />
+
+            {/* Right: Banner image placeholder */}
+            <div className="nav-banner-area">
+              <div className="nav-banner-placeholder">
+                <span>🖼️</span>
+                <span>Banner image will be placed here</span>
+                <small>Recommended size: 900 × 90 px</small>
+              </div>
+            </div>
+
+          </div>
         </div>
+
+        {/* ── BOTTOM ROW ── */}
+        <div className="nav-bottom">
+          <div className="nav-bottom-inner">
+
+            {user ? (
+              <>
+                {/* Left: Role-based nav links */}
+                <div className="nav-links-group">
+                  {links.map(({ label, path, icon: Icon }) => (
+                    <button
+                      key={path}
+                      className={`nav-link ${location.pathname === path ? 'active' : ''}`}
+                      onClick={() => navigate(path)}
+                    >
+                      <Icon size={14} />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Right: User dropdown */}
+                <div className="nav-user-wrap">
+                  <button
+                    className="nav-user-btn"
+                    onClick={() => setUserMenuOpen(v => !v)}
+                  >
+                    <div className="nav-avatar">
+                      {user?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || <User size={13} />}
+                    </div>
+                    <div className="nav-user-info">
+                      <span className="nav-user-email">{user?.name || user?.email}</span>
+                      <span
+                        className="nav-role-badge"
+                        style={{ background: role.bg, color: role.color, border: `1px solid ${role.border}` }}
+                      >
+                        {role.label}
+                      </span>
+                    </div>
+                    <ChevronDown size={14} className={`nav-chevron ${userMenuOpen ? 'open' : ''}`} />
+                  </button>
+
+                  {userMenuOpen && (
+                    <>
+                      <div className="nav-overlay" onClick={() => setUserMenuOpen(false)} />
+                      <div className="nav-dropdown">
+                        <div className="nav-dropdown-header">
+                          <div className="nav-dropdown-name">{user?.name || 'User'}</div>
+                          <div className="nav-dropdown-email">{user?.email}</div>
+                        </div>
+                        <button
+                          className="nav-dropdown-item"
+                          onClick={() => { setUserMenuOpen(false); navigate('/profile'); }}
+                        >
+                          <User size={15} />
+                          My Profile
+                        </button>
+                        <button
+                          className="nav-dropdown-item danger"
+                          onClick={() => { setUserMenuOpen(false); handleLogout(); }}
+                        >
+                          <LogOut size={15} />
+                          Sign Out
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Public homepage: empty left, Login + Sign Up on right */}
+                <div />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <button
+                    onClick={() => navigate('/login')}
+                    className="nav-auth-btn nav-auth-btn--outline"
+                  >
+                    Log In
+                  </button>
+                  <button
+                    onClick={() => navigate('/signup')}
+                    className="nav-auth-btn nav-auth-btn--solid"
+                  >
+                    Sign Up
+                  </button>
+                </div>
+              </>
+            )}
+
+          </div>
+        </div>
+
       </nav>
     </>
   );

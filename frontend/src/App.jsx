@@ -22,6 +22,8 @@ import Businesses from "./pages/Businesses";
 import ApprovedBusinesses from "./pages/ApprovedBusinesses";
 import Jobs from "./pages/Jobs";
 import JobDetail from "./pages/JobDetail";
+import Home from "./pages/Home";
+
 function App() {
   return (
     <AuthProvider>
@@ -29,13 +31,13 @@ function App() {
         <Toaster position="top-right" />
 
         <Routes>
+          <Route path="/" element={<Home />} />
 
-          {/* ================= AUTH ================= */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
-          <Route path="/profile" element={<Myprofile/>}/>
-          <Route path="/jobs/:jobId" element={<JobDetail />}/>
-          {/* ================= MAIN DASHBOARD REDIRECT ================= */}
+          <Route path="/profile" element={<Myprofile />} />
+          <Route path="/jobs/:jobId" element={<JobDetail />} />
+
           <Route
             path="/dashboard"
             element={
@@ -45,9 +47,8 @@ function App() {
             }
           />
 
-          {/* ================= JOB ROUTES ================= */}
+          <Route path="/jobs" element={<Jobs />} />
 
-          {/* Recruiter post job */}
           <Route
             path="/post-job"
             element={
@@ -57,7 +58,6 @@ function App() {
             }
           />
 
-          {/* Admin approve jobs */}
           <Route
             path="/admin/pending-jobs"
             element={
@@ -67,9 +67,6 @@ function App() {
             }
           />
 
-          {/* ================= BUSINESS ROUTES ================= */}
-
-          {/* Admin approve businesses */}
           <Route
             path="/admin/pending-businesses"
             element={
@@ -79,13 +76,8 @@ function App() {
             }
           />
 
-          {/* Public business listing */}
-          <Route
-            path="/businesses"
-            element={<Businesses />}
-          />
-          
-          {/* ================= ROLE DASHBOARDS ================= */}
+          <Route path="/businesses" element={<Businesses />} />
+          <Route path="/admin/approved-businesses" element={<ApprovedBusinesses />} />
 
           <Route
             path="/jobseeker/*"
@@ -104,7 +96,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
           <Route
             path="/business/*"
             element={
@@ -113,7 +105,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-<Route path="/jobs" element={<Jobs />} />
+
           <Route
             path="/admin/*"
             element={
@@ -123,7 +115,6 @@ function App() {
             }
           />
 
-          {/* ================= PROFILE ================= */}
           <Route
             path="/complete-profile"
             element={
@@ -132,9 +123,8 @@ function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="/admin/approved-businesses" element={<ApprovedBusinesses />} />
-          {/* ================= DEFAULT ================= */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
+
+          <Route path="*" element={<Navigate to="/" replace />} />
 
         </Routes>
       </div>
