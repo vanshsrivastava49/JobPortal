@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { LogOut, User, ChevronDown, Briefcase, LayoutDashboard, Building, Clock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
-
+import bannerImg from '../../assets/banner.jpeg';
 const Navbar = ({ title }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -123,15 +123,14 @@ const Navbar = ({ title }) => {
 
         /* Right: banner image area */
         .nav-banner-area {
-          flex: 1;
-          background: #f5f5f5;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          position: relative;
-          overflow: hidden;
-          min-height: 90px;
-        }
+  flex: 1;
+  background: transparent;
+  display: flex;
+  align-items: stretch;
+  position: relative;
+  overflow: hidden;
+  min-height: 90px;
+}
 
         .nav-banner-placeholder {
           position: absolute;
@@ -404,11 +403,16 @@ const Navbar = ({ title }) => {
 
             {/* Right: Banner image placeholder */}
             <div className="nav-banner-area">
-              <div className="nav-banner-placeholder">
-                <span>🖼️</span>
-                <span>Banner image will be placed here</span>
-                <small>Recommended size: 900 × 90 px</small>
-              </div>
+              <img
+    src={bannerImg}
+    alt="Banner"
+    style={{
+      width: '100%',
+      height: '150px',
+      objectFit: 'fill',
+    display: 'block',
+    }}
+  />
             </div>
 
           </div>
