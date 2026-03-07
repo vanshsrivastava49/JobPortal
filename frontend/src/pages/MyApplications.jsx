@@ -260,6 +260,7 @@ const RoundJourneyBanner = ({ app }) => {
 ───────────────────────────────────────────────────────── */
 const MyApplications = () => {
   const { token } = useAuth();
+const authToken = token || JSON.parse(localStorage.getItem("job_portal_auth") || "{}").token;
   const [applications, setApplications] = useState([]);
   const [loading, setLoading]           = useState(true);
   const [expandedApp, setExpandedApp]   = useState(null);
@@ -267,19 +268,19 @@ const MyApplications = () => {
   const [filterStatus, setFilterStatus] = useState("all");
 
   const fetchApplications = useCallback(async () => {
-    if (!token) return;
+    if (!authToken) return;
     try {
       setLoading(true);
-      const res = await axios.get(`${API_BASE}/api/applications/my`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await axios.get(`${API_BASE_URL}/api/applications/my`, {
+  headers: { Authorization: `Bearer ${authToken}` },
+});
       setApplications(res.data.applications || []);
     } catch {
       toast.error("Failed to load applications");
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [authToken]);
 
   useEffect(() => { fetchApplications(); }, [fetchApplications]);
 
@@ -288,10 +289,10 @@ const MyApplications = () => {
     try {
       setWithdrawing(applicationId);
       await axios.patch(
-        `${API_BASE}/api/applications/${applicationId}/withdraw`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+  `${API_BASE_URL}/api/applications/${applicationId}/withdraw`,
+  {},
+  { headers: { Authorization: `Bearer ${authToken}` } }
+);
       toast.success("Application withdrawn");
       fetchApplications();
     } catch (err) {
