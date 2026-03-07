@@ -7,6 +7,7 @@ import { sendOTP, verifyOTP } from "../api/authApi";
 import GoogleSignIn from "../components/Auth/GoogleSignIn";
 import ReCAPTCHA from "react-google-recaptcha";
 import Navbar from "../components/common/Navbar";
+
 const Login = () => {
   const [step, setStep] = useState("email");
   const [email, setEmail] = useState("");
@@ -16,6 +17,13 @@ const Login = () => {
 
   const { isAuthenticated, login } = useAuth();
   const navigate = useNavigate();
+
+  const redirectMap = {
+    jobseeker: "/jobseeker/dashboard",
+    recruiter: "/recruiter/dashboard",
+    business:  "/business/dashboard",
+    admin:     "/admin",
+  };
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
@@ -29,8 +37,14 @@ const Login = () => {
       return;
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error("Please enter a valid email");
+      return;
+    }
+
     if (!captchaToken) {
-      toast.error("Please verify that you are not a robot");
+      toast.error("Please complete the reCAPTCHA");
       return;
     }
 
@@ -38,7 +52,6 @@ const Login = () => {
 
     try {
       const res = await sendOTP(email, "login", captchaToken);
-
       if (res.success) {
         toast.success("OTP sent to your email");
         setStep("verify");
@@ -46,7 +59,11 @@ const Login = () => {
         toast.error(res.message || "Failed to send OTP");
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to send OTP");
+      toast.error(
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to send OTP"
+      );
     } finally {
       setLoading(false);
     }
@@ -63,17 +80,21 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const res = await verifyOTP(email, otp, null, null, null, "login");
+      const res = await verifyOTP(email, otp, null, null, null, null, "login");
 
       if (res.success) {
         toast.success("Login successful");
         login(res.user, res.token);
-        navigate("/dashboard");
+        navigate(redirectMap[res.user.role] || "/dashboard");
       } else {
         toast.error(res.message || "Invalid OTP");
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || "Invalid OTP");
+      toast.error(
+        err.response?.data?.message ||
+        err.message ||
+        "Invalid OTP"
+      );
     } finally {
       setLoading(false);
     }
@@ -84,18 +105,14 @@ const Login = () => {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-        * {
-          margin: 0;
-          padding: 0;
-          box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
 
         .auth-wrapper {
-          min-height: calc(100vh-140px);
+          min-height: calc(100vh - 140px);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -246,9 +263,7 @@ const Login = () => {
           transition: all 0.2s;
         }
 
-        .btn-back:hover {
-          color: #0f172a;
-        }
+        .btn-back:hover { color: #0f172a; }
 
         .divider {
           margin: 24px 0;
@@ -259,9 +274,7 @@ const Login = () => {
         .divider::before {
           content: '';
           position: absolute;
-          left: 0;
-          right: 0;
-          top: 50%;
+          left: 0; right: 0; top: 50%;
           height: 1px;
           background: #e2e8f0;
         }
@@ -295,44 +308,36 @@ const Login = () => {
           transition: color 0.2s;
         }
 
-        .auth-link:hover {
-          color: #2563eb;
-        }
+        .auth-link:hover { color: #2563eb; }
 
-        .spinner {
-          animation: spin 1s linear infinite;
-        }
+        .spinner { animation: spin 1s linear infinite; }
 
         @keyframes spin {
           from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+          to   { transform: rotate(360deg); }
         }
 
         @media (max-width: 480px) {
-          .auth-container {
-            padding: 32px 24px;
-          }
-
-          .auth-title {
-            font-size: 22px;
-          }
+          .auth-container { padding: 32px 24px; }
+          .auth-title { font-size: 22px; }
         }
       `}</style>
-      <Navbar/>
+
+      <Navbar />
+
       <div className="auth-wrapper">
         <div className="auth-container">
+
           {/* Header */}
           <div className="auth-header">
             <div className="auth-icon">
               <Briefcase size={28} color="white" />
             </div>
             <h1 className="auth-title">Welcome Back</h1>
-            <p className="auth-subtitle">
-              Login using OTP sent to your email
-            </p>
+            <p className="auth-subtitle">Login using OTP sent to your email</p>
           </div>
 
-          {/* Step 1: Email */}
+          {/* Step 1: Email + Captcha */}
           {step === "email" && (
             <form onSubmit={handleSendOtp}>
               <div className="form-group">
@@ -354,15 +359,13 @@ const Login = () => {
                 <ReCAPTCHA
                   sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
                   onChange={(token) => setCaptchaToken(token)}
+                  onExpired={() => setCaptchaToken(null)}
                 />
               </div>
 
-              <button className="btn btn-primary" disabled={loading}>
+              <button type="submit" className="btn btn-primary" disabled={loading}>
                 {loading ? (
-                  <>
-                    <Loader size={18} className="spinner" />
-                    Sending...
-                  </>
+                  <><Loader size={18} className="spinner" /> Sending...</>
                 ) : (
                   "Send OTP"
                 )}
@@ -379,10 +382,16 @@ const Login = () => {
           {/* Step 2: Verify OTP */}
           {step === "verify" && (
             <>
-              <button onClick={() => setStep("email")} className="btn-back">
-                <ArrowLeft size={18} />
-                Back
+              <button
+                onClick={() => { setStep("email"); setOtp(""); }}
+                className="btn-back"
+              >
+                <ArrowLeft size={18} /> Back
               </button>
+
+              <p style={{ fontSize: 13, color: "#64748b", marginBottom: 20 }}>
+                OTP sent to <strong>{email}</strong>
+              </p>
 
               <form onSubmit={handleVerifyOtp}>
                 <div className="form-group">
@@ -402,12 +411,9 @@ const Login = () => {
                   </div>
                 </div>
 
-                <button className="btn btn-primary" disabled={loading}>
+                <button type="submit" className="btn btn-primary" disabled={loading}>
                   {loading ? (
-                    <>
-                      <Loader size={18} className="spinner" />
-                      Verifying...
-                    </>
+                    <><Loader size={18} className="spinner" /> Verifying...</>
                   ) : (
                     "Verify & Login"
                   )}
@@ -420,11 +426,10 @@ const Login = () => {
           <div className="auth-footer">
             <p className="auth-footer-text">
               Don't have an account?{" "}
-              <Link to="/signup" className="auth-link">
-                Sign Up
-              </Link>
+              <Link to="/signup" className="auth-link">Sign Up</Link>
             </p>
           </div>
+
         </div>
       </div>
     </>
