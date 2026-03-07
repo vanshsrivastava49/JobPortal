@@ -7,7 +7,6 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // ✅ Wait until auth state is known
     if (!isAuthenticated) {
       navigate('/login', { replace: true });
       return;
@@ -15,7 +14,6 @@ const Dashboard = () => {
 
     if (!user || !user.role) return;
 
-    // ✅ Role-based redirect
     const routes = {
       jobseeker: '/jobseeker/dashboard',
       recruiter: '/recruiter/dashboard',
@@ -34,16 +32,47 @@ const Dashboard = () => {
   }, [user, isAuthenticated, navigate]);
 
   return (
-    <div style={{
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      height: "100vh",
-      fontSize: "18px",
-      color: "#6b7280"
-    }}>
-      Redirecting...
-    </div>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=DM+Sans:wght@400;500&display=swap');
+
+        .redirect-wrapper {
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          height: 100vh;
+          background-color: #edf3f4;
+          font-family: 'DM Sans', sans-serif;
+          gap: 16px;
+        }
+
+        .redirect-spinner {
+          width: 40px;
+          height: 40px;
+          border: 3px solid #c8ddd0;
+          border-top-color: #108a42;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+
+        .redirect-text {
+          font-size: 16px;
+          color: #415b41;
+          font-weight: 500;
+          letter-spacing: 0.3px;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+
+      <div className="redirect-wrapper">
+        <div className="redirect-spinner" />
+        <span className="redirect-text">Redirecting you…</span>
+      </div>
+    </>
   );
 };
 

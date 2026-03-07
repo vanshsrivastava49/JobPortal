@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import { sendOTP, verifyOTP } from "../api/authApi";
 import GoogleSignIn from "../components/Auth/GoogleSignIn";
 import ReCAPTCHA from "react-google-recaptcha";
-
+import Navbar from "../components/common/Navbar";
 const Login = () => {
   const [step, setStep] = useState("email");
   const [email, setEmail] = useState("");
@@ -95,7 +95,7 @@ const Login = () => {
         }
 
         .auth-wrapper {
-          min-height: 100vh;
+          min-height: calc(100vh-140px);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -318,7 +318,7 @@ const Login = () => {
           }
         }
       `}</style>
-
+      <Navbar/>
       <div className="auth-wrapper">
         <div className="auth-container">
           {/* Header */}

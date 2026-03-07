@@ -13,7 +13,7 @@ const Navbar = ({ title }) => {
   const handleLogout = () => {
     logout();
     toast.success('Logged out successfully');
-    navigate('/login');
+    navigate('/');
   };
 
   const roleConfig = {

@@ -4,7 +4,10 @@ const cors = require("cors");
 const connectDB = require("./config/db");
 
 const app = express();
-const allowedOrigins = ["http://localhost:5173"];
+const allowedOrigins = [
+  "http://localhost:5173",
+  process.env.FRONTEND_URL,         // CloudFront URL added after deploy
+].filter(Boolean);
 
 // ✅ 1. CORS first — before any routes
 app.use(

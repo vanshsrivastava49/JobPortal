@@ -5,7 +5,7 @@ import EmailSignup from "../components/Auth/EmailSignup";
 import SignupVerifyOtp from "../components/Auth/SignupVerifyOtp";
 import { Briefcase } from "lucide-react";
 import GoogleSignIn from "../components/Auth/GoogleSignIn";
-
+import Navbar from "../components/common/Navbar";
 const Signup = () => {
   const [step, setStep] = useState("signup");
   const [email, setEmail] = useState("");
@@ -46,7 +46,7 @@ const Signup = () => {
         }
 
         .auth-wrapper {
-          min-height: 100vh;
+          min-height: calc(100vh - 140px);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -164,7 +164,7 @@ const Signup = () => {
           }
         }
       `}</style>
-
+      <Navbar />
       <div className="auth-wrapper">
         <div className="auth-container">
           {/* Header */}

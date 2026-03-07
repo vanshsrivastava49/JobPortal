@@ -10,6 +10,7 @@ const {
   sendRejectionEmail,
   sendHiredEmail,
   sendApplicationWithdrawnNotice,
+  sendFinalShortlistEmail, // ✅ NEW — add this to your emailService
 } = require("../services/emailService");
 
 /* =========================================================
@@ -27,13 +28,11 @@ exports.submitApplication = async (req, res) => {
       });
     }
 
-    // Fetch jobseeker profile
     const jobseeker = await User.findById(jobseekerId).select("-password");
     if (!jobseeker || jobseeker.role !== "jobseeker") {
       return res.status(403).json({ success: false, message: "Jobseeker account required" });
     }
 
-    // Must have resume uploaded
     const resumeUrl = jobseeker.jobSeekerProfile?.resume;
     if (!resumeUrl) {
       return res.status(400).json({
@@ -43,7 +42,6 @@ exports.submitApplication = async (req, res) => {
       });
     }
 
-    // Fetch job (must be approved and open)
     const job = await Job.findOne({ _id: jobId, status: "approved", isOpen: true })
       .populate("recruiter", "name email")
       .populate("business", "name businessProfile");
@@ -55,7 +53,6 @@ exports.submitApplication = async (req, res) => {
       });
     }
 
-    // Check duplicate
     const existing = await Application.findOne({ job: jobId, jobseeker: jobseekerId });
     if (existing) {
       return res.status(409).json({
@@ -65,7 +62,6 @@ exports.submitApplication = async (req, res) => {
       });
     }
 
-    // Build applicant snapshot
     const profile = jobseeker.jobSeekerProfile || {};
     const applicantSnapshot = {
       fullName:
@@ -81,7 +77,6 @@ exports.submitApplication = async (req, res) => {
       portfolio: profile.portfolio || "",
     };
 
-    // Validate selectedSkills
     const validSelected = Array.isArray(selectedSkills)
       ? selectedSkills.filter((s) => typeof s === "string" && s.trim())
       : [];
@@ -101,7 +96,6 @@ exports.submitApplication = async (req, res) => {
     const companyName =
       job.business?.businessProfile?.businessName || job.company || "the company";
 
-    // Email jobseeker — confirmation
     sendApplicationConfirmation(
       jobseeker.email,
       applicantSnapshot.fullName || jobseeker.name,
@@ -109,7 +103,6 @@ exports.submitApplication = async (req, res) => {
       companyName
     ).catch(console.error);
 
-    // Email recruiter — new application alert
     sendNewApplicationAlert(
       job.recruiter.email,
       job.recruiter.name,
@@ -143,7 +136,7 @@ exports.submitApplication = async (req, res) => {
 };
 
 /* =========================================================
-   JOBSEEKER - GET MY APPLICATIONS (with tracking info)
+   JOBSEEKER - GET MY APPLICATIONS
 ========================================================= */
 exports.getMyApplications = async (req, res) => {
   try {
@@ -198,12 +191,8 @@ exports.withdrawApplication = async (req, res) => {
     application.withdrawnAt = new Date();
     await application.save();
 
-    // Notify recruiter
-    const jobseeker = await User.findById(jobseekerId).select(
-      "name email jobSeekerProfile"
-    );
-    const applicantName =
-      jobseeker?.jobSeekerProfile?.fullName || jobseeker?.name;
+    const jobseeker = await User.findById(jobseekerId).select("name email jobSeekerProfile");
+    const applicantName = jobseeker?.jobSeekerProfile?.fullName || jobseeker?.name;
 
     sendApplicationWithdrawnNotice(
       application.recruiter.email,
@@ -232,7 +221,7 @@ exports.getRecruiterApplications = async (req, res) => {
     if (status) filter.status = status;
 
     const applications = await Application.find(filter)
-      .populate("job", "title location type company")
+      .populate("job", "title location type company rounds")
       .populate("jobseeker", "name email jobSeekerProfile")
       .sort({ createdAt: -1 });
 
@@ -262,7 +251,6 @@ exports.getApplicationDetail = async (req, res) => {
       return res.status(404).json({ success: false, message: "Application not found" });
     }
 
-    // Mark as under_review on first open
     if (application.status === "applied") {
       application.status = "under_review";
       application.reviewedAt = new Date();
@@ -277,7 +265,8 @@ exports.getApplicationDetail = async (req, res) => {
 };
 
 /* =========================================================
-   RECRUITER - SHORTLIST APPLICANT
+   RECRUITER - SHORTLIST INTO ROUND 1
+   Kicks off the round-wise process. Sends "you're in Round 1" email.
 ========================================================= */
 exports.shortlistApplicant = async (req, res) => {
   try {
@@ -306,7 +295,6 @@ exports.shortlistApplicant = async (req, res) => {
     application.shortlistedAt = new Date();
     application.currentRound = 1;
 
-    // Add first round update if job has rounds
     const firstRound = application.job.rounds?.[0];
     if (firstRound) {
       application.roundUpdates.push({
@@ -316,7 +304,7 @@ exports.shortlistApplicant = async (req, res) => {
         result: "scheduled",
         note:
           note ||
-          `You have been shortlisted for ${application.job.title}. The first round is ${firstRound.title || firstRound.type}.`,
+          `You have been shortlisted for ${application.job.title}. Your first round is ${firstRound.title || firstRound.type}.`,
         updatedAt: new Date(),
       });
     }
@@ -338,7 +326,7 @@ exports.shortlistApplicant = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Applicant shortlisted successfully",
+      message: "Applicant shortlisted for Round 1",
       application,
     });
   } catch (err) {
@@ -348,7 +336,197 @@ exports.shortlistApplicant = async (req, res) => {
 };
 
 /* =========================================================
-   RECRUITER - UPDATE ROUND RESULT
+   RECRUITER - PROCEED TO NEXT ROUND
+   Marks current round as passed and moves to the next round.
+   If already on the last round, returns an error — use finalShortlist instead.
+========================================================= */
+exports.proceedToNextRound = async (req, res) => {
+  try {
+    const { applicationId } = req.params;
+    const { note } = req.body;
+    const recruiterId = req.user.id;
+
+    const application = await Application.findOne({
+      _id: applicationId,
+      recruiter: recruiterId,
+    })
+      .populate("job", "title company rounds")
+      .populate("jobseeker", "name email jobSeekerProfile");
+
+    if (!application) {
+      return res.status(404).json({ success: false, message: "Application not found" });
+    }
+
+    if (!["shortlisted", "round_update"].includes(application.status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Application must be in shortlisted or round_update state",
+      });
+    }
+
+    const rounds = application.job.rounds || [];
+    const currentRoundIndex = application.currentRound - 1;
+    const currentRoundData = rounds[currentRoundIndex];
+    const nextRoundData = rounds[currentRoundIndex + 1];
+
+    if (!nextRoundData) {
+      return res.status(400).json({
+        success: false,
+        message: "This is the last round. Use 'Final Shortlist' to complete the process.",
+        code: "LAST_ROUND",
+      });
+    }
+
+    // Mark current round as passed
+    const existingIdx = application.roundUpdates.findIndex(
+      (r) => r.roundNumber === application.currentRound
+    );
+    const passedEntry = {
+      roundNumber: application.currentRound,
+      roundTitle: currentRoundData?.title || currentRoundData?.type || `Round ${application.currentRound}`,
+      roundType: currentRoundData?.type || "other",
+      result: "passed",
+      note: note || "",
+      updatedAt: new Date(),
+    };
+
+    if (existingIdx >= 0) {
+      application.roundUpdates[existingIdx] = passedEntry;
+    } else {
+      application.roundUpdates.push(passedEntry);
+    }
+
+    // Schedule next round
+    const nextRoundNumber = application.currentRound + 1;
+    application.currentRound = nextRoundNumber;
+    application.status = "round_update";
+
+    const nextExistingIdx = application.roundUpdates.findIndex(
+      (r) => r.roundNumber === nextRoundNumber
+    );
+    const nextEntry = {
+      roundNumber: nextRoundNumber,
+      roundTitle: nextRoundData.title || nextRoundData.type,
+      roundType: nextRoundData.type,
+      result: "scheduled",
+      note: `You have advanced to Round ${nextRoundNumber}: ${nextRoundData.title || nextRoundData.type}`,
+      updatedAt: new Date(),
+    };
+
+    if (nextExistingIdx >= 0) {
+      application.roundUpdates[nextExistingIdx] = nextEntry;
+    } else {
+      application.roundUpdates.push(nextEntry);
+    }
+
+    await application.save();
+
+    const applicantName =
+      application.jobseeker?.jobSeekerProfile?.fullName || application.jobseeker?.name;
+
+    sendRoundPassedEmail(
+      application.jobseeker.email,
+      applicantName,
+      application.job.title,
+      application.job.company,
+      passedEntry.roundTitle,
+      nextRoundData.title || nextRoundData.type,
+      nextRoundNumber,
+      note
+    ).catch(console.error);
+
+    res.json({
+      success: true,
+      message: `Candidate advanced to Round ${nextRoundNumber}: ${nextRoundData.title || nextRoundData.type}`,
+      application,
+    });
+  } catch (err) {
+    console.error("PROCEED TO NEXT ROUND ERROR:", err);
+    res.status(500).json({ success: false, message: "Failed to proceed to next round" });
+  }
+};
+
+/* =========================================================
+   RECRUITER - FINAL SHORTLIST (HIRED)
+   Marks the final round as passed and sets status to "hired".
+   Can be called at any round — recruiter decides when to finalize.
+========================================================= */
+exports.finalShortlist = async (req, res) => {
+  try {
+    const { applicationId } = req.params;
+    const { note } = req.body;
+    const recruiterId = req.user.id;
+
+    const application = await Application.findOne({
+      _id: applicationId,
+      recruiter: recruiterId,
+    })
+      .populate("job", "title company rounds")
+      .populate("jobseeker", "name email jobSeekerProfile");
+
+    if (!application) {
+      return res.status(404).json({ success: false, message: "Application not found" });
+    }
+
+    if (!["shortlisted", "round_update"].includes(application.status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Application must be in shortlisted or round_update state to finalize",
+      });
+    }
+
+    const rounds = application.job.rounds || [];
+    const currentRoundIndex = application.currentRound - 1;
+    const currentRoundData = rounds[currentRoundIndex];
+
+    // Mark the current round as passed
+    const existingIdx = application.roundUpdates.findIndex(
+      (r) => r.roundNumber === application.currentRound
+    );
+    const passedEntry = {
+      roundNumber: application.currentRound,
+      roundTitle: currentRoundData?.title || currentRoundData?.type || `Round ${application.currentRound}`,
+      roundType: currentRoundData?.type || "other",
+      result: "passed",
+      note: note || "Congratulations! You have been selected.",
+      updatedAt: new Date(),
+    };
+
+    if (existingIdx >= 0) {
+      application.roundUpdates[existingIdx] = passedEntry;
+    } else {
+      application.roundUpdates.push(passedEntry);
+    }
+
+    application.status = "hired";
+    application.hiredAt = new Date();
+
+    await application.save();
+
+    const applicantName =
+      application.jobseeker?.jobSeekerProfile?.fullName || application.jobseeker?.name;
+
+    sendHiredEmail(
+      application.jobseeker.email,
+      applicantName,
+      application.job.title,
+      application.job.company,
+      note
+    ).catch(console.error);
+
+    res.json({
+      success: true,
+      message: `🏆 ${applicantName} has been officially shortlisted (hired)! Offer email sent.`,
+      application,
+    });
+  } catch (err) {
+    console.error("FINAL SHORTLIST ERROR:", err);
+    res.status(500).json({ success: false, message: "Failed to finalize shortlist" });
+  }
+};
+
+/* =========================================================
+   RECRUITER - UPDATE ROUND RESULT (general purpose — keep for compatibility)
 ========================================================= */
 exports.updateRoundResult = async (req, res) => {
   try {
@@ -376,15 +554,13 @@ exports.updateRoundResult = async (req, res) => {
     const roundIndex = roundNumber - 1;
     const currentRoundData = rounds[roundIndex];
 
-    // Update or push round update
     const existingUpdateIdx = application.roundUpdates.findIndex(
       (r) => r.roundNumber === roundNumber
     );
 
     const roundUpdate = {
       roundNumber,
-      roundTitle:
-        currentRoundData?.title || currentRoundData?.type || `Round ${roundNumber}`,
+      roundTitle: currentRoundData?.title || currentRoundData?.type || `Round ${roundNumber}`,
       roundType: currentRoundData?.type || "other",
       result,
       note: note || "",

@@ -9,6 +9,8 @@ const {
   getRecruiterApplications,
   getApplicationDetail,
   shortlistApplicant,
+  proceedToNextRound,   // ✅ NEW
+  finalShortlist,       // ✅ NEW
   updateRoundResult,
   rejectApplicant,
   updateApplicationNotes,
@@ -26,7 +28,9 @@ router.get("/check/:jobId", protect, authorizeRoles("jobseeker"), checkApplied);
 router.get("/recruiter", protect, authorizeRoles("recruiter"), getRecruiterApplications);
 router.get("/:applicationId", protect, authorizeRoles("recruiter", "admin"), getApplicationDetail);
 router.patch("/:applicationId/shortlist", protect, authorizeRoles("recruiter"), shortlistApplicant);
-router.patch("/:applicationId/round-result", protect, authorizeRoles("recruiter"), updateRoundResult);
+router.patch("/:applicationId/next-round", protect, authorizeRoles("recruiter"), proceedToNextRound);       // ✅ NEW
+router.patch("/:applicationId/final-shortlist", protect, authorizeRoles("recruiter"), finalShortlist);     // ✅ NEW
+router.patch("/:applicationId/round-result", protect, authorizeRoles("recruiter"), updateRoundResult);     // kept for compatibility
 router.patch("/:applicationId/reject", protect, authorizeRoles("recruiter"), rejectApplicant);
 router.patch("/:applicationId/notes", protect, authorizeRoles("recruiter"), updateApplicationNotes);
 
