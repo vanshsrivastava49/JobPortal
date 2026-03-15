@@ -536,7 +536,7 @@ const sendJobPostedDirectlyEmail = async (adminEmail, jobTitle, recruiterName, r
   await transporter.sendMail({
     from: `"${APP_NAME}" <${process.env.EMAIL_USER}>`,
     to: adminEmail,
-    subject: `✅ Job Posted Directly — "${jobTitle}" by ${recruiterName}`,
+    subject: `✅ Job Posted — "${jobTitle}" by ${recruiterName}`,
     html,
   });
 };
