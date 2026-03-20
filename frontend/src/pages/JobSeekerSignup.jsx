@@ -8,15 +8,20 @@ import SignupVerifyOtp from "../components/Auth/SignupVerifyOtp";
 import Navbar from "../components/common/Navbar";
 
 const JobSeekerSignup = () => {
-  const [step, setStep] = useState("signup");
+  const [step,  setStep]  = useState("signup");
   const [email, setEmail] = useState("");
+  const [role,  setRole]  = useState("jobseeker");
   const { isAuthenticated, user } = useAuth();
 
   if (isAuthenticated) {
     return <Navigate to={user?.profileCompleted ? "/dashboard" : "/complete-profile"} replace />;
   }
 
-  const handleOTPSent = (userEmail) => { setEmail(userEmail); setStep("verify"); };
+  const handleOTPSent = (userEmail, userRole) => {
+    setEmail(userEmail);
+    setRole(userRole);
+    setStep("verify");
+  };
   const handleBack = () => { setStep("signup"); setEmail(""); };
 
   return (
@@ -30,13 +35,10 @@ const JobSeekerSignup = () => {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
 
-        /* ── LEFT PANEL ── */
         .jss-left {
-          width: 42%;
-          flex-shrink: 0;
+          width: 42%; flex-shrink: 0;
           background: linear-gradient(160deg, #052e16 0%, #14532d 50%, #166534 100%);
-          position: relative;
-          display: flex; flex-direction: column; justify-content: flex-end;
+          position: relative; display: flex; flex-direction: column; justify-content: flex-end;
           padding: 52px 48px; overflow: hidden;
         }
         .jss-left-circles { position: absolute; inset: 0; pointer-events: none; }
@@ -47,11 +49,7 @@ const JobSeekerSignup = () => {
         .jss-leaf-bg { position: absolute; inset: 0; background-image: radial-gradient(circle at 70% 20%, rgba(16,185,129,0.15) 0%, transparent 60%); }
 
         .jss-tagline { position: relative; z-index: 2; }
-        .jss-eyebrow {
-          font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
-          text-transform: uppercase; color: #6ee7b7; margin-bottom: 16px;
-          display: flex; align-items: center; gap: 8px;
-        }
+        .jss-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #6ee7b7; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
         .jss-eyebrow::before { content: ''; width: 24px; height: 1px; background: #6ee7b7; }
         .jss-title { font-size: 40px; font-weight: 800; line-height: 1.15; color: white; margin-bottom: 20px; letter-spacing: -1px; }
         .jss-title em { font-style: normal; color: #6ee7b7; }
@@ -59,41 +57,12 @@ const JobSeekerSignup = () => {
 
         .jss-steps { margin-top: 40px; display: flex; flex-direction: column; gap: 16px; position: relative; z-index: 2; }
         .jss-step { display: flex; align-items: center; gap: 12px; }
-        .jss-step-num {
-          width: 28px; height: 28px; border-radius: 50%;
-          background: rgba(16,185,129,0.2); border: 1px solid rgba(110,231,183,0.3);
-          display: flex; align-items: center; justify-content: center;
-          font-size: 12px; font-weight: 800; color: #6ee7b7; flex-shrink: 0;
-        }
+        .jss-step-num { width: 28px; height: 28px; border-radius: 50%; background: rgba(16,185,129,0.2); border: 1px solid rgba(110,231,183,0.3); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #6ee7b7; flex-shrink: 0; }
         .jss-step-text { font-size: 13px; color: rgba(255,255,255,0.5); font-weight: 500; }
 
-        /* ── RIGHT PANEL ── */
-        .jss-right {
-          flex: 1; min-width: 0;
-          display: flex; align-items: center; justify-content: center;
-          padding: 48px 40px; overflow-y: auto;
-        }
-
-        .jss-form-box {
-          width: 100%; max-width: 420px;
-          margin: 0 auto;
-          animation: jssFadeUp 0.5s ease both;
-        }
+        .jss-right { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; padding: 48px 40px; overflow-y: auto; }
+        .jss-form-box { width: 100%; max-width: 420px; margin: 0 auto; animation: jssFadeUp 0.5s ease both; }
         @keyframes jssFadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
-        .jss-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; }
-        .jss-logo-icon { width: 40px; height: 40px; background: #052e16; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
-        .jss-logo-text { font-size: 20px; font-weight: 800; color: #052e16; letter-spacing: -0.4px; }
-        .jss-logo-text span { color: #16a34a; }
-
-        .jss-role-switch { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 28px; }
-        .jss-chip {
-          padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
-          border: 1.5px solid #e5e7eb; background: white; color: #6b7280;
-          text-decoration: none; transition: all 0.15s; cursor: pointer;
-        }
-        .jss-chip:hover { border-color: #10b981; color: #16a34a; }
-        .jss-chip.active { border-color: #10b981; color: #16a34a; background: #f0fdf4; font-weight: 700; }
 
         .jss-heading { font-size: 28px; font-weight: 800; color: #052e16; margin-bottom: 6px; letter-spacing: -0.5px; }
         .jss-subheading { font-size: 14px; color: #6b7280; margin-bottom: 28px; line-height: 1.6; font-weight: 400; }
@@ -110,69 +79,17 @@ const JobSeekerSignup = () => {
         .jss-back { background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; color: #6b7280; margin-bottom: 20px; padding: 0; font-family: 'Inter', sans-serif; font-weight: 500; transition: color 0.15s; }
         .jss-back:hover { color: #052e16; }
 
-        /* ══ OTP grid fix — applied to child SignupVerifyOtp ══ */
-        .jss-form-box .otp-row,
-        .jss-form-box [class*="otp-row"],
-        .jss-form-box [class*="otp_row"] {
-          display: grid !important;
-          grid-template-columns: repeat(6, 1fr) !important;
-          gap: 8px !important;
-          width: 100% !important;
-        }
-        .jss-form-box .otp-row input,
-        .jss-form-box [class*="otp-row"] input,
-        .jss-form-box [class*="otp_row"] input {
-          width: 100% !important;
-          flex: unset !important;
-          aspect-ratio: 1/1 !important;
-          max-height: 60px !important;
-          padding: 0 !important;
-          box-sizing: border-box !important;
-        }
+        .jss-form-box .otp-row, .jss-form-box [class*="otp-row"], .jss-form-box [class*="otp_row"] { display: grid !important; grid-template-columns: repeat(6, 1fr) !important; gap: 8px !important; width: 100% !important; }
+        .jss-form-box .otp-row input, .jss-form-box [class*="otp-row"] input, .jss-form-box [class*="otp_row"] input { width: 100% !important; flex: unset !important; aspect-ratio: 1/1 !important; max-height: 60px !important; padding: 0 !important; box-sizing: border-box !important; }
 
-        /* Style child EmailSignup / SignupVerifyOtp to match theme */
-        .jss-form-box input {
-          background: white !important;
-          border: 1.5px solid #d1fae5 !important;
-          border-radius: 10px !important;
-          font-family: 'Inter', sans-serif !important;
-          font-size: 14px !important;
-          color: #111827 !important;
-          box-sizing: border-box !important;
-        }
+        .jss-form-box input { background: white !important; border: 1.5px solid #d1fae5 !important; border-radius: 10px !important; font-family: 'Inter', sans-serif !important; font-size: 14px !important; color: #111827 !important; box-sizing: border-box !important; }
         .jss-form-box input::placeholder { color: #9ca3af !important; }
         .jss-form-box input:focus { border-color: #10b981 !important; box-shadow: 0 0 0 3px rgba(16,185,129,0.12) !important; }
-        .jss-form-box label {
-          font-family: 'Inter', sans-serif !important;
-          font-size: 12px !important; font-weight: 700 !important;
-          color: #374151 !important; text-transform: uppercase !important; letter-spacing: 0.06em !important;
-        }
-        .jss-form-box button[type="submit"] {
-          background: #052e16 !important;
-          border-radius: 10px !important;
-          font-family: 'Inter', sans-serif !important;
-          font-size: 15px !important; font-weight: 700 !important;
-          letter-spacing: 0.1px !important;
-        }
-        .jss-form-box button[type="submit"]:hover:not(:disabled) {
-          background: #14532d !important;
-          transform: translateY(-1px) !important;
-          box-shadow: 0 4px 12px rgba(5,46,22,0.25) !important;
-        }
-
-        /* OTP box specific overrides */
-        .jss-form-box input[maxLength="1"],
-        .jss-form-box input[maxlength="1"] {
-          font-size: 22px !important;
-          font-weight: 800 !important;
-          text-align: center !important;
-          background: white !important;
-          border: 1.5px solid #d1fae5 !important;
-        }
-        .jss-form-box input[maxLength="1"]:focus,
-        .jss-form-box input[maxlength="1"]:focus {
-          background: #f0fdf4 !important;
-        }
+        .jss-form-box label { font-family: 'Inter', sans-serif !important; font-size: 12px !important; font-weight: 700 !important; color: #374151 !important; text-transform: uppercase !important; letter-spacing: 0.06em !important; }
+        .jss-form-box button[type="submit"] { background: #052e16 !important; border-radius: 10px !important; font-family: 'Inter', sans-serif !important; font-size: 15px !important; font-weight: 700 !important; letter-spacing: 0.1px !important; }
+        .jss-form-box button[type="submit"]:hover:not(:disabled) { background: #14532d !important; transform: translateY(-1px) !important; box-shadow: 0 4px 12px rgba(5,46,22,0.25) !important; }
+        .jss-form-box input[maxLength="1"], .jss-form-box input[maxlength="1"] { font-size: 22px !important; font-weight: 800 !important; text-align: center !important; background: white !important; border: 1.5px solid #d1fae5 !important; }
+        .jss-form-box input[maxLength="1"]:focus, .jss-form-box input[maxlength="1"]:focus { background: #f0fdf4 !important; }
 
         @media (max-width: 900px) { .jss-left { width: 36%; padding: 40px 32px; } .jss-title { font-size: 32px; } }
         @media (max-width: 768px) { .jss-left { display: none; } .jss-right { padding: 32px 24px; align-items: flex-start; padding-top: 36px; } .jss-form-box { max-width: 100%; } }
@@ -205,14 +122,14 @@ const JobSeekerSignup = () => {
                 <p className="jss-subheading">Join as a job seeker — it's free</p>
                 <EmailSignup onOTPSent={handleOTPSent} role="jobseeker" />
                 <div className="jss-divider"><span>or sign up with</span></div>
-                <GoogleSignIn />
+                <GoogleSignIn role="jobseeker"/>
               </>
             ) : (
               <>
                 <button className="jss-back" type="button" onClick={handleBack}><ArrowLeft size={14} /> Back</button>
                 <h1 className="jss-heading">Verify email</h1>
                 <p className="jss-subheading">Code sent to <strong>{email}</strong></p>
-                <SignupVerifyOtp email={email} onBack={handleBack} />
+                <SignupVerifyOtp email={email} onBack={handleBack} role={role} />
               </>
             )}
             <div className="jss-footer">

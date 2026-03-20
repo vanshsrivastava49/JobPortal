@@ -3,8 +3,8 @@ import { Mail, Loader } from "lucide-react";
 import toast from "react-hot-toast";
 import { sendOTP } from "../../api/authApi";
 
-const EmailSignup = ({ onOTPSent }) => {
-  const [email, setEmail] = useState("");
+const EmailSignup = ({ onOTPSent, role = "jobseeker" }) => {
+  const [email,   setEmail]   = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -28,7 +28,7 @@ const EmailSignup = ({ onOTPSent }) => {
 
       if (response.success) {
         toast.success("OTP sent to your email!");
-        onOTPSent(email); // 👉 forward to verify step
+        onOTPSent(email, role); // forward both email and role
       } else {
         toast.error(response.message || "Failed to send OTP");
       }
@@ -43,28 +43,11 @@ const EmailSignup = ({ onOTPSent }) => {
     <div className="email-signup">
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: "20px" }}>
-          <label
-            style={{
-              display: "block",
-              marginBottom: "8px",
-              color: "#374151",
-              fontWeight: "500",
-            }}
-          >
+          <label style={{ display: "block", marginBottom: "8px", color: "#374151", fontWeight: "500" }}>
             Email Address
           </label>
-
           <div style={{ position: "relative" }}>
-            <Mail
-              size={20}
-              style={{
-                position: "absolute",
-                left: "12px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: "#9ca3af",
-              }}
-            />
+            <Mail size={20} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#9ca3af" }} />
             <input
               type="email"
               className="input"
@@ -75,14 +58,7 @@ const EmailSignup = ({ onOTPSent }) => {
               disabled={loading}
             />
           </div>
-
-          <p
-            style={{
-              fontSize: "12px",
-              color: "#6b7280",
-              marginTop: "8px",
-            }}
-          >
+          <p style={{ fontSize: "12px", color: "#6b7280", marginTop: "8px" }}>
             We'll send you a verification code to verify your email
           </p>
         </div>
@@ -90,23 +66,11 @@ const EmailSignup = ({ onOTPSent }) => {
         <button
           type="submit"
           className="btn btn-primary"
-          style={{
-            width: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "8px",
-          }}
+          style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}
           disabled={loading}
         >
           {loading ? (
-            <>
-              <Loader
-                size={20}
-                style={{ animation: "spin 1s linear infinite" }}
-              />
-              Sending OTP...
-            </>
+            <><Loader size={20} style={{ animation: "spin 1s linear infinite" }} />Sending OTP...</>
           ) : (
             "Continue with Email"
           )}
@@ -116,7 +80,7 @@ const EmailSignup = ({ onOTPSent }) => {
       <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+          to   { transform: rotate(360deg); }
         }
       `}</style>
     </div>

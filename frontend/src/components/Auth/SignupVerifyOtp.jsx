@@ -5,16 +5,15 @@ import { verifyOTP } from "../../api/authApi";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
-const SignupVerifyOtp = ({ email, onBack }) => {
+const SignupVerifyOtp = ({ email, onBack, role = "jobseeker" }) => {
   const [otp,       setOtp]       = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName,  setLastName]  = useState("");
-  const [role,      setRole]      = useState("jobseeker");
   const [mobile,    setMobile]    = useState("");
   const [loading,   setLoading]   = useState(false);
 
-  const { login } = useAuth();
-  const navigate  = useNavigate();
+  const { login }  = useAuth();
+  const navigate   = useNavigate();
 
   const roleMap = {
     jobseeker: "jobseeker",
@@ -33,7 +32,6 @@ const SignupVerifyOtp = ({ email, onBack }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // ── Validation ──────────────────────────────────────────────
     if (otp.length !== 6) {
       toast.error("Enter a valid 6-digit OTP");
       return;
@@ -47,21 +45,20 @@ const SignupVerifyOtp = ({ email, onBack }) => {
       return;
     }
 
-    // Combine for backend — backend stores as `name` on the User root field
     const fullName = `${firstName.trim()} ${lastName.trim()}`;
 
     setLoading(true);
 
     try {
       const res = await verifyOTP(
-  email,
-  otp,
-  roleMap[role],
-  mobile,
-  firstName.trim(),   // ← separate
-  lastName.trim(),    // ← separate
-  "signup"
-);
+        email,
+        otp,
+        roleMap[role],
+        mobile,
+        firstName.trim(),
+        lastName.trim(),
+        "signup"
+      );
 
       if (res.success) {
         toast.success("Account created successfully");
@@ -69,8 +66,8 @@ const SignupVerifyOtp = ({ email, onBack }) => {
         login(
           {
             ...res.user,
-            name:      fullName,          // full name in auth context
-            firstName: firstName.trim(),  // available for pre-filling CompleteProfile
+            name:      fullName,
+            firstName: firstName.trim(),
             lastName:  lastName.trim(),
           },
           res.token
@@ -95,12 +92,10 @@ const SignupVerifyOtp = ({ email, onBack }) => {
 
       <form onSubmit={handleSubmit}>
 
+        {/* ── OTP ── */}
         <label>OTP</label>
         <div style={{ position: "relative", marginBottom: 16 }}>
-          <Shield
-            size={18}
-            style={{ position: "absolute", left: 10, top: 13, color: "#9ca3af" }}
-          />
+          <Shield size={18} style={{ position: "absolute", left: 10, top: 13, color: "#9ca3af" }} />
           <input
             className="input"
             style={{ paddingLeft: 40 }}
@@ -110,61 +105,26 @@ const SignupVerifyOtp = ({ email, onBack }) => {
             onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
           />
         </div>
+
+        {/* ── Name ── */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <div>
-            <label>
-              First Name <span style={{ color: "#ef4444" }}>*</span>
-            </label>
+            <label>First Name <span style={{ color: "#ef4444" }}>*</span></label>
             <div style={{ position: "relative", marginBottom: 16 }}>
-              <User
-                size={16}
-                style={{ position: "absolute", left: 10, top: 13, color: "#9ca3af" }}
-              />
-              <input
-                className="input"
-                style={{ paddingLeft: 36 }}
-                placeholder="John"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-              />
+              <User size={16} style={{ position: "absolute", left: 10, top: 13, color: "#9ca3af" }} />
+              <input className="input" style={{ paddingLeft: 36 }} placeholder="John" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
             </div>
           </div>
-
           <div>
-            <label>
-              Last Name <span style={{ color: "#ef4444" }}>*</span>
-            </label>
+            <label>Last Name <span style={{ color: "#ef4444" }}>*</span></label>
             <div style={{ position: "relative", marginBottom: 16 }}>
-              <User
-                size={16}
-                style={{ position: "absolute", left: 10, top: 13, color: "#9ca3af" }}
-              />
-              <input
-                className="input"
-                style={{ paddingLeft: 36 }}
-                placeholder="Doe"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-              />
+              <User size={16} style={{ position: "absolute", left: 10, top: 13, color: "#9ca3af" }} />
+              <input className="input" style={{ paddingLeft: 36 }} placeholder="Doe" value={lastName} onChange={(e) => setLastName(e.target.value)} />
             </div>
           </div>
         </div>
 
-        {/* ── ROLE ─────────────────────────────────────────────── */}
-        <label>Role</label>
-        <select
-          className="input"
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-          style={{ marginBottom: 16 }}
-        >
-          <option value="jobseeker">Job Seeker</option>
-          <option value="recruiter">Recruiter</option>
-          <option value="business">Business Owner</option>
-          <option value="admin">Admin</option>
-        </select>
-
-        {/* ── MOBILE ───────────────────────────────────────────── */}
+        {/* ── Mobile ── */}
         <label>Mobile (Optional)</label>
         <input
           className="input"
@@ -174,11 +134,7 @@ const SignupVerifyOtp = ({ email, onBack }) => {
           style={{ marginBottom: 16 }}
         />
 
-        <button
-          className="btn btn-primary"
-          disabled={loading}
-          style={{ width: "100%" }}
-        >
+        <button className="btn btn-primary" disabled={loading} style={{ width: "100%" }}>
           {loading ? <Loader size={18} className="spin" /> : "Create Account"}
         </button>
 
