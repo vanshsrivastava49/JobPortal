@@ -2,18 +2,25 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import Dashboard from "./pages/Dashboard";
+// Role-based login pages
+import JobSeekerLogin from "./pages/Jobseekerlogin";
+import RecruiterLogin from "./pages/Recruiterlogin";
+import BusinessLogin from "./pages/Businesslogin";
+import AdminLogin from "./pages/Adminlogin";
 
+// Role-based signup pages
+import JobSeekerSignup from "./pages/JobSeekerSignup";
+import RecruiterSignup from "./pages/RecruiterSignup";
+import BusinessSignup from "./pages/BusinessSignup";
+import AdminSignup from "./pages/AdminSignup";
+
+// Other pages
+import Dashboard from "./pages/Dashboard";
 import JobSeekerDashboard from "./pages/JobSeekerDashboard";
 import RecruiterDashboard from "./pages/RecruiterDashboard";
 import BusinessOwnerDashboard from "./pages/BusinessOwnerDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
-
 import CompleteProfile from "./pages/CompleteProfile";
-import ProtectedRoute from "./components/common/ProtectedRoute";
-import { AuthProvider } from "./context/AuthContext";
 import Myprofile from "./pages/Myprofile";
 import PostJob from "./pages/PostJob";
 import PendingJobs from "./pages/PendingJobs";
@@ -23,6 +30,10 @@ import ApprovedBusinesses from "./pages/ApprovedBusinesses";
 import Jobs from "./pages/Jobs";
 import JobDetail from "./pages/JobDetail";
 import Home from "./pages/Home";
+import BusinessDetail from "./pages/BusinessDetail";
+
+import ProtectedRoute from "./components/common/ProtectedRoute";
+import { AuthProvider } from "./context/AuthContext";
 
 function App() {
   return (
@@ -31,13 +42,26 @@ function App() {
         <Toaster position="top-right" />
 
         <Routes>
+          {/* Public */}
           <Route path="/" element={<Home />} />
 
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/profile" element={<Myprofile />} />
-          <Route path="/jobs/:jobId" element={<JobDetail />} />
+          {/* Role-based login pages */}
+          <Route path="/login"            element={<JobSeekerLogin />} />
+          <Route path="/recruiter/login"  element={<RecruiterLogin />} />
+          <Route path="/business/login"   element={<BusinessLogin />} />
+          <Route path="/admin/login"      element={<AdminLogin />} />
 
+          {/* Role-based signup pages */}
+          <Route path="/signup"            element={<JobSeekerSignup />} />
+          <Route path="/recruiter/signup"  element={<RecruiterSignup />} />
+          <Route path="/business/signup"   element={<BusinessSignup />} />
+          <Route path="/admin/signup"      element={<AdminSignup />} />
+          <Route path="/profile"          element={<Myprofile />} />
+          <Route path="/jobs"             element={<Jobs />} />
+          <Route path="/jobs/:jobId"      element={<JobDetail />} />
+          <Route path="/businesses"       element={<Businesses />} />
+          <Route path="/businesses/:id" element={<BusinessDetail />} />
+          {/* General dashboard (redirects internally based on role) */}
           <Route
             path="/dashboard"
             element={
@@ -47,38 +71,7 @@ function App() {
             }
           />
 
-          <Route path="/jobs" element={<Jobs />} />
-
-          <Route
-            path="/post-job"
-            element={
-              <ProtectedRoute allowedRoles={["recruiter"]}>
-                <PostJob />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/admin/pending-jobs"
-            element={
-              <ProtectedRoute allowedRoles={["admin"]}>
-                <PendingJobs />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/admin/pending-businesses"
-            element={
-              <ProtectedRoute allowedRoles={["admin"]}>
-                <PendingBusinesses />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route path="/businesses" element={<Businesses />} />
-          <Route path="/admin/approved-businesses" element={<ApprovedBusinesses />} />
-
+          {/* Job Seeker */}
           <Route
             path="/jobseeker/*"
             element={
@@ -88,6 +81,7 @@ function App() {
             }
           />
 
+          {/* Recruiter */}
           <Route
             path="/recruiter/*"
             element={
@@ -96,7 +90,16 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/post-job"
+            element={
+              <ProtectedRoute allowedRoles={["recruiter"]}>
+                <PostJob />
+              </ProtectedRoute>
+            }
+          />
 
+          {/* Business */}
           <Route
             path="/business/*"
             element={
@@ -106,6 +109,7 @@ function App() {
             }
           />
 
+          {/* Admin */}
           <Route
             path="/admin/*"
             element={
@@ -114,7 +118,28 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/admin/pending-jobs"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <PendingJobs />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/pending-businesses"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <PendingBusinesses />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/approved-businesses"
+            element={<ApprovedBusinesses />}
+          />
 
+          {/* Complete profile */}
           <Route
             path="/complete-profile"
             element={
@@ -124,8 +149,8 @@ function App() {
             }
           />
 
+          {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
-
         </Routes>
       </div>
     </AuthProvider>

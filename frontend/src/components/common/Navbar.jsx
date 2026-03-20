@@ -1,303 +1,391 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { LogOut, LayoutDashboard, Briefcase, Building2 } from "lucide-react";
 
+const roles = [
+  { key: "job-seeker", label: "Job Seeker",    desc: "Find green energy jobs",       color: "#10b981" },
+  { key: "recruiter",  label: "Recruiter",      desc: "Post & manage job listings",   color: "#3b82f6" },
+  { key: "business",   label: "Business Owner", desc: "Grow your green business",     color: "#8b5cf6" },
+  { key: "admin",      label: "Admin",          desc: "Platform administration",      color: "#f59e0b" },
+];
+
+const ROLE_LABELS = {
+  jobseeker:    "Job Seeker",
+  "job-seeker": "Job Seeker",
+  recruiter:    "Recruiter",
+  business:     "Business Owner",
+  admin:        "Admin",
+};
+
+/* ─── Role Dropdown (Login / Signup) ─── */
+const RoleDropdown = ({ type, onSelect, onClose, wrapperRef }) => {
+  useEffect(() => {
+    const handler = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) onClose();
+    };
+    const t = setTimeout(() => document.addEventListener("mousedown", handler), 0);
+    return () => { clearTimeout(t); document.removeEventListener("mousedown", handler); };
+  }, [onClose, wrapperRef]);
+
+  return (
+    <div className="rd-panel">
+      <div className="rd-header">
+        <span className="rd-title">{type === "login" ? "Sign In" : "Create Account"}</span>
+        <span className="rd-sub">Choose your role to continue</span>
+      </div>
+      <div className="rd-list">
+        {roles.map((role) => (
+          <div key={role.key} className="rd-item"
+            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); onSelect(role.key); }}>
+            <div className="rd-item-text">
+              <div className="rd-item-label">{role.label}</div>
+              <div className="rd-item-desc">{role.desc}</div>
+            </div>
+            <svg className="rd-item-arrow" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </div>
+        ))}
+      </div>
+      <div className="rd-footer">
+        {type === "login"
+          ? <>No account? <span className="rd-flink" onMouseDown={(e) => { e.preventDefault(); onClose(); }}>Sign up free →</span></>
+          : <>Have an account? <span className="rd-flink" onMouseDown={(e) => { e.preventDefault(); onClose(); }}>Sign in →</span></>
+        }
+      </div>
+    </div>
+  );
+};
+
+/* ─── User Menu Dropdown ─── */
+const UserMenu = ({ user, roleLabel, dashboardRoute, onProfile, onLogout, onClose, wrapperRef }) => {
+  useEffect(() => {
+    const handler = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) onClose();
+    };
+    const t = setTimeout(() => document.addEventListener("mousedown", handler), 0);
+    return () => { clearTimeout(t); document.removeEventListener("mousedown", handler); };
+  }, [onClose, wrapperRef]);
+
+  return (
+    <div className="um-panel">
+      {/* User info header */}
+      <div className="um-header">
+        <div className="um-avatar-lg">
+          {user?.name?.charAt(0).toUpperCase() || "U"}
+        </div>
+        <div className="um-info">
+          <div className="um-name">{user?.name || "User"}</div>
+          <div className="um-email">{user?.email}</div>
+          <div className="um-role-badge">{roleLabel}</div>
+        </div>
+      </div>
+
+      <div className="um-divider" />
+
+      {/* Menu items */}
+      <div className="um-list">
+        <div className="um-item" onMouseDown={(e) => { e.preventDefault(); onProfile(); }}>
+          <div className="um-item-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </div>
+          <div className="um-item-text">
+            <div className="um-item-label">My Profile</div>
+            <div className="um-item-desc">View and edit your details</div>
+          </div>
+        </div>
+
+        <div className="um-item" onMouseDown={(e) => { e.preventDefault(); window.location.href = dashboardRoute; }}>
+          <div className="um-item-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+              <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+            </svg>
+          </div>
+          <div className="um-item-text">
+            <div className="um-item-label">Dashboard</div>
+            <div className="um-item-desc">Go to your workspace</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="um-divider" />
+
+      {/* Logout */}
+      <div className="um-list">
+        <div className="um-item um-item-danger" onMouseDown={(e) => { e.preventDefault(); onLogout(); }}>
+          <div className="um-item-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+          </div>
+          <div className="um-item-text">
+            <div className="um-item-label">Logout</div>
+            <div className="um-item-desc">Sign out of your account</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ─── Main Navbar ─── */
 const Navbar = ({ title }) => {
   const { isAuthenticated, logout, user } = useAuth();
   const navigate = useNavigate();
+  const [loginDropdown,  setLoginDropdown]  = useState(false);
+  const [signupDropdown, setSignupDropdown] = useState(false);
+  const [userMenuOpen,   setUserMenuOpen]   = useState(false);
 
-  const handleLogout = () => {
-    logout();
-    navigate("/");
+  const loginRef   = useRef(null);
+  const signupRef  = useRef(null);
+  const userMenuRef = useRef(null);
+
+  const handleLogout = () => { setUserMenuOpen(false); logout(); navigate("/"); };
+
+  const LOGIN_ROUTES  = { "job-seeker": "/login",  recruiter: "/recruiter/login",  business: "/business/login",  admin: "/admin/login"  };
+  const SIGNUP_ROUTES = { "job-seeker": "/signup", recruiter: "/recruiter/signup", business: "/business/signup", admin: "/admin/signup" };
+
+  const handleRoleLogin  = (role) => { setLoginDropdown(false);  navigate(LOGIN_ROUTES[role]  || "/login");  };
+  const handleRoleSignup = (role) => { setSignupDropdown(false); navigate(SIGNUP_ROUTES[role] || "/signup"); };
+
+  const userRoleLabel = ROLE_LABELS[user?.role] || user?.role || "Member";
+
+  const dashboardRoute =
+    user?.role === "admin"     ? "/admin/dashboard" :
+    user?.role === "recruiter" ? "/recruiter/dashboard" :
+    user?.role === "business"  ? "/business/dashboard" :
+    "/dashboard";
+
+  const handleProfile = () => {
+    setUserMenuOpen(false);
+    navigate("/profile");
   };
 
   return (
     <>
       <style>{`
+        /* ══ SHELL ══ */
         .navbar-fixed {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          z-index: 9999;
-          background: rgba(255,255,255,0.96);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          border-bottom: 1px solid rgba(229,231,235,0.8);
-          box-shadow: 0 1px 16px rgba(0,0,0,0.05);
+          position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+          background: white; border-bottom: 1px solid #e5e7eb;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
-
-        body {
-          padding-top: 80px;
-        }
-
+        body { padding-top: 82px; }
         .navbar-container {
-          max-width: 100%;
-          margin: 0 auto;
-          padding: 0 40px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          height: 80px;
-          position: relative;
+          max-width: 100%; margin: 0 auto; padding: 0 40px;
+          display: flex; align-items: center; justify-content: space-between;
+          height: 82px; position: relative;
         }
 
-        /* ── Logo ── */
-        .navbar-left {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          flex-shrink: 0;
-        }
-
-        .navbar-logo {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          text-decoration: none;
-          cursor: pointer;
-          min-width: 120px;
-        }
-
-        .logo-image {
-          height: 52px;
-          width: auto;
-          object-fit: contain;
-        }
-
-        .logo-text {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          margin-top: 2px;
-        }
-
-        .logo-brand {
-          font-size: 20px;
-          font-weight: 800;
-          letter-spacing: 0.5px;
-        }
+        /* ── LEFT ── */
+        .navbar-left { display: flex; align-items: center; gap: 16px; }
+        .navbar-logo { display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; cursor: pointer; min-width: 120px; }
+        .logo-image { height: 52px; width: auto; object-fit: contain; }
+        .logo-text { display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: 2px; }
+        .logo-brand { font-size: 20px; font-weight: 800; letter-spacing: 0.5px; }
         .logo-green { color: #16a34a; }
         .logo-black { color: #111827; }
 
-        /* ── Center image ── */
+        /* ── CENTER ── */
         .navbar-center {
-          position: absolute;
-          left: 50%;
-          transform: translateX(-50%);
-          display: flex;
-          align-items: center;
-          pointer-events: none;
+          position: absolute; left: 50%; transform: translateX(-50%);
+          display: flex; align-items: center;
+          pointer-events: none; z-index: 0;
         }
+        .worker-image { height: 75px; width: auto; object-fit: contain; border-radius: 8px; }
 
-        .worker-image {
-          height: 78px;
-          width: auto;
-          object-fit: contain;
-        }
+        /* ── RIGHT ── */
+        .navbar-right { display: flex; align-items: center; gap: 8px; position: relative; z-index: 1; }
 
-        /* ── Right side ── */
-        .navbar-right {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        /* ── Nav links ── */
         .nav-links {
-          display: flex;
-          gap: 4px;
-          align-items: center;
-          margin-right: 8px;
+          display: flex; align-items: center; gap: 2px;
+          background: #f7f8fa; border: 1px solid #eaecef;
+          border-radius: 12px; padding: 4px; margin-right: 6px;
         }
-
         .nav-link {
-          display: inline-flex;
-          align-items: center;
-          gap: 7px;
-          font-size: 14px;
-          font-weight: 500;
-          color: #4b5563;
-          text-decoration: none;
-          cursor: pointer;
-          transition: all 0.18s;
-          padding: 8px 14px;
-          border-radius: 8px;
-          position: relative;
+          display: flex; align-items: center; padding: 7px 15px;
+          border-radius: 9px; font-size: 13.5px; font-weight: 600;
+          color: #4b5563; text-decoration: none; transition: all 0.15s; white-space: nowrap;
         }
-        .nav-link:hover {
-          color: #10b981;
-          background: #f0fdf4;
-        }
+        .nav-link:hover { color: #111827; background: white; box-shadow: 0 1px 5px rgba(0,0,0,0.07); }
 
-        /* ── User section ── */
-        .user-section {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
+        .nav-sep { width: 1px; height: 22px; background: #e5e7eb; flex-shrink: 0; margin: 0 2px; }
+
+        /* ── User chip with dropdown ── */
+        .user-menu-wrap { position: relative; }
 
         .user-chip {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 6px 14px 6px 6px;
-          background: #f8fafc;
-          border: 1.5px solid #e2e8f0;
-          border-radius: 40px;
-          cursor: pointer;
-          transition: all 0.2s;
+          display: flex; align-items: center; gap: 9px;
+          padding: 5px 12px 5px 5px;
+          background: #f8fafc; border: 1.5px solid #e5e7eb; border-radius: 50px;
+          cursor: pointer; transition: all 0.18s; user-select: none;
         }
-        .user-chip:hover {
-          border-color: #10b981;
-          background: #f0fdf4;
-        }
+        .user-chip:hover { border-color: #10b981; background: #f0fdf4; }
+        .user-chip.open  { border-color: #10b981; background: #f0fdf4; box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }
 
         .user-avatar {
-          width: 32px;
-          height: 32px;
-          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-weight: 700;
-          font-size: 13px;
-          flex-shrink: 0;
+          width: 32px; height: 32px;
+          background: linear-gradient(135deg, #10b981, #059669);
+          border-radius: 50%; display: flex; align-items: center; justify-content: center;
+          color: white; font-weight: 800; font-size: 13px; flex-shrink: 0;
           box-shadow: 0 2px 6px rgba(16,185,129,0.3);
         }
+        .user-details { display: flex; flex-direction: column; gap: 1px; }
+        .user-name-txt  { font-size: 13px; font-weight: 700; color: #111827; line-height: 1.1; }
+        .user-role-txt  { font-size: 10.5px; color: #9ca3af; font-weight: 500; }
+        .user-chip-caret {
+          font-size: 9px; color: #9ca3af; transition: transform 0.2s;
+          display: inline-block; line-height: 1; margin-left: 2px;
+        }
+        .user-chip-caret.open { transform: rotate(180deg); color: #10b981; }
 
-        .user-details {
-          display: flex;
-          flex-direction: column;
+        /* ══ USER MENU PANEL ══ */
+        .um-panel {
+          position: absolute; top: calc(100% + 10px); right: 0; z-index: 99999;
+          width: 272px; background: white;
+          border: 1px solid #f0f0f0; border-radius: 16px;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.13), 0 4px 20px rgba(0,0,0,0.06);
+          overflow: hidden;
+          animation: umIn 0.18s cubic-bezier(0.16,1,0.3,1);
+        }
+        @keyframes umIn {
+          from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+          to   { opacity: 1; transform: translateY(0)  scale(1); }
         }
 
-        .user-name {
-          font-size: 13px;
-          font-weight: 700;
-          color: #111827;
-          line-height: 1.1;
+        .um-header {
+          display: flex; align-items: center; gap: 12px;
+          padding: 16px 16px 14px;
+          background: linear-gradient(to bottom, #fafafa, white);
+        }
+        .um-avatar-lg {
+          width: 44px; height: 44px; border-radius: 12px;
+          background: linear-gradient(135deg, #10b981, #059669);
+          display: flex; align-items: center; justify-content: center;
+          color: white; font-weight: 800; font-size: 18px; flex-shrink: 0;
+          box-shadow: 0 3px 8px rgba(16,185,129,0.3);
+        }
+        .um-info { flex: 1; min-width: 0; }
+        .um-name  { font-size: 14px; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .um-email { font-size: 11.5px; color: #9ca3af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+        .um-role-badge {
+          display: inline-block; margin-top: 5px;
+          padding: 2px 9px; border-radius: 20px;
+          font-size: 10.5px; font-weight: 700;
+          background: #d1fae5; color: #065f46;
+          letter-spacing: 0.3px;
         }
 
-        .user-role {
-          font-size: 11px;
-          color: #9ca3af;
-          line-height: 1.2;
-          font-weight: 500;
-        }
+        .um-divider { height: 1px; background: #f3f4f6; margin: 0; }
 
-        /* ── Divider ── */
-        .nav-divider {
-          width: 1px;
-          height: 22px;
-          background: #e5e7eb;
-          margin: 0 4px;
+        .um-list { padding: 6px; }
+        .um-item {
+          display: flex; align-items: center; gap: 11px;
+          padding: 10px 10px; border-radius: 10px;
+          cursor: pointer; transition: background 0.13s; user-select: none;
         }
+        .um-item:hover { background: #f8fafc; }
+        .um-item:hover .um-item-icon { background: #f0fdf4; color: #10b981; }
+
+        .um-item-danger:hover { background: #fef2f2; }
+        .um-item-danger:hover .um-item-icon { background: #fef2f2; color: #dc2626; }
+        .um-item-danger:hover .um-item-label { color: #dc2626; }
+
+        .um-item-icon {
+          width: 34px; height: 34px; border-radius: 9px;
+          background: #f8fafc; border: 1px solid #f0f0f0;
+          display: flex; align-items: center; justify-content: center;
+          flex-shrink: 0; color: #64748b; transition: all 0.13s;
+        }
+        .um-item-text { flex: 1; min-width: 0; }
+        .um-item-label { font-size: 13.5px; font-weight: 700; color: #111827; margin-bottom: 1px; transition: color 0.13s; }
+        .um-item-desc  { font-size: 11.5px; color: #9ca3af; font-weight: 500; }
+
+        /* ══ ROLE DROPDOWN ══ */
+        .auth-btn-group { display: flex; align-items: center; gap: 8px; }
+        .dropdown-wrapper { position: relative; }
+
+        .rd-panel {
+          position: absolute; top: calc(100% + 10px); right: 0; z-index: 99999;
+          width: 288px; background: white;
+          border: 1px solid #f0f0f0; border-radius: 16px;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.13), 0 4px 20px rgba(0,0,0,0.06);
+          overflow: hidden;
+          animation: rdIn 0.18s cubic-bezier(0.16,1,0.3,1);
+        }
+        @keyframes rdIn {
+          from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .rd-header { padding: 15px 18px 11px; border-bottom: 1px solid #f3f4f6; background: linear-gradient(to bottom, #fafafa, white); }
+        .rd-title  { display: block; font-size: 15px; font-weight: 800; color: #111827; letter-spacing: -0.2px; }
+        .rd-sub    { display: block; font-size: 12px; color: #9ca3af; font-weight: 500; margin-top: 2px; }
+        .rd-list   { padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+        .rd-item   { display: flex; align-items: center; gap: 11px; padding: 10px; border-radius: 10px; cursor: pointer; transition: background 0.13s; user-select: none; }
+        .rd-item:hover { background: #f8fafc; }
+        .rd-item:hover .rd-item-arrow { opacity: 1; transform: translateX(0); color: #10b981; }
+        .rd-item-text  { flex: 1; }
+        .rd-item-label { font-size: 13.5px; font-weight: 700; color: #111827; margin-bottom: 2px; }
+        .rd-item-desc  { font-size: 11.5px; color: #9ca3af; font-weight: 500; }
+        .rd-item-arrow { color: #d1d5db; opacity: 0; transform: translateX(-4px); transition: all 0.14s; flex-shrink: 0; }
+        .rd-footer  { padding: 11px 18px; border-top: 1px solid #f3f4f6; font-size: 12px; color: #9ca3af; background: #fafafa; font-weight: 500; }
+        .rd-flink   { color: #10b981; font-weight: 700; cursor: pointer; }
+        .rd-flink:hover { color: #059669; }
 
         /* ── Buttons ── */
         .nav-btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 7px;
-          padding: 9px 18px;
-          font-size: 13.5px;
-          font-weight: 600;
-          border-radius: 10px;
-          cursor: pointer;
-          transition: all 0.18s ease;
-          font-family: inherit;
-          white-space: nowrap;
-          letter-spacing: 0.1px;
+          display: inline-flex; align-items: center; gap: 7px;
+          padding: 9px 18px; font-size: 13.5px; font-weight: 700;
+          border-radius: 10px; cursor: pointer;
+          transition: all 0.18s ease; font-family: inherit;
+          white-space: nowrap; letter-spacing: 0.1px;
         }
+        .btn-login  { background: white; color: #374151; border: 1.5px solid #d1d5db; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+        .btn-login:hover  { border-color: #9ca3af; color: #111827; background: #fafafa; box-shadow: 0 2px 8px rgba(0,0,0,0.09); transform: translateY(-1px); }
+        .btn-login.active { border-color: #10b981; color: #15803d; background: #f0fdf4; }
+        .btn-signup { background: linear-gradient(135deg, #16a34a 0%, #10b981 100%); color: white; border: none; box-shadow: 0 3px 12px rgba(16,185,129,0.35); }
+        .btn-signup:hover  { background: linear-gradient(135deg, #15803d 0%, #059669 100%); box-shadow: 0 5px 18px rgba(16,185,129,0.45); transform: translateY(-1px); }
+        .btn-signup:active { transform: translateY(0); }
+        .btn-signup.active { background: linear-gradient(135deg, #15803d 0%, #059669 100%); transform: translateY(-1px); }
+        .btn-chevron { font-size: 9px; transition: transform 0.2s; display: inline-block; opacity: 0.6; line-height: 1; }
+        .btn-chevron.open { transform: rotate(180deg); opacity: 1; }
 
-        /* Ghost/outline logout */
-        .btn-logout {
-          background: transparent;
-          color: #6b7280;
-          border: 1.5px solid #e5e7eb;
-        }
-        .btn-logout:hover {
-          background: #fef2f2;
-          border-color: #fca5a5;
-          color: #dc2626;
-        }
+        .banner-ad-image { height: 0; width: auto; object-fit: contain; }
 
-        /* Login — outlined with subtle bg */
-        .btn-login {
-          background: white;
-          color: #374151;
-          border: 1.5px solid #d1d5db;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-        }
-        .btn-login:hover {
-          background: #f9fafb;
-          border-color: #9ca3af;
-          color: #111827;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-          transform: translateY(-1px);
-        }
-
-        /* Sign up — solid green primary */
-        .btn-signup {
-          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-          color: white;
-          border: 1.5px solid transparent;
-          box-shadow: 0 3px 12px rgba(16,185,129,0.35);
-        }
-        .btn-signup:hover {
-          background: linear-gradient(135deg, #059669 0%, #047857 100%);
-          box-shadow: 0 5px 18px rgba(16,185,129,0.45);
-          transform: translateY(-1px);
-        }
-        .btn-signup:active {
-          transform: translateY(0);
-          box-shadow: 0 2px 6px rgba(16,185,129,0.3);
-        }
-
-        /* Banner ad */
-        .banner-ad-image {
-          height: 60px;
-          width: auto;
-          object-fit: contain;
-          border-radius: 8px;
-          margin-left: 8px;
-        }
-
+        /* ── Responsive ── */
         @media (max-width: 1024px) {
           .navbar-container { padding: 0 24px; }
           .navbar-center { position: static; transform: none; }
+          .navbar-right { gap: 6px; }
           .banner-ad-image { display: none; }
         }
-
         @media (max-width: 768px) {
           body { padding-top: 72px; }
           .navbar-container { padding: 0 16px; height: 72px; }
           .logo-image { height: 44px; }
           .logo-brand { font-size: 12px; }
-          .worker-image { height: 44px; }
+          .worker-image { height: 46px; }
           .navbar-center { display: none; }
           .nav-links { display: none; }
-          .user-name, .user-role { display: none; }
-          .user-chip { padding: 6px; }
-          .nav-btn { padding: 8px 14px; font-size: 13px; }
+          .user-name-txt, .user-role-txt { display: none; }
+          .user-chip { padding: 5px; }
+          .user-chip-caret { display: none; }
         }
       `}</style>
 
       <nav className="navbar-fixed">
         <div className="navbar-container">
-          {/* Logo */}
+
+          {/* LEFT */}
           <div className="navbar-left">
             <Link to="/" className="navbar-logo">
-              <img
-                src="/solar-is-my-passion-logo.jpeg"
-                alt="Solar is my passion"
-                className="logo-image"
-                onError={(e) => { e.target.style.display = "none"; }}
-              />
+              <img src="/solar-is-my-passion-logo.jpeg" alt="GreenJobs" className="logo-image" onError={(e) => { e.target.style.display = "none"; }} />
               <div className="logo-text">
                 <div className="logo-brand">
                   <span className="logo-green">Green</span>
@@ -307,94 +395,92 @@ const Navbar = ({ title }) => {
             </Link>
           </div>
 
-          {/* Center worker image */}
+          {/* CENTER */}
           <div className="navbar-center">
-            <img
-              src="/worker-navbar.jpeg"
-              alt="Worker"
-              className="worker-image"
-              onError={(e) => { e.target.style.display = "none"; }}
-            />
+            <img src="/worker-navbar.jpeg" alt="Worker" className="worker-image" onError={(e) => { e.target.style.display = "none"; }} />
           </div>
 
-          {/* Right side */}
+          {/* RIGHT */}
           <div className="navbar-right">
             {isAuthenticated ? (
               <>
                 <div className="nav-links">
-                  <Link to="/jobs" className="nav-link">
-                    <Briefcase size={15} />
-                    Jobs
-                  </Link>
-                  <Link to="/dashboard" className="nav-link">
-                    <LayoutDashboard size={15} />
-                    Dashboard
-                  </Link>
+                  <Link to="/jobs" className="nav-link">Jobs</Link>
+                  <Link to={dashboardRoute} className="nav-link">Dashboard</Link>
                 </div>
 
-                <div className="nav-divider" />
+                <div className="nav-sep" />
 
-                <div className="user-section">
-                  <div className="user-chip">
+                {/* ── User chip → opens dropdown ── */}
+                <div className="user-menu-wrap" ref={userMenuRef}>
+                  <div
+                    className={`user-chip${userMenuOpen ? " open" : ""}`}
+                    onClick={() => setUserMenuOpen((v) => !v)}
+                  >
                     <div className="user-avatar">
                       {user?.name?.charAt(0).toUpperCase() || "U"}
                     </div>
                     <div className="user-details">
-                      <span className="user-name">
-                        {user?.name?.split(" ")[0] || "User"}
-                      </span>
-                      <span className="user-role">Job Seeker</span>
+                      <span className="user-name-txt">{user?.name?.split(" ")[0] || "User"}</span>
+                      <span className="user-role-txt">{userRoleLabel}</span>
                     </div>
+                    <span className={`user-chip-caret${userMenuOpen ? " open" : ""}`}>▼</span>
                   </div>
 
-                  <button onClick={handleLogout} className="nav-btn btn-logout">
-                    <LogOut size={14} />
-                    Logout
-                  </button>
+                  {userMenuOpen && (
+                    <UserMenu
+                      user={user}
+                      roleLabel={userRoleLabel}
+                      dashboardRoute={dashboardRoute}
+                      onProfile={handleProfile}
+                      onLogout={handleLogout}
+                      onClose={() => setUserMenuOpen(false)}
+                      wrapperRef={userMenuRef}
+                    />
+                  )}
                 </div>
 
-                <img
-                  src="/banner-ad-right.jpeg"
-                  alt="Banner"
-                  className="banner-ad-image"
-                  onError={(e) => { e.target.style.display = "none"; }}
-                />
+                <img src="/banner-ad-right.jpeg" alt="Banner" className="banner-ad-image" onError={(e) => { e.target.style.display = "none"; }} />
               </>
             ) : (
               <>
                 <div className="nav-links">
-                  <Link to="/jobs" className="nav-link">
-                    <Briefcase size={15} />
-                    Jobs
-                  </Link>
-                  <Link to="/businesses" className="nav-link">
-                    <Building2 size={15} />
-                    Companies
-                  </Link>
+                  <Link to="/jobs" className="nav-link">Jobs</Link>
+                  <Link to="/businesses" className="nav-link">Companies</Link>
                 </div>
-
-                <div className="nav-divider" />
-
-                <button
-                  onClick={() => navigate("/login")}
-                  className="nav-btn btn-login"
-                >
-                  Login
-                </button>
-
-                <button
-                  onClick={() => navigate("/signup")}
-                  className="nav-btn btn-signup"
-                >
-                  Sign Up Free
-                </button>
-
-                <img
-                  src="/banner-ad-right.jpeg"
-                  alt="Banner"
-                  className="banner-ad-image"
-                  onError={(e) => { e.target.style.display = "none"; }}
-                />
+                <div className="nav-sep" />
+                <div className="auth-btn-group">
+                  <div className="dropdown-wrapper" ref={loginRef}>
+                    <button
+                      className={`nav-btn btn-login${loginDropdown ? " active" : ""}`}
+                      onClick={() => { setLoginDropdown((v) => !v); setSignupDropdown(false); }}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                        <polyline points="10 17 15 12 10 7"/>
+                        <line x1="15" y1="12" x2="3" y2="12"/>
+                      </svg>
+                      Login
+                      <span className={`btn-chevron${loginDropdown ? " open" : ""}`}>▼</span>
+                    </button>
+                    {loginDropdown && (
+                      <RoleDropdown type="login" onSelect={handleRoleLogin} onClose={() => setLoginDropdown(false)} wrapperRef={loginRef} />
+                    )}
+                  </div>
+                  <div className="dropdown-wrapper" ref={signupRef}>
+                    <button
+                      className={`nav-btn btn-signup${signupDropdown ? " active" : ""}`}
+                      onClick={() => { setSignupDropdown((v) => !v); setLoginDropdown(false); }}
+                    >
+                      Sign Up Free
+                      <span className={`btn-chevron${signupDropdown ? " open" : ""}`} style={{ color: "rgba(255,255,255,0.75)" }}>▼</span>
+                    </button>
+                    {signupDropdown && (
+                      <RoleDropdown type="signup" onSelect={handleRoleSignup} onClose={() => setSignupDropdown(false)} wrapperRef={signupRef} />
+                    )}
+                  </div>
+                </div>
+                <img src="/banner-ad-right.jpeg" alt="Banner" className="banner-ad-image" onError={(e) => { e.target.style.display = "none"; }} />
               </>
             )}
           </div>

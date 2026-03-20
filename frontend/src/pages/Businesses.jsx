@@ -1,29 +1,30 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Navbar from "../components/common/Navbar";
 import axios from "axios";
-import { Building2, MapPin, Phone, Star, ArrowRight, Search, ChevronDown, X } from "lucide-react";
+import {
+  Building2, MapPin, Phone, Star, ArrowRight, Search,
+  ChevronDown, X, CheckCircle, Filter, Loader2
+} from "lucide-react";
 import API_BASE_URL from "../config/api";
+
 export default function Businesses() {
+  const navigate = useNavigate();
   const [biz, setBiz] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
-  const [hoveredId, setHoveredId] = useState(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+
+  useEffect(() => { fetchBusinesses(); }, []);
 
   useEffect(() => {
-    fetchBusinesses();
-  }, []);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (!e.target.closest(".biz-dropdown-wrap")) {
-        setDropdownOpen(false);
-      }
+    const handler = (e) => {
+      if (!e.target.closest(".biz-dropdown-wrap")) setDropdownOpen(false);
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   const fetchBusinesses = async () => {
@@ -49,742 +50,427 @@ export default function Businesses() {
     return matchSearch && matchCat;
   });
 
+  // ── Navigate to detail page ──
+  const goToDetail = (id) => navigate(`/businesses/${id}`);
+
   return (
-    <div style={{ background: "#f7f5f0", minHeight: "100vh", fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif" }}>
+    <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Playfair+Display:wght@700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f8fafc; color: #0f172a; }
 
+        @keyframes pulse  { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        @keyframes spin   { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes dropIn {
+          from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        .biz-wrapper { background: #f8fafc; min-height: 100vh; }
+
+        /* ══ HERO ══ */
         .biz-hero {
-          background: #fff;
-          border-bottom: 1px solid #ede9e0;
-          padding: 64px 0 48px;
-          position: relative;
-          overflow: visible;
+          background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+          padding: 64px 24px 80px;
+        }
+        .biz-hero-inner { max-width: 900px; margin: 0 auto; text-align: center; }
+
+        .biz-hero-badge {
+          display: inline-flex; align-items: center; gap: 8px;
+          padding: 6px 16px;
+          background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2);
+          border-radius: 50px; color: #10b981; font-size: 13px; font-weight: 600;
+          margin-bottom: 24px;
+        }
+        .biz-hero-badge-dot {
+          width: 6px; height: 6px; background: #10b981; border-radius: 50%;
+          animation: pulse 2s infinite;
         }
 
-        .biz-hero::before {
-          content: '';
-          position: absolute;
-          top: -80px;
-          right: -80px;
-          width: 400px;
-          height: 400px;
-          background: radial-gradient(circle, rgba(22,163,74,0.06) 0%, transparent 70%);
-          border-radius: 50%;
-          pointer-events: none;
+        .biz-hero-title {
+          font-size: 40px; font-weight: 800; color: white;
+          margin-bottom: 16px; line-height: 1.15; letter-spacing: -0.5px;
+        }
+        .biz-hero-title span { color: #10b981; }
+
+        .biz-hero-subtitle {
+          font-size: 17px; color: #94a3b8; max-width: 520px;
+          margin: 0 auto 40px; line-height: 1.6; font-weight: 400;
         }
 
-        .biz-hero::after {
-          content: '';
-          position: absolute;
-          bottom: -60px;
-          left: 10%;
-          width: 260px;
-          height: 260px;
-          background: radial-gradient(circle, rgba(251,191,36,0.07) 0%, transparent 70%);
-          border-radius: 50%;
-          pointer-events: none;
+        /* ── Search box ── */
+        .biz-search-container { max-width: 900px; margin: 0 auto; }
+        .biz-search-box {
+          background: white; border-radius: 12px; padding: 8px;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+          display: flex; gap: 8px; flex-wrap: wrap;
         }
-
-        .biz-container {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 0 32px;
+        .biz-search-wrap { flex: 1; min-width: 250px; position: relative; }
+        .biz-search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
+        .biz-search-input {
+          width: 100%; padding: 14px 16px 14px 48px;
+          font-size: 14px; font-family: 'Inter', sans-serif;
+          background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+          outline: none; transition: all 0.2s; color: #0f172a;
         }
-
-        .biz-label {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          background: #f0fdf4;
-          color: #16a34a;
-          border: 1px solid #bbf7d0;
-          padding: 6px 14px;
-          border-radius: 20px;
-          font-size: 12px;
-          font-weight: 600;
-          letter-spacing: 0.5px;
-          text-transform: uppercase;
-          margin-bottom: 20px;
+        .biz-search-input:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.1); background: white; }
+        .biz-search-input::placeholder { color: #94a3b8; }
+        .biz-search-clear {
+          position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+          background: #f1f5f9; border: none; border-radius: 50%;
+          width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+          cursor: pointer; color: #64748b; transition: all 0.15s;
         }
+        .biz-search-clear:hover { background: #e2e8f0; color: #0f172a; }
 
-        .biz-label-dot {
-          width: 6px;
-          height: 6px;
-          background: #16a34a;
-          border-radius: 50%;
-          animation: pulse-dot 2s infinite;
+        /* ── Category dropdown ── */
+        .biz-dropdown-wrap { position: relative; min-width: 180px; }
+        .biz-dropdown-btn {
+          display: flex; align-items: center; justify-content: space-between; gap: 8px;
+          padding: 14px 16px; width: 100%;
+          font-size: 14px; font-weight: 600; font-family: 'Inter', sans-serif;
+          background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+          color: #475569; cursor: pointer; transition: all 0.2s; white-space: nowrap;
         }
+        .biz-dropdown-btn:hover, .biz-dropdown-btn.open { border-color: #10b981; color: #10b981; background: #f0fdf4; }
+        .biz-dropdown-btn.has-value { border-color: #6ee7b7; background: #d1fae5; color: #065f46; }
+        .biz-dd-chevron { transition: transform 0.2s; color: #94a3b8; flex-shrink: 0; }
+        .biz-dropdown-btn.open .biz-dd-chevron { transform: rotate(180deg); color: #10b981; }
 
-        @keyframes pulse-dot {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.5; transform: scale(0.8); }
+        .biz-dropdown-panel {
+          position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 999;
+          background: white; border: 1px solid #e2e8f0; border-radius: 12px;
+          box-shadow: 0 12px 40px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.05);
+          overflow: hidden; max-height: 260px; overflow-y: auto;
+          animation: dropIn 0.16s cubic-bezier(0.16,1,0.3,1);
+          scrollbar-width: thin; scrollbar-color: #e2e8f0 transparent;
         }
+        .biz-dropdown-panel::-webkit-scrollbar { width: 4px; }
+        .biz-dropdown-panel::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
 
-        .biz-heading {
-          font-family: 'Playfair Display', Georgia, serif;
-          font-size: clamp(36px, 5vw, 56px);
-          font-weight: 800;
-          color: #1a1a1a;
-          line-height: 1.1;
-          margin-bottom: 16px;
-          letter-spacing: -1px;
+        .biz-dd-item {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 10px 14px; font-size: 13.5px; font-weight: 500;
+          color: #374151; cursor: pointer; transition: background 0.12s;
+          border: none; background: none; width: 100%; text-align: left;
+          font-family: 'Inter', sans-serif;
         }
+        .biz-dd-item:hover { background: #f8fafc; color: #111827; }
+        .biz-dd-item.active { background: #d1fae5; color: #065f46; font-weight: 700; }
+        .biz-dd-check { width: 16px; height: 16px; border-radius: 50%; background: #10b981; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .biz-dd-check::after { content: ''; width: 4px; height: 8px; border: 2px solid white; border-top: none; border-left: none; transform: rotate(45deg) translateY(-1px); display: block; }
+        .biz-dd-divider { height: 1px; background: #f1f5f9; margin: 4px 0; }
 
-        .biz-heading span {
-          color: #16a34a;
-          position: relative;
-          display: inline-block;
-        }
-
-        .biz-heading span::after {
-          content: '';
-          position: absolute;
-          bottom: 2px;
-          left: 0;
-          right: 0;
-          height: 3px;
-          background: linear-gradient(90deg, #16a34a, #86efac);
-          border-radius: 2px;
-        }
-
-        .biz-subheading {
-          font-size: 17px;
-          color: #6b6b6b;
-          font-weight: 400;
-          max-width: 480px;
-          line-height: 1.6;
-          margin-bottom: 40px;
-        }
-
-        .biz-controls {
-          display: flex;
-          gap: 16px;
-          flex-wrap: wrap;
-          align-items: center;
-        }
-
-        .biz-search-wrap {
-          position: relative;
-          flex: 1;
-          min-width: 240px;
-          max-width: 400px;
-        }
-
-        .biz-search-icon {
-          position: absolute;
-          left: 16px;
-          top: 50%;
-          transform: translateY(-50%);
-          color: #9ca3af;
-          pointer-events: none;
-        }
-
-        .biz-search {
-          width: 100%;
-          padding: 13px 16px 13px 44px;
-          border: 1.5px solid #e5e0d6;
-          border-radius: 12px;
-          font-size: 14px;
-          font-family: 'DM Sans', sans-serif;
-          background: #faf9f7;
-          color: #1a1a1a;
-          outline: none;
+        /* ── Filter button ── */
+        .biz-filter-btn {
+          display: flex; align-items: center; gap: 6px;
+          padding: 14px 16px; font-size: 14px; font-weight: 600;
+          color: #475569; background: #f8fafc; border: 1px solid #e2e8f0;
+          border-radius: 8px; cursor: pointer; font-family: 'Inter', sans-serif;
           transition: all 0.2s;
         }
+        .biz-filter-btn:hover, .biz-filter-btn.active { border-color: #10b981; color: #10b981; background: #f0fdf4; }
 
-        .biz-search:focus {
-          border-color: #16a34a;
-          background: #fff;
-          box-shadow: 0 0 0 3px rgba(22,163,74,0.08);
+        /* ── Stats bar ── */
+        .biz-stats-bar { max-width: 1200px; margin: -24px auto 40px; padding: 0 24px; }
+        .biz-stats-card {
+          background: white; border: 1px solid #e2e8f0; border-radius: 8px;
+          padding: 16px 24px; display: flex; align-items: center; gap: 24px;
+          flex-wrap: wrap; font-size: 14px;
+        }
+        .biz-stat-item { color: #64748b; }
+        .biz-stat-value { font-weight: 600; color: #0f172a; }
+        .biz-stat-divider { color: #cbd5e1; }
+        .biz-verified-badge {
+          margin-left: auto; color: #10b981; font-weight: 600;
+          display: flex; align-items: center; gap: 6px; font-size: 13px;
         }
 
-        .biz-search::placeholder { color: #b0a99a; }
-
-        .biz-clear {
-          position: absolute;
-          right: 12px;
-          top: 50%;
-          transform: translateY(-50%);
-          background: #f0ede7;
-          border: none;
-          border-radius: 50%;
-          width: 22px;
-          height: 22px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          color: #888;
-        }
-
-        /* Dropdown */
-        .biz-dropdown-wrap {
-          position: relative;
-          min-width: 200px;
-        }
-
-        .biz-dropdown-trigger {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 10px;
-          padding: 13px 16px;
-          border: 1.5px solid #e5e0d6;
-          border-radius: 12px;
-          font-size: 14px;
-          font-family: 'DM Sans', sans-serif;
-          font-weight: 500;
-          background: #faf9f7;
-          color: #1a1a1a;
-          cursor: pointer;
-          transition: all 0.2s;
-          white-space: nowrap;
-          width: 100%;
-        }
-
-        .biz-dropdown-trigger:hover,
-        .biz-dropdown-trigger.open {
-          border-color: #16a34a;
-          background: #fff;
-          box-shadow: 0 0 0 3px rgba(22,163,74,0.08);
-        }
-
-        .biz-dropdown-trigger .chevron {
-          color: #9ca3af;
-          transition: transform 0.2s;
-          flex-shrink: 0;
-        }
-
-        .biz-dropdown-trigger.open .chevron {
-          transform: rotate(180deg);
-          color: #16a34a;
-        }
-
-        .biz-dropdown-trigger .active-indicator {
-          display: inline-block;
-          width: 7px;
-          height: 7px;
-          background: #16a34a;
-          border-radius: 50%;
-          margin-right: 2px;
-          flex-shrink: 0;
-        }
-
-        .biz-dropdown-menu {
-          position: absolute;
-          top: calc(100% + 8px);
-          left: 0;
-          right: 0;
-          background: #fff;
-          border: 1.5px solid #e5e0d6;
-          border-radius: 14px;
-          box-shadow: 0 12px 40px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
-          z-index: 9999;
-          overflow: hidden;
-          animation: dropdown-in 0.18s cubic-bezier(0.25, 0.8, 0.25, 1);
-          max-height: 280px;
-          overflow-y: auto;
-        }
-
-        @keyframes dropdown-in {
-          from { opacity: 0; transform: translateY(-6px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        .biz-dropdown-menu::-webkit-scrollbar {
-          width: 4px;
-        }
-        .biz-dropdown-menu::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .biz-dropdown-menu::-webkit-scrollbar-thumb {
-          background: #e5e0d6;
-          border-radius: 4px;
-        }
-
-        .biz-dropdown-item {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 11px 16px;
-          font-size: 14px;
-          font-family: 'DM Sans', sans-serif;
-          font-weight: 400;
-          color: #444;
-          cursor: pointer;
-          transition: background 0.15s;
-          border: none;
-          background: none;
-          width: 100%;
-          text-align: left;
-        }
-
-        .biz-dropdown-item:hover {
-          background: #f0fdf4;
-          color: #16a34a;
-        }
-
-        .biz-dropdown-item.active {
-          background: #f0fdf4;
-          color: #16a34a;
-          font-weight: 600;
-        }
-
-        .biz-dropdown-item .check {
-          width: 18px;
-          height: 18px;
-          border-radius: 50%;
-          background: #16a34a;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-        }
-
-        .biz-dropdown-item .check::after {
-          content: '';
-          width: 5px;
-          height: 9px;
-          border: 2px solid #fff;
-          border-top: none;
-          border-left: none;
-          transform: rotate(45deg) translateY(-1px);
-          display: block;
-        }
-
-        .biz-dropdown-divider {
-          height: 1px;
-          background: #f0ece5;
-          margin: 4px 0;
-        }
-
-        .biz-body {
-          padding: 52px 0 80px;
-        }
-
-        .biz-meta-row {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 32px;
-        }
-
-        .biz-count {
-          font-size: 14px;
-          color: #9c9485;
-          font-weight: 500;
-        }
-
-        .biz-count strong { color: #1a1a1a; }
+        /* ══ BODY ══ */
+        .biz-body { padding: 0 0 80px; }
+        .biz-container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
 
         .biz-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-          gap: 28px;
+          gap: 20px;
         }
 
+        /* ── Card ── */
         .biz-card {
-          background: #fff;
-          border-radius: 20px;
-          overflow: hidden;
-          border: 1.5px solid #ede9e0;
-          transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-          cursor: pointer;
-          position: relative;
-          animation: card-in 0.5s ease both;
+          background: white; border: 1px solid #e2e8f0; border-radius: 12px;
+          overflow: hidden; transition: all 0.2s; cursor: pointer;
+          display: flex; flex-direction: column;
+          animation: fadeUp 0.3s ease both;
         }
-
-        .biz-card:hover {
-          transform: translateY(-6px);
-          box-shadow: 0 24px 64px rgba(0,0,0,0.1), 0 4px 16px rgba(0,0,0,0.06);
-          border-color: #d4eddb;
-        }
-
-        @keyframes card-in {
-          from { opacity: 0; transform: translateY(16px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
+        .biz-card:hover { border-color: #10b981; box-shadow: 0 4px 20px rgba(16,185,129,0.1); transform: translateY(-2px); }
 
         .biz-card-img-wrap {
-          position: relative;
-          height: 210px;
-          overflow: hidden;
-          background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
+          position: relative; height: 190px; overflow: hidden;
+          background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+          flex-shrink: 0;
         }
+        .biz-card-img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.5s ease; }
+        .biz-card:hover .biz-card-img { transform: scale(1.04); }
+        .biz-card-img-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.18) 0%, transparent 50%); }
 
-        .biz-card-img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          transition: transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
-        }
-
-        .biz-card:hover .biz-card-img {
-          transform: scale(1.06);
-        }
-
-        .biz-card-img-overlay {
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(to top, rgba(0,0,0,0.18) 0%, transparent 50%);
-        }
-
-        .biz-placeholder-img {
-          width: 100%;
-          height: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
+        .biz-placeholder {
+          width: 100%; height: 100%;
+          display: flex; align-items: center; justify-content: center;
           background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
           color: #86efac;
         }
 
-        .biz-verified-badge {
-          position: absolute;
-          top: 14px;
-          left: 14px;
-          background: rgba(255,255,255,0.95);
+        .biz-card-tags { position: absolute; top: 12px; left: 12px; display: flex; gap: 6px; }
+        .biz-tag {
+          padding: 4px 10px; border-radius: 6px;
+          font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
           backdrop-filter: blur(8px);
-          color: #16a34a;
-          padding: 5px 12px;
-          border-radius: 20px;
-          font-size: 11.5px;
-          font-weight: 700;
-          letter-spacing: 0.3px;
-          display: flex;
-          align-items: center;
-          gap: 5px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.12);
         }
+        .biz-tag-verified { background: rgba(255,255,255,0.9); color: #065f46; display: flex; align-items: center; gap: 4px; }
+        .biz-tag-cat { background: rgba(15,23,42,0.7); color: #94a3b8; }
 
         .biz-img-count {
-          position: absolute;
-          bottom: 12px;
-          right: 12px;
-          background: rgba(0,0,0,0.55);
-          backdrop-filter: blur(4px);
-          color: white;
-          padding: 4px 10px;
-          border-radius: 20px;
-          font-size: 12px;
-          font-weight: 600;
+          position: absolute; bottom: 10px; right: 12px;
+          background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+          color: white; padding: 3px 10px; border-radius: 20px;
+          font-size: 12px; font-weight: 600;
         }
 
-        .biz-card-body {
-          padding: 24px;
-        }
-
-        .biz-card-cat {
-          display: inline-block;
-          background: #f0fdf4;
-          color: #15803d;
-          border: 1px solid #bbf7d0;
-          padding: 3px 10px;
-          border-radius: 6px;
-          font-size: 11.5px;
-          font-weight: 600;
-          letter-spacing: 0.3px;
-          margin-bottom: 12px;
-          text-transform: uppercase;
-        }
+        .biz-card-body { padding: 20px 20px 16px; flex: 1; display: flex; flex-direction: column; }
 
         .biz-card-name {
-          font-family: 'Playfair Display', serif;
-          font-size: 21px;
-          font-weight: 700;
-          color: #1a1a1a;
-          margin-bottom: 10px;
-          letter-spacing: -0.3px;
-          line-height: 1.25;
+          font-size: 17px; font-weight: 700; color: #0f172a; margin-bottom: 10px;
+          line-height: 1.35; transition: color 0.2s;
         }
+        .biz-card:hover .biz-card-name { color: #10b981; }
 
         .biz-card-desc {
-          font-size: 14px;
-          color: #6b6b6b;
-          line-height: 1.65;
-          margin-bottom: 18px;
-          display: -webkit-box;
-          -webkit-line-clamp: 3;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
+          font-size: 13.5px; color: #64748b; line-height: 1.65; margin-bottom: 14px;
+          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+          font-weight: 400;
         }
 
-        .biz-card-divider {
-          height: 1px;
-          background: #f0ece5;
-          margin-bottom: 18px;
-        }
+        .biz-card-divider { height: 1px; background: #f1f5f9; margin-bottom: 14px; }
 
-        .biz-card-meta {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          margin-bottom: 20px;
-        }
-
+        .biz-card-meta { display: flex; flex-direction: column; gap: 7px; margin-bottom: 16px; }
         .biz-card-meta-item {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 13px;
-          color: #7a7268;
+          display: flex; align-items: center; gap: 8px;
+          font-size: 13px; color: #64748b;
         }
-
-        .biz-card-meta-item svg {
-          flex-shrink: 0;
-          color: #16a34a;
-        }
+        .biz-card-meta-item svg { flex-shrink: 0; color: #10b981; }
+        .biz-card-meta-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
         .biz-card-cta {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 13px 18px;
-          background: #f7f5f0;
-          border-radius: 12px;
-          border: none;
-          cursor: pointer;
-          width: 100%;
-          font-family: 'DM Sans', sans-serif;
-          font-size: 14px;
-          font-weight: 600;
-          color: #1a1a1a;
-          transition: all 0.2s;
+          display: flex; align-items: center; justify-content: center; gap: 8px;
+          width: 100%; padding: 11px 16px; margin-top: auto;
+          background: #0f172a; color: white; border: none; border-radius: 8px;
+          font-size: 14px; font-weight: 600; cursor: pointer;
+          transition: background 0.2s; font-family: 'Inter', sans-serif;
         }
+        .biz-card-cta:hover { background: #10b981; }
+        .biz-cta-arrow { transition: transform 0.2s; }
+        .biz-card-cta:hover .biz-cta-arrow { transform: translateX(3px); }
 
-        .biz-card-cta:hover {
-          background: #16a34a;
-          color: #fff;
-        }
-
-        .biz-card-cta:hover .cta-arrow {
-          transform: translateX(4px);
-          color: #fff;
-        }
-
-        .cta-arrow {
-          transition: transform 0.2s;
-          color: #16a34a;
-        }
-
-        /* Empty & Loading */
-        .biz-empty {
-          text-align: center;
-          padding: 80px 24px;
-          background: #fff;
-          border-radius: 20px;
-          border: 1.5px dashed #ddd8cf;
-        }
-
-        .biz-empty-icon {
-          width: 80px;
-          height: 80px;
-          margin: 0 auto 20px;
-          background: #f7f5f0;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .biz-empty-title {
-          font-family: 'Playfair Display', serif;
-          font-size: 22px;
-          font-weight: 700;
-          color: #1a1a1a;
-          margin-bottom: 8px;
-        }
-
-        .biz-empty-desc {
-          font-size: 15px;
-          color: #9c9485;
-        }
-
-        .biz-loading {
+        /* ── Skeletons ── */
+        .biz-loading-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-          gap: 28px;
+          gap: 20px;
         }
-
-        .biz-skeleton {
-          background: #fff;
-          border-radius: 20px;
-          overflow: hidden;
-          border: 1.5px solid #ede9e0;
-          animation: skeleton-pulse 1.6s ease-in-out infinite;
-        }
-
-        @keyframes skeleton-pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.55; }
-        }
-
+        .biz-skeleton { background: white; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
         .biz-skeleton-img {
-          height: 210px;
-          background: linear-gradient(90deg, #f0ece5 25%, #e8e4dc 50%, #f0ece5 75%);
-          background-size: 200% 100%;
-          animation: shimmer 1.5s infinite;
+          height: 190px;
+          background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+          background-size: 200% 100%; animation: shimmer 1.5s infinite;
         }
-
-        @keyframes shimmer {
-          0% { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
-
-        .biz-skeleton-body {
-          padding: 24px;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
+        .biz-skeleton-body { padding: 20px; display: flex; flex-direction: column; gap: 10px; }
         .biz-skeleton-line {
-          height: 14px;
-          border-radius: 8px;
-          background: linear-gradient(90deg, #f0ece5 25%, #e8e4dc 50%, #f0ece5 75%);
-          background-size: 200% 100%;
-          animation: shimmer 1.5s infinite;
+          height: 13px; border-radius: 6px;
+          background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+          background-size: 200% 100%; animation: shimmer 1.5s infinite;
         }
 
+        /* ── Empty / error ── */
+        .biz-empty {
+          text-align: center; padding: 80px 24px;
+          background: white; border: 1px solid #e2e8f0; border-radius: 12px;
+        }
+        .biz-state-icon {
+          width: 64px; height: 64px; margin: 0 auto 20px;
+          background: #f1f5f9; border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .biz-state-title { font-size: 20px; font-weight: 600; color: #0f172a; margin-bottom: 8px; }
+        .biz-state-desc  { font-size: 15px; color: #64748b; margin-bottom: 24px; }
+        .biz-btn-action {
+          display: inline-flex; align-items: center; gap: 8px;
+          padding: 12px 24px; background: #10b981; color: white;
+          font-size: 14px; font-weight: 600; border: none; border-radius: 8px;
+          cursor: pointer; transition: all 0.2s; font-family: 'Inter', sans-serif;
+        }
+        .biz-btn-action:hover { background: #059669; }
+
+        /* ── Responsive ── */
         @media (max-width: 768px) {
-          .biz-container { padding: 0 20px; }
-          .biz-hero { padding: 40px 0 32px; }
-          .biz-controls { flex-direction: column; align-items: stretch; }
-          .biz-search-wrap { max-width: 100%; }
+          .biz-hero { padding: 48px 16px 64px; }
+          .biz-hero-title { font-size: 32px; }
+          .biz-search-box { flex-direction: column; }
+          .biz-search-wrap { min-width: 100%; }
           .biz-dropdown-wrap { width: 100%; }
-          .biz-grid { grid-template-columns: 1fr; }
-          .biz-meta-row { flex-direction: column; gap: 12px; align-items: flex-start; }
+          .biz-grid, .biz-loading-grid { grid-template-columns: 1fr; }
+          .biz-stats-card { font-size: 13px; gap: 16px; }
+          .biz-verified-badge { margin-left: 0; width: 100%; }
+          .biz-container { padding: 0 16px; }
         }
       `}</style>
 
       <Navbar />
 
-      {/* Hero Section */}
-      <div className="biz-hero">
-        <div className="biz-container">
-          <div className="biz-label">
-            <div className="biz-label-dot" />
-            Verified & Live
-          </div>
-          <h1 className="biz-heading">
-            Discover <span>Green</span><br />Businesses
-          </h1>
-          <p className="biz-subheading">
-            Every business here has been carefully vetted and approved by our team. Explore opportunities that match your values.
-          </p>
+      <div className="biz-wrapper">
 
-          <div className="biz-controls">
-            {/* Search */}
-            <div className="biz-search-wrap">
-              <Search size={16} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', pointerEvents: 'none' }} />
-              <input
-                className="biz-search"
-                placeholder="Search businesses, locations..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-              {search && (
-                <button className="biz-clear" onClick={() => setSearch("")}>
-                  <X size={12} />
-                </button>
-              )}
+        {/* ══ HERO ══ */}
+        <div className="biz-hero">
+          <div className="biz-hero-inner">
+            <div className="biz-hero-badge">
+              <span className="biz-hero-badge-dot" />
+              {filtered.length} verified {filtered.length === 1 ? "company" : "companies"}
             </div>
+            <h1 className="biz-hero-title">
+              Find your next <span>Green Company</span>
+            </h1>
+            <p className="biz-hero-subtitle">
+              Every business here has been carefully vetted and approved. Discover companies building India's renewable future.
+            </p>
+          </div>
 
-            {/* Category Dropdown */}
-            <div className="biz-dropdown-wrap">
+          <div className="biz-search-container">
+            <div className="biz-search-box">
+              <div className="biz-search-wrap">
+                <Search className="biz-search-icon" size={18} />
+                <input
+                  className="biz-search-input"
+                  placeholder="Search companies, locations..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                />
+                {search && (
+                  <button className="biz-search-clear" onClick={() => setSearch("")}>
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+
+              <div className="biz-dropdown-wrap">
+                <button
+                  className={`biz-dropdown-btn${dropdownOpen ? " open" : ""}${activeCategory !== "All" ? " has-value" : ""}`}
+                  onClick={() => setDropdownOpen(v => !v)}
+                >
+                  <span>{activeCategory === "All" ? "All Categories" : activeCategory}</span>
+                  <ChevronDown size={15} className="biz-dd-chevron" />
+                </button>
+                {dropdownOpen && (
+                  <div className="biz-dropdown-panel">
+                    {categories.map((cat, idx) => (
+                      <React.Fragment key={cat}>
+                        {idx === 1 && <div className="biz-dd-divider" />}
+                        <button
+                          className={`biz-dd-item${activeCategory === cat ? " active" : ""}`}
+                          onClick={() => { setActiveCategory(cat); setDropdownOpen(false); }}
+                        >
+                          <span>{cat === "All" ? "All Categories" : cat}</span>
+                          {activeCategory === cat && <span className="biz-dd-check" />}
+                        </button>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <button
-                className={`biz-dropdown-trigger ${dropdownOpen ? "open" : ""}`}
-                onClick={() => setDropdownOpen(prev => !prev)}
+                className={`biz-filter-btn${showFilters ? " active" : ""}`}
+                onClick={() => setShowFilters(v => !v)}
               >
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {activeCategory !== "All" && <span className="active-indicator" />}
-                  {activeCategory === "All" ? "All Categories" : activeCategory}
-                </span>
-                <ChevronDown size={16} className="chevron" />
+                <Filter size={15} />
+                Filters
               </button>
 
-              {dropdownOpen && (
-                <div className="biz-dropdown-menu">
-                  {categories.map((cat, idx) => (
-                    <React.Fragment key={cat}>
-                      {idx === 1 && <div className="biz-dropdown-divider" />}
-                      <button
-                        className={`biz-dropdown-item ${activeCategory === cat ? "active" : ""}`}
-                        onClick={() => {
-                          setActiveCategory(cat);
-                          setDropdownOpen(false);
-                        }}
-                      >
-                        <span>{cat === "All" ? "All Categories" : cat}</span>
-                        {activeCategory === cat && <span className="check" />}
-                      </button>
-                    </React.Fragment>
-                  ))}
-                </div>
+              {(search || activeCategory !== "All") && (
+                <button
+                  className="biz-filter-btn"
+                  onClick={() => { setSearch(""); setActiveCategory("All"); }}
+                  style={{ color: "#64748b" }}
+                >
+                  <X size={15} />
+                  Clear
+                </button>
               )}
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Body */}
-      <div className="biz-body">
-        <div className="biz-container">
+        {/* ══ STATS BAR ══ */}
+        <div className="biz-stats-bar">
+          <div className="biz-stats-card">
+            <span className="biz-stat-item"><span className="biz-stat-value">{filtered.length}</span> companies</span>
+            <span className="biz-stat-divider">|</span>
+            <span className="biz-stat-item"><span className="biz-stat-value">{categories.length - 1}</span> categories</span>
+            <span className="biz-stat-divider">|</span>
+            <span className="biz-stat-item"><span className="biz-stat-value">{biz.length}</span> total verified</span>
+            <span className="biz-verified-badge">
+              <CheckCircle size={14} />
+              Approved businesses
+            </span>
+          </div>
+        </div>
 
-          {loading ? (
-            <div className="biz-loading">
-              {[1, 2, 3, 4, 5, 6].map(i => (
-                <div key={i} className="biz-skeleton" style={{ animationDelay: `${i * 0.1}s` }}>
-                  <div className="biz-skeleton-img" />
-                  <div className="biz-skeleton-body">
-                    <div className="biz-skeleton-line" style={{ width: '40%' }} />
-                    <div className="biz-skeleton-line" style={{ width: '75%', height: 20 }} />
-                    <div className="biz-skeleton-line" style={{ width: '90%' }} />
-                    <div className="biz-skeleton-line" style={{ width: '65%' }} />
+        {/* ══ BODY ══ */}
+        <div className="biz-body">
+          <div className="biz-container">
+
+            {loading ? (
+              <div className="biz-loading-grid">
+                {[1,2,3,4,5,6].map(i => (
+                  <div key={i} className="biz-skeleton" style={{ animationDelay: `${i * 0.07}s` }}>
+                    <div className="biz-skeleton-img" />
+                    <div className="biz-skeleton-body">
+                      <div className="biz-skeleton-line" style={{ width: "40%" }} />
+                      <div className="biz-skeleton-line" style={{ width: "75%", height: 18 }} />
+                      <div className="biz-skeleton-line" style={{ width: "90%" }} />
+                      <div className="biz-skeleton-line" style={{ width: "60%" }} />
+                    </div>
                   </div>
+                ))}
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="biz-empty">
+                <div className="biz-state-icon">
+                  <Building2 size={32} color="#cbd5e1" />
                 </div>
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="biz-empty">
-              <div className="biz-empty-icon">
-                <Building2 size={36} color="#c9c3b8" />
-              </div>
-              <div className="biz-empty-title">
-                {search ? `No results for "${search}"` : "No businesses yet"}
-              </div>
-              <p className="biz-empty-desc">
-                {search ? "Try a different search term or category." : "Check back soon — verified businesses will appear here."}
-              </p>
-              {(search || activeCategory !== "All") && (
-                <button
-                  onClick={() => { setSearch(""); setActiveCategory("All"); }}
-                  style={{ marginTop: 20, padding: '10px 24px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 10, fontFamily: 'DM Sans, sans-serif', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}
-                >
-                  Clear Filters
-                </button>
-              )}
-            </div>
-          ) : (
-            <>
-              <div className="biz-meta-row">
-                <p className="biz-count">
-                  Showing <strong>{filtered.length}</strong> verified {filtered.length === 1 ? "business" : "businesses"}
-                  {activeCategory !== "All" && <> in <strong>{activeCategory}</strong></>}
+                <h3 className="biz-state-title">
+                  {search ? `No results for "${search}"` : "No businesses yet"}
+                </h3>
+                <p className="biz-state-desc">
+                  {search ? "Try a different search term or category." : "Verified businesses will appear here soon."}
                 </p>
+                {(search || activeCategory !== "All") && (
+                  <button className="biz-btn-action" onClick={() => { setSearch(""); setActiveCategory("All"); }}>
+                    Clear Filters
+                  </button>
+                )}
               </div>
-
+            ) : (
               <div className="biz-grid">
                 {filtered.map((b, idx) => (
                   <div
                     key={b._id}
                     className="biz-card"
-                    style={{ animationDelay: `${idx * 0.07}s` }}
-                    onMouseEnter={() => setHoveredId(b._id)}
-                    onMouseLeave={() => setHoveredId(null)}
+                    style={{ animationDelay: `${idx * 0.05}s` }}
+                    onClick={() => goToDetail(b._id)}   // ← whole card is clickable
                   >
                     {/* Image */}
                     <div className="biz-card-img-wrap">
@@ -797,69 +483,67 @@ export default function Businesses() {
                           />
                           <div className="biz-card-img-overlay" />
                           {b.businessProfile.images.length > 1 && (
-                            <div className="biz-img-count">
-                              +{b.businessProfile.images.length - 1} photos
-                            </div>
+                            <div className="biz-img-count">+{b.businessProfile.images.length - 1} photos</div>
                           )}
                         </>
                       ) : (
-                        <div className="biz-placeholder-img">
-                          <Building2 size={52} />
+                        <div className="biz-placeholder">
+                          <Building2 size={48} />
                         </div>
                       )}
-                      <div className="biz-verified-badge">
-                        <Star size={12} fill="currentColor" />
-                        Verified
+                      <div className="biz-card-tags">
+                        <span className="biz-tag biz-tag-verified">
+                          <Star size={10} fill="currentColor" />
+                          Verified
+                        </span>
+                        {b.businessProfile?.category && (
+                          <span className="biz-tag biz-tag-cat">{b.businessProfile.category}</span>
+                        )}
                       </div>
                     </div>
 
                     {/* Body */}
                     <div className="biz-card-body">
-                      {b.businessProfile?.category && (
-                        <div className="biz-card-cat">{b.businessProfile.category}</div>
-                      )}
-
-                      <h3 className="biz-card-name">
-                        {b.businessProfile?.businessName}
-                      </h3>
+                      <h3 className="biz-card-name">{b.businessProfile?.businessName}</h3>
 
                       {b.businessProfile?.description && (
-                        <p className="biz-card-desc">
-                          {b.businessProfile.description}
-                        </p>
+                        <p className="biz-card-desc">{b.businessProfile.description}</p>
                       )}
 
                       <div className="biz-card-divider" />
 
                       <div className="biz-card-meta">
-                        {b.businessProfile?.contactDetails && (
-                          <div className="biz-card-meta-item">
-                            <Phone size={14} />
-                            <span>{b.businessProfile.contactDetails}</span>
-                          </div>
-                        )}
                         {b.businessProfile?.address && (
                           <div className="biz-card-meta-item">
-                            <MapPin size={14} />
-                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {b.businessProfile.address}
-                            </span>
+                            <MapPin size={13} />
+                            <span>{b.businessProfile.address}</span>
+                          </div>
+                        )}
+                        {b.businessProfile?.contactDetails && (
+                          <div className="biz-card-meta-item">
+                            <Phone size={13} />
+                            <span>{b.businessProfile.contactDetails}</span>
                           </div>
                         )}
                       </div>
 
-                      <button className="biz-card-cta">
-                        <span>View Details</span>
-                        <ArrowRight size={16} className="cta-arrow" />
+                      {/* CTA — stopPropagation so it doesn't double-fire with card click */}
+                      <button
+                        className="biz-card-cta"
+                        onClick={(e) => { e.stopPropagation(); goToDetail(b._id); }}
+                      >
+                        View Details
+                        <ArrowRight size={15} className="biz-cta-arrow" />
                       </button>
                     </div>
                   </div>
                 ))}
               </div>
-            </>
-          )}
+            )}
+
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

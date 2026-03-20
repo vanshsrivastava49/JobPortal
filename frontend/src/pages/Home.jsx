@@ -505,89 +505,7 @@ export default function GreenJobsHomepage() {
             <button className="cat-arrow cat-arrow-right" onClick={() => document.getElementById("categoriesScroll").scrollBy({ left: 240, behavior: "smooth" })}>→</button>
           </div>
         </section>
-
-        {/* ══ COMPANIES ══ */}
-        <section className="companies-section">
-          <h2 className="companies-title">Top Companies Hiring Now</h2>
-          <div className="companies-grid">
-            {topCompanies.map((company, index) => (
-              <div key={index} className="company-card" onClick={() => navigate(`/jobs?company=${company.name}`)}>
-                <img
-                  src={company.logo}
-                  alt={company.name}
-                  className="company-logo"
-                  onError={(e) => {
-                    e.target.style.display = "none";
-                    e.target.parentElement.innerHTML = `<div style="font-size:18px;font-weight:600;color:#374151">${company.name}</div>`;
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* ══ ADS ══ */}
-        <section className="ads-section">
-          <div className="ads-inner">
-            <div className="ads-header">
-              <div className="ads-header-left">
-                <div className="ads-eyebrow">
-                  <span className="ads-eyebrow-line"></span>
-                  Featured Opportunities
-                </div>
-                <h2 className="ads-title">Spotlight on Green Energy Careers</h2>
-              </div>
-              <div className="ads-nav">
-                <div className="ads-dots">
-                  {featuredAds.map((_, i) => (
-                    <div key={i} className={`ads-dot${i === activeAd ? " active" : ""}`} onClick={() => setActiveAd(i)} />
-                  ))}
-                </div>
-                <button className="ads-arrow" onClick={() => scrollAds("left")}><ChevronLeft size={18} /></button>
-                <button className="ads-arrow" onClick={() => scrollAds("right")}><ChevronRight size={18} /></button>
-              </div>
-            </div>
-
-            <div className="ads-spotlight">
-              <div className="ad-main-card" onClick={() => navigate("/jobs")} key={activeAd}>
-                <img src={featuredAds[activeAd].image} alt={featuredAds[activeAd].title} className="ad-main-img" onError={(e) => { e.target.style.background = "#1e293b"; }} />
-                <div className="ad-main-overlay" />
-                <div className="ad-main-content">
-                  <div className="ad-main-tag" style={{ background: featuredAds[activeAd].accentLight + "33", color: featuredAds[activeAd].accentLight, border: `1px solid ${featuredAds[activeAd].accentLight}55` }}>
-                    {featuredAds[activeAd].tag}
-                  </div>
-                  <div className="ad-main-title">{featuredAds[activeAd].title}</div>
-                  <div className="ad-main-subtitle">{featuredAds[activeAd].subtitle}</div>
-                  <button className="ad-main-cta" style={{ background: featuredAds[activeAd].accent }}>
-                    {featuredAds[activeAd].cta} <ChevronRight size={16} />
-                  </button>
-                </div>
-              </div>
-
-              <div className="ads-side-stack">
-                {featuredAds.map((ad, i) =>
-                  i !== activeAd && (
-                    <div
-                      key={i}
-                      className={`ad-side-card${i === (activeAd + 1) % featuredAds.length ? " highlighted" : ""}`}
-                      onClick={() => { setActiveAd(i); navigate("/jobs"); }}
-                    >
-                      <img src={ad.image} alt={ad.title} className="ad-side-thumb" onError={(e) => { e.target.style.background = "#f1f5f9"; }} />
-                      <div className="ad-side-body">
-                        <div className="ad-side-tag" style={{ color: ad.accent }}>{ad.tag}</div>
-                        <div className="ad-side-title">{ad.title}</div>
-                        <div className="ad-side-subtitle">{ad.subtitle}</div>
-                      </div>
-                      <div className="ad-side-arrow"><ChevronRight size={18} /></div>
-                    </div>
-                  )
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ══ LIVE JOBS ══ */}
+{/* ══ LIVE JOBS ══ */}
         <section className="jobs-section">
           <div className="jobs-header">
             <h2 className="jobs-title">Jobs Listed Right Now</h2>
@@ -652,6 +570,88 @@ export default function GreenJobsHomepage() {
             </>
           )}
         </section>
+       
+
+        {/* ══ ADS ══ */}
+        <section className="ads-section">
+          <div className="ads-inner">
+            <div className="ads-header">
+              <div className="ads-header-left">
+                <div className="ads-eyebrow">
+                  <span className="ads-eyebrow-line"></span>
+                  Featured Opportunities
+                </div>
+                <h2 className="ads-title">Spotlight on Green Energy Careers</h2>
+              </div>
+              <div className="ads-nav">
+                <div className="ads-dots">
+                  {featuredAds.map((_, i) => (
+                    <div key={i} className={`ads-dot${i === activeAd ? " active" : ""}`} onClick={() => setActiveAd(i)} />
+                  ))}
+                </div>
+                <button className="ads-arrow" onClick={() => scrollAds("left")}><ChevronLeft size={18} /></button>
+                <button className="ads-arrow" onClick={() => scrollAds("right")}><ChevronRight size={18} /></button>
+              </div>
+            </div>
+
+            <div className="ads-spotlight">
+              <div className="ad-main-card" onClick={() => navigate("/jobs")} key={activeAd}>
+                <img src={featuredAds[activeAd].image} alt={featuredAds[activeAd].title} className="ad-main-img" onError={(e) => { e.target.style.background = "#1e293b"; }} />
+                <div className="ad-main-overlay" />
+                <div className="ad-main-content">
+                  <div className="ad-main-tag" style={{ background: featuredAds[activeAd].accentLight + "33", color: featuredAds[activeAd].accentLight, border: `1px solid ${featuredAds[activeAd].accentLight}55` }}>
+                    {featuredAds[activeAd].tag}
+                  </div>
+                  <div className="ad-main-title">{featuredAds[activeAd].title}</div>
+                  <div className="ad-main-subtitle">{featuredAds[activeAd].subtitle}</div>
+                  <button className="ad-main-cta" style={{ background: featuredAds[activeAd].accent }}>
+                    {featuredAds[activeAd].cta} <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="ads-side-stack">
+                {featuredAds.map((ad, i) =>
+                  i !== activeAd && (
+                    <div
+                      key={i}
+                      className={`ad-side-card${i === (activeAd + 1) % featuredAds.length ? " highlighted" : ""}`}
+                      onClick={() => { setActiveAd(i); navigate("/jobs"); }}
+                    >
+                      <img src={ad.image} alt={ad.title} className="ad-side-thumb" onError={(e) => { e.target.style.background = "#f1f5f9"; }} />
+                      <div className="ad-side-body">
+                        <div className="ad-side-tag" style={{ color: ad.accent }}>{ad.tag}</div>
+                        <div className="ad-side-title">{ad.title}</div>
+                        <div className="ad-side-subtitle">{ad.subtitle}</div>
+                      </div>
+                      <div className="ad-side-arrow"><ChevronRight size={18} /></div>
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+         {/* ══ COMPANIES ══ */}
+        <section className="companies-section">
+          <h2 className="companies-title">Top Companies Hiring Now</h2>
+          <div className="companies-grid">
+            {topCompanies.map((company, index) => (
+              <div key={index} className="company-card" onClick={() => navigate(`/jobs?company=${company.name}`)}>
+                <img
+                  src={company.logo}
+                  alt={company.name}
+                  className="company-logo"
+                  onError={(e) => {
+                    e.target.style.display = "none";
+                    e.target.parentElement.innerHTML = `<div style="font-size:18px;font-weight:600;color:#374151">${company.name}</div>`;
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+        
 
       </div>
 

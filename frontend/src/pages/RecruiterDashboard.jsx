@@ -149,12 +149,6 @@ const RecruiterDashboard = () => {
       color: "#10b981",
     },
     {
-      icon: Eye,
-      label: "Profile Views",
-      value: "—",
-      color: "#8b5cf6",
-    },
-    {
       icon: ShieldCheck,
       label: "Verification",
       value: isVerified
