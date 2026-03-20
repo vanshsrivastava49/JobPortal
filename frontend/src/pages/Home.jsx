@@ -637,7 +637,6 @@ export default function GreenJobsHomepage() {
 
       </div>
 
-      {/* ══ FOOTER ══ */}
       <footer className="footer">
         <div className="footer-grid">
   <div>
