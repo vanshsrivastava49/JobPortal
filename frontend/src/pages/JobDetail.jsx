@@ -28,9 +28,9 @@ import {
   AlertCircle,
   BadgeCheck,
 } from "lucide-react";
-// Rupee icon component
+
 const RupeeIcon = ({ size = 20, color = "#065f46" }) => (
-  <span style={{ fontSize: size, fontWeight: 700, color }}>{'\u20B9'}</span>
+  <span style={{ fontSize: size, fontWeight: 700, color, fontFamily: "'Inter', sans-serif" }}>₹</span>
 );
 
 const ROUND_TYPE_LABELS = {
@@ -65,19 +65,18 @@ const JobDetail = () => {
       try {
         setLoading(true);
         const res = await axios.get(`${API_BASE_URL}/api/jobs/public/${jobId}`, {
-  headers: token ? { Authorization: `Bearer ${token}` } : {},
-  timeout: 10000,
-});
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          timeout: 10000,
+        });
         const jobData = res.data.job || res.data;
         setJob(jobData);
 
-        // Check if already applied
         if (token && user?.role === "jobseeker") {
           try {
             const checkRes = await axios.get(`${API_BASE_URL}/api/applications/check/${jobId}`, {
-  headers: { Authorization: `Bearer ${token}` },
-});
-setApplied(checkRes.data.applied || false);
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            setApplied(checkRes.data.applied || false);
           } catch (err) { /* silently ignore */ }
         }
       } catch (err) {
@@ -116,44 +115,18 @@ setApplied(checkRes.data.applied || false);
   };
 
   const formatPay = (job) => {
-  if (!job) return null;
-
-  if (!job.isPaid) {
-    return {
-      label: "Unpaid / Volunteer",
-      color: "#64748b",
-      bg: "#f1f5f9",
-      border: "#e2e8f0",
-      icon: Gift,
-    };
-  }
-
-  if (job.stipend) {
-    const period = {
-      monthly: "per month",
-      yearly: "per year",
-      weekly: "per week",
-      hourly: "per hour",
-      project: "per project",
-    };
-
-    return {
-      label: `${job.stipend} ${period[job.stipendPeriod] || ""}`.trim(),
-      color: "#065f46",
-      bg: "#d1fae5",
-      border: "#6ee7b7",
-      icon: RupeeIcon,
-    };
-  }
-
-  return {
-    label: "Paid",
-    color: "#065f46",
-    bg: "#d1fae5",
-    border: "#6ee7b7",
-    icon: RupeeIcon,
+    if (!job) return null;
+    if (!job.isPaid) {
+      return { label: "Unpaid / Volunteer", color: "#64748b", bg: "#f1f5f9", border: "#e2e8f0", icon: Gift };
+    }
+    if (job.stipend) {
+      const period = { monthly: "per month", yearly: "per year", weekly: "per week", hourly: "per hour", project: "per project" };
+      return { label: `${job.stipend} ${period[job.stipendPeriod] || ""}`.trim(), color: "#065f46", bg: "#d1fae5", border: "#6ee7b7", icon: RupeeIcon };
+    }
+    return { label: "Paid", color: "#065f46", bg: "#d1fae5", border: "#6ee7b7", icon: RupeeIcon };
   };
-};
+
+  const INTER = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
 
   if (loading) {
     return (
@@ -161,7 +134,7 @@ setApplied(checkRes.data.applied || false);
         <Navbar />
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "70vh", gap: 16 }}>
           <Loader2 size={40} style={{ color: "#10b981", animation: "spin 1s linear infinite" }} />
-          <p style={{ color: "#64748b", fontSize: 16, fontFamily: "'DM Sans', sans-serif" }}>Loading job details…</p>
+          <p style={{ color: "#64748b", fontSize: 16, fontFamily: INTER }}>Loading job details…</p>
         </div>
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
@@ -174,9 +147,9 @@ setApplied(checkRes.data.applied || false);
         <Navbar />
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "70vh", gap: 16, padding: 24 }}>
           <AlertCircle size={48} color="#cbd5e1" />
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: "#0f172a", fontFamily: "'DM Serif Display', serif" }}>Job not found</h2>
-          <p style={{ color: "#64748b", fontSize: 15 }}>{error || "This job may have been removed or is no longer available."}</p>
-          <button onClick={() => navigate("/jobs")} style={{ padding: "12px 24px", background: "#10b981", color: "white", border: "none", borderRadius: 10, fontWeight: 700, cursor: "pointer", fontSize: 14, fontFamily: "'DM Sans', sans-serif" }}>
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: "#0f172a", fontFamily: INTER, letterSpacing: "-0.5px" }}>Job not found</h2>
+          <p style={{ color: "#64748b", fontSize: 15, fontFamily: INTER }}>{error || "This job may have been removed or is no longer available."}</p>
+          <button onClick={() => navigate("/jobs")} style={{ padding: "12px 24px", background: "#10b981", color: "white", border: "none", borderRadius: 10, fontWeight: 700, cursor: "pointer", fontSize: 14, fontFamily: INTER }}>
             ← Back to Jobs
           </button>
         </div>
@@ -192,7 +165,7 @@ setApplied(checkRes.data.applied || false);
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -202,27 +175,25 @@ setApplied(checkRes.data.applied || false);
         @keyframes modalIn { from { opacity: 0; transform: scale(0.96) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
         @keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
 
-        .jd-root { background: #f8fafc; min-height: 100vh; font-family: 'DM Sans', sans-serif; }
+        .jd-root { background: #f8fafc; min-height: 100vh; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
 
         /* ── Hero banner ── */
         .jd-hero {
-          background: linear-gradient(160deg, #0f172a 0%, #1e293b 60%, #0f2d1e 100%);
-          padding: 48px 24px 80px; position: relative; overflow: hidden;
+          background: linear-gradient(160deg, #052e16 0%, #14532d 50%, #166534 100%);
+          padding: 64px 24px 80px; position: relative; overflow: hidden;
         }
-        .jd-hero::before {
-          content: ''; position: absolute; inset: 0;
-          background: radial-gradient(ellipse 60% 80% at 80% 50%, rgba(16,185,129,0.12) 0%, transparent 70%);
-          pointer-events: none;
-        }
+        .jd-hero::before { content: ''; position: absolute; width: 600px; height: 600px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.06); top: -200px; left: -200px; pointer-events: none; }
+        .jd-hero::after  { content: ''; position: absolute; width: 400px; height: 400px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.06); top: 40px; right: -140px; pointer-events: none; }
+        .jd-hero-glow { position: absolute; inset: 0; background-image: radial-gradient(circle at 70% 20%, rgba(16,185,129,0.15) 0%, transparent 60%); pointer-events: none; }
         .jd-hero-inner { max-width: 1100px; margin: 0 auto; position: relative; }
 
         .jd-back {
           display: inline-flex; align-items: center; gap: 8px;
-          color: #64748b; background: none; border: none; cursor: pointer;
-          font-size: 14px; font-family: 'DM Sans', sans-serif; padding: 0;
-          margin-bottom: 32px; transition: color 0.2s;
+          color: rgba(255,255,255,0.5); background: none; border: none; cursor: pointer;
+          font-size: 14px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          padding: 0; margin-bottom: 32px; transition: color 0.2s;
         }
-        .jd-back:hover { color: #10b981; }
+        .jd-back:hover { color: #6ee7b7; }
 
         .jd-hero-content {
           display: flex; align-items: flex-start; justify-content: space-between;
@@ -232,20 +203,15 @@ setApplied(checkRes.data.applied || false);
         .jd-hero-left { flex: 1; min-width: 0; animation: fadeUp 0.5s ease; }
 
         .jd-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
-        .jd-tag {
-          padding: 5px 12px; border-radius: 100px; font-size: 12px; font-weight: 700;
-          text-transform: uppercase; letter-spacing: 0.5px;
-        }
+        .jd-tag { padding: 5px 12px; border-radius: 100px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
         .jd-tag-type { background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); color: #93c5fd; }
-        .jd-tag-live {
-          background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: #6ee7b7;
-          display: flex; align-items: center; gap: 5px;
-        }
+        .jd-tag-live { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: #6ee7b7; display: flex; align-items: center; gap: 5px; }
         .live-dot { width: 6px; height: 6px; background: #10b981; border-radius: 50%; animation: pulse 2s infinite; }
 
         .jd-title {
-          font-family: 'DM Serif Display', serif; font-size: 42px; color: white;
-          line-height: 1.15; margin-bottom: 20px; font-style: italic;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          font-size: 42px; font-weight: 800; color: white;
+          line-height: 1.15; margin-bottom: 20px; letter-spacing: -1.5px;
         }
 
         .jd-company-row { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
@@ -261,7 +227,7 @@ setApplied(checkRes.data.applied || false);
         .jd-meta-chip {
           display: flex; align-items: center; gap: 8px; padding: 8px 14px;
           background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
-          border-radius: 8px; font-size: 13px; color: #cbd5e1; font-weight: 500;
+          border-radius: 8px; font-size: 13px; color: rgba(255,255,255,0.7); font-weight: 500;
         }
 
         /* ── Apply CTA (hero right) ── */
@@ -271,19 +237,16 @@ setApplied(checkRes.data.applied || false);
           backdrop-filter: blur(8px); animation: fadeUp 0.5s ease 0.1s both;
           display: flex; flex-direction: column; gap: 16px;
         }
-        .jd-pay-display {
-          padding: 14px 16px; border-radius: 10px;
-          display: flex; align-items: center; gap: 10px;
-        }
+        .jd-pay-display { padding: 14px 16px; border-radius: 10px; display: flex; align-items: center; gap: 10px; }
         .jd-pay-amount { font-size: 18px; font-weight: 700; }
         .jd-pay-label { font-size: 12px; opacity: 0.7; margin-top: 2px; }
 
         .jd-apply-btn {
           width: 100%; padding: 15px; background: #10b981; color: white;
           border: none; border-radius: 10px; font-size: 15px; font-weight: 700;
-          font-family: 'DM Sans', sans-serif; cursor: pointer;
-          display: flex; align-items: center; justify-content: center; gap: 8px;
-          transition: all 0.2s; letter-spacing: 0.2px;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+          transition: all 0.2s; letter-spacing: 0.1px;
         }
         .jd-apply-btn:hover:not(:disabled) { background: #059669; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(16,185,129,0.35); }
         .jd-apply-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
@@ -294,7 +257,7 @@ setApplied(checkRes.data.applied || false);
         .jd-login-note a:hover { text-decoration: underline; }
 
         .jd-rounds-count {
-          display: flex; align-items: center; gap: 8px; font-size: 13px; color: #64748b;
+          display: flex; align-items: center; gap: 8px; font-size: 13px; color: rgba(255,255,255,0.5);
           padding: 10px 14px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
           border-radius: 8px;
         }
@@ -309,7 +272,8 @@ setApplied(checkRes.data.applied || false);
           margin-bottom: 20px; animation: fadeUp 0.4s ease; box-shadow: 0 1px 4px rgba(0,0,0,0.04);
         }
         .jd-card-title {
-          font-family: 'DM Serif Display', serif; font-size: 22px; color: #0f172a;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          font-size: 20px; font-weight: 800; color: #0f172a; letter-spacing: -0.3px;
           margin-bottom: 20px; display: flex; align-items: center; gap: 10px;
         }
         .jd-card-title-icon {
@@ -317,13 +281,8 @@ setApplied(checkRes.data.applied || false);
           border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
 
-        /* Description */
-        .jd-description {
-          font-size: 15px; color: #374151; line-height: 1.8; white-space: pre-wrap;
-          word-break: break-word;
-        }
+        .jd-description { font-size: 15px; color: #374151; line-height: 1.8; white-space: pre-wrap; word-break: break-word; }
 
-        /* Skills */
         .jd-skills { display: flex; flex-wrap: wrap; gap: 8px; }
         .jd-skill-pill {
           padding: 6px 14px; border-radius: 100px; font-size: 13px; font-weight: 600;
@@ -342,10 +301,8 @@ setApplied(checkRes.data.applied || false);
         .jd-round-num-badge {
           width: 40px; height: 40px; background: #0f172a; border-radius: 50%;
           display: flex; align-items: center; justify-content: center;
-          font-size: 14px; font-weight: 700; color: white; flex-shrink: 0; z-index: 1;
-          position: relative;
+          font-size: 14px; font-weight: 700; color: white; flex-shrink: 0; z-index: 1; position: relative;
         }
-        .jd-round-icon-badge { font-size: 20px; }
         .jd-round-body { flex: 1; padding-bottom: 24px; padding-top: 8px; }
         .jd-round-title { font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
         .jd-round-type-label {
@@ -364,43 +321,26 @@ setApplied(checkRes.data.applied || false);
         /* Sidebar */
         .jd-sidebar { position: sticky; top: 24px; display: flex; flex-direction: column; gap: 16px; }
 
-        .jd-info-card {
-          background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px;
-          box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-        }
-        .jd-info-card-title {
-          font-size: 13px; font-weight: 700; color: #94a3b8;
-          text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 16px;
-        }
-        .jd-info-item {
-          display: flex; align-items: flex-start; gap: 12px;
-          padding: 12px 0; border-bottom: 1px solid #f1f5f9;
-        }
+        .jd-info-card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+        .jd-info-card-title { font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 16px; }
+        .jd-info-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
         .jd-info-item:last-child { border-bottom: none; padding-bottom: 0; }
-        .jd-info-icon {
-          width: 32px; height: 32px; background: #f8fafc; border: 1px solid #e2e8f0;
-          border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-        }
+        .jd-info-icon { width: 32px; height: 32px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .jd-info-label { font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
         .jd-info-value { font-size: 14px; color: #0f172a; font-weight: 600; margin-top: 2px; }
 
         /* Apply sidebar card */
-        .jd-apply-sidebar {
-          background: linear-gradient(135deg, #0f2d1e, #1e3a2f);
-          border: 1px solid rgba(16,185,129,0.2); border-radius: 16px; padding: 24px;
-        }
+        .jd-apply-sidebar { background: linear-gradient(135deg, #052e16, #14532d); border: 1px solid rgba(16,185,129,0.2); border-radius: 16px; padding: 24px; }
         .jd-apply-sidebar-title { font-size: 16px; font-weight: 700; color: white; margin-bottom: 6px; }
         .jd-apply-sidebar-sub { font-size: 13px; color: #6ee7b7; margin-bottom: 20px; }
         .jd-apply-sidebar-btn {
           width: 100%; padding: 13px; background: #10b981; color: white;
           border: none; border-radius: 10px; font-size: 14px; font-weight: 700;
-          font-family: 'DM Sans', sans-serif; cursor: pointer;
-          display: flex; align-items: center; justify-content: center; gap: 8px;
-          transition: all 0.2s;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;
         }
         .jd-apply-sidebar-btn:hover:not(:disabled) { background: #059669; }
         .jd-apply-sidebar-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .jd-apply-sidebar-btn.applied { background: #065f46; }
 
         .jd-applied-badge {
           display: flex; align-items: center; gap: 8px; padding: 12px 14px;
@@ -408,7 +348,7 @@ setApplied(checkRes.data.applied || false);
           border-radius: 10px; font-size: 13px; font-weight: 600; color: #6ee7b7;
         }
 
-        /* ── Apply Modal ── */
+        /* ── Modal ── */
         .jd-modal-overlay {
           position: fixed; inset: 0; background: rgba(0,0,0,0.6);
           backdrop-filter: blur(4px); z-index: 1000;
@@ -426,20 +366,15 @@ setApplied(checkRes.data.applied || false);
           display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;
         }
         .jd-modal-close:hover { background: #e2e8f0; }
-        .jd-modal-title {
-          font-family: 'DM Serif Display', serif; font-size: 24px; color: #0f172a; margin-bottom: 6px;
-        }
+        .jd-modal-title { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 24px; font-weight: 800; color: #0f172a; margin-bottom: 6px; letter-spacing: -0.5px; }
         .jd-modal-sub { font-size: 14px; color: #64748b; margin-bottom: 24px; }
-        .jd-modal-job-pill {
-          display: flex; align-items: center; gap: 10px; padding: 12px 14px;
-          background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 24px;
-        }
+        .jd-modal-job-pill { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 24px; }
         .jd-modal-job-name { font-size: 14px; font-weight: 700; color: #0f172a; }
         .jd-modal-company { font-size: 12px; color: #64748b; }
-
         .jd-modal-label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; display: block; }
         .jd-modal-textarea {
-          width: 100%; padding: 14px; font-size: 14px; font-family: 'DM Sans', sans-serif;
+          width: 100%; padding: 14px; font-size: 14px;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
           background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; color: #0f172a;
           outline: none; resize: vertical; min-height: 130px; line-height: 1.6; transition: all 0.2s;
         }
@@ -451,24 +386,21 @@ setApplied(checkRes.data.applied || false);
         .jd-modal-cancel {
           flex: 1; padding: 13px; background: #f1f5f9; color: #64748b;
           border: none; border-radius: 10px; font-size: 14px; font-weight: 600;
-          font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.2s;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          cursor: pointer; transition: all 0.2s;
         }
         .jd-modal-cancel:hover { background: #e2e8f0; }
         .jd-modal-submit {
           flex: 2; padding: 13px; background: #10b981; color: white;
           border: none; border-radius: 10px; font-size: 14px; font-weight: 700;
-          font-family: 'DM Sans', sans-serif; cursor: pointer;
-          display: flex; align-items: center; justify-content: center; gap: 8px;
-          transition: all 0.2s;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;
         }
         .jd-modal-submit:hover:not(:disabled) { background: #059669; }
         .jd-modal-submit:disabled { opacity: 0.5; cursor: not-allowed; }
 
         /* ── Breadcrumb ── */
-        .jd-breadcrumb {
-          display: flex; align-items: center; gap: 6px; font-size: 13px;
-          color: #64748b; margin-bottom: 24px; flex-wrap: wrap;
-        }
+        .jd-breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #64748b; margin-bottom: 24px; flex-wrap: wrap; }
         .jd-breadcrumb a { color: #94a3b8; text-decoration: none; transition: color 0.2s; }
         .jd-breadcrumb a:hover { color: #10b981; }
 
@@ -488,13 +420,13 @@ setApplied(checkRes.data.applied || false);
       <div className="jd-root">
         {/* ── Hero ── */}
         <div className="jd-hero">
+          <div className="jd-hero-glow" />
           <div className="jd-hero-inner">
             <button className="jd-back" onClick={() => navigate("/jobs")}>
               <ArrowLeft size={16} /> Back to Jobs
             </button>
 
             <div className="jd-hero-content">
-              {/* Left */}
               <div className="jd-hero-left">
                 <div className="jd-tags">
                   <span className="jd-tag jd-tag-type">{job.type}</span>
@@ -520,21 +452,13 @@ setApplied(checkRes.data.applied || false);
                 </div>
 
                 <div className="jd-meta-chips">
-                  <div className="jd-meta-chip">
-                    <MapPin size={14} color="#10b981" /> {job.location}
-                  </div>
-                  <div className="jd-meta-chip">
-                    <Briefcase size={14} color="#10b981" /> {job.type}
-                  </div>
+                  <div className="jd-meta-chip"><MapPin size={14} color="#10b981" /> {job.location}</div>
+                  <div className="jd-meta-chip"><Briefcase size={14} color="#10b981" /> {job.type}</div>
                   {rounds.length > 0 && (
-                    <div className="jd-meta-chip">
-                      <Layers size={14} color="#10b981" /> {rounds.length} round{rounds.length !== 1 ? "s" : ""}
-                    </div>
+                    <div className="jd-meta-chip"><Layers size={14} color="#10b981" /> {rounds.length} round{rounds.length !== 1 ? "s" : ""}</div>
                   )}
                   {skills.length > 0 && (
-                    <div className="jd-meta-chip">
-                      <Code2 size={14} color="#10b981" /> {skills.length} skill{skills.length !== 1 ? "s" : ""}
-                    </div>
+                    <div className="jd-meta-chip"><Code2 size={14} color="#10b981" /> {skills.length} skill{skills.length !== 1 ? "s" : ""}</div>
                   )}
                 </div>
               </div>
@@ -542,14 +466,14 @@ setApplied(checkRes.data.applied || false);
               {/* Right CTA */}
               <div className="jd-cta-card">
                 {pay && (
-  <div className="jd-pay-display" style={{ background: pay.bg, border: `1px solid ${pay.border}` }}>
-    <PayIcon size={20} color={pay.color} />
-    <div>
-      <div className="jd-pay-amount" style={{ color: pay.color }}>{pay.label}</div>
-      <div className="jd-pay-label" style={{ color: pay.color }}>Compensation</div>
-    </div>
-  </div>
-)}
+                  <div className="jd-pay-display" style={{ background: pay.bg, border: `1px solid ${pay.border}` }}>
+                    <PayIcon size={20} color={pay.color} />
+                    <div>
+                      <div className="jd-pay-amount" style={{ color: pay.color }}>{pay.label}</div>
+                      <div className="jd-pay-label" style={{ color: pay.color }}>Compensation</div>
+                    </div>
+                  </div>
+                )}
 
                 {applied ? (
                   <div className="jd-applied-badge">
@@ -560,7 +484,7 @@ setApplied(checkRes.data.applied || false);
                     <Send size={16} /> Apply Now
                   </button>
                 ) : isLoggedIn ? (
-                  <div style={{ fontSize: 13, color: "#64748b", textAlign: "center", padding: "10px 0" }}>
+                  <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", textAlign: "center", padding: "10px 0" }}>
                     Only job seekers can apply
                   </div>
                 ) : (
@@ -569,7 +493,7 @@ setApplied(checkRes.data.applied || false);
                       <Send size={16} /> Sign in to Apply
                     </button>
                     <div className="jd-login-note">
-                      No account? <Link to="/register">Register free</Link>
+                      No account? <Link to="/signup">Register free</Link>
                     </div>
                   </>
                 )}
@@ -598,7 +522,6 @@ setApplied(checkRes.data.applied || false);
           <div className="jd-grid">
             {/* ── Main content ── */}
             <div>
-              {/* Description */}
               <div className="jd-card">
                 <div className="jd-card-title">
                   <div className="jd-card-title-icon"><FileText size={16} color="#10b981" /></div>
@@ -607,7 +530,6 @@ setApplied(checkRes.data.applied || false);
                 <p className="jd-description">{job.description || "No description provided."}</p>
               </div>
 
-              {/* Skills */}
               {skills.length > 0 && (
                 <div className="jd-card">
                   <div className="jd-card-title">
@@ -624,7 +546,6 @@ setApplied(checkRes.data.applied || false);
                 </div>
               )}
 
-              {/* Hiring rounds */}
               {rounds.length > 0 && (
                 <div className="jd-card">
                   <div className="jd-card-title">
@@ -638,20 +559,10 @@ setApplied(checkRes.data.applied || false);
                           <div className="jd-round-num-badge">{r.order || i + 1}</div>
                         </div>
                         <div className="jd-round-body">
-                          <div className="jd-round-title">
-                            {r.title || ROUND_TYPE_LABELS[r.type] || r.type}
-                          </div>
-                          <div className="jd-round-type-label">
-                            {ROUND_TYPE_LABELS[r.type] || r.type}
-                          </div>
-                          {r.description && (
-                            <div className="jd-round-desc">{r.description}</div>
-                          )}
-                          {r.duration && (
-                            <div className="jd-round-dur">
-                              <Clock size={11} /> {r.duration}
-                            </div>
-                          )}
+                          <div className="jd-round-title">{r.title || ROUND_TYPE_LABELS[r.type] || r.type}</div>
+                          <div className="jd-round-type-label">{ROUND_TYPE_LABELS[r.type] || r.type}</div>
+                          {r.description && <div className="jd-round-desc">{r.description}</div>}
+                          {r.duration && <div className="jd-round-dur"><Clock size={11} /> {r.duration}</div>}
                         </div>
                       </div>
                     ))}
@@ -662,15 +573,12 @@ setApplied(checkRes.data.applied || false);
 
             {/* ── Sidebar ── */}
             <div className="jd-sidebar">
-              {/* Apply card */}
               {isJobSeeker && (
                 <div className="jd-apply-sidebar">
                   <div className="jd-apply-sidebar-title">Ready to apply?</div>
                   <div className="jd-apply-sidebar-sub">Takes less than 2 minutes</div>
                   {applied ? (
-                    <div className="jd-applied-badge">
-                      <CheckCircle size={16} /> Application Submitted
-                    </div>
+                    <div className="jd-applied-badge"><CheckCircle size={16} /> Application Submitted</div>
                   ) : (
                     <button className="jd-apply-sidebar-btn" onClick={() => setShowApplyModal(true)}>
                       <Send size={15} /> Apply for this Job
@@ -689,7 +597,6 @@ setApplied(checkRes.data.applied || false);
                 </div>
               )}
 
-              {/* Job info */}
               <div className="jd-info-card">
                 <div className="jd-info-card-title">Job Overview</div>
                 {[
@@ -697,11 +604,7 @@ setApplied(checkRes.data.applied || false);
                   { icon: Building2, label: "Company", value: job.company || job.business?.businessProfile?.businessName || "Direct Hire" },
                   { icon: MapPin, label: "Location", value: job.location },
                   { icon: Clock, label: "Employment", value: job.type },
-                  {
-                    icon: job.isPaid ? RupeeIcon : Gift,
-                    label: "Compensation",
-                    value: pay?.label || "Not specified"
-                  },
+                  { icon: job.isPaid ? RupeeIcon : Gift, label: "Compensation", value: pay?.label || "Not specified" },
                   { icon: Layers, label: "Rounds", value: `${rounds.length} stage${rounds.length !== 1 ? "s" : ""}` },
                 ].map(({ icon: Icon, label, value }) => (
                   <div key={label} className="jd-info-item">
@@ -714,7 +617,6 @@ setApplied(checkRes.data.applied || false);
                 ))}
               </div>
 
-              {/* Skills sidebar */}
               {skills.length > 0 && (
                 <div className="jd-info-card">
                   <div className="jd-info-card-title">Skills Required</div>
@@ -732,17 +634,13 @@ setApplied(checkRes.data.applied || false);
         </div>
       </div>
 
-      {/* ── Apply Modal ── */}
-{showApplyModal && (
-  <ApplyModal
-    job={job}
-    onClose={() => setShowApplyModal(false)}
-    onSuccess={() => {
-      setApplied(true);
-      setShowApplyModal(false);
-    }}
-  />
-)}
+      {showApplyModal && (
+        <ApplyModal
+          job={job}
+          onClose={() => setShowApplyModal(false)}
+          onSuccess={() => { setApplied(true); setShowApplyModal(false); }}
+        />
+      )}
     </>
   );
 };
