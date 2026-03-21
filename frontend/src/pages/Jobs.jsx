@@ -6,7 +6,6 @@ import {
   Search,
   Briefcase,
   MapPin,
-  DollarSign,
   Bookmark,
   ExternalLink,
   Loader2,
@@ -25,7 +24,9 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
-
+const RupeeIcon = ({ size = 14, color = "#065f46" }) => (
+  <span style={{ fontSize: size, fontWeight: 700, color, lineHeight: 1 }}>₹</span>
+);
 const ROUND_TYPE_LABELS = {
   resume_screening: "Resume Screening",
   online_test: "Online Test",
@@ -37,19 +38,6 @@ const ROUND_TYPE_LABELS = {
   final_interview: "Final Interview",
   offer: "Offer / Selection",
   other: "Other",
-};
-
-const ROUND_ICONS = {
-  resume_screening: "📄",
-  online_test: "💻",
-  aptitude_test: "🧠",
-  technical_interview: "⚙️",
-  hr_interview: "🤝",
-  group_discussion: "💬",
-  assignment: "📝",
-  final_interview: "🎯",
-  offer: "🏆",
-  other: "➕",
 };
 
 /* ── Skill Dropdown Component ── */
@@ -266,10 +254,22 @@ const Jobs = () => {
     if (!job.isPaid) return { label: "Unpaid", color: "#64748b", bg: "#f1f5f9", border: "#e2e8f0" };
     if (job.stipend) {
       const period = { monthly: "/mo", yearly: "/yr", weekly: "/wk", hourly: "/hr", project: "/project" };
-      return { label: `${job.stipend} ${period[job.stipendPeriod] || ""}`.trim(), color: "#065f46", bg: "#d1fae5", border: "#6ee7b7" };
+      return {
+      label: `₹${job.stipend} ${period[job.stipendPeriod] || ""}`.trim(),
+      color: "#065f46", bg: "#d1fae5", border: "#6ee7b7",
+      icon: RupeeIcon,
+    };
     }
-    if (job.salary) return { label: job.salary, color: "#065f46", bg: "#d1fae5", border: "#6ee7b7" };
-    return { label: "Paid", color: "#065f46", bg: "#d1fae5", border: "#6ee7b7" };
+    if (job.salary) return {
+    label: job.salary.startsWith("₹") ? job.salary : `₹${job.salary}`,
+    color: "#065f46", bg: "#d1fae5", border: "#6ee7b7",
+    icon: RupeeIcon,
+  };
+    return {
+    label: "Paid",
+    color: "#065f46", bg: "#d1fae5", border: "#6ee7b7",
+    icon: RupeeIcon,
+  };
   };
 
   return (
@@ -630,7 +630,6 @@ const Jobs = () => {
                         Live
                       </span>
                       <span className="tag-pay" style={{ background: pay.bg, color: pay.color, borderColor: pay.border }}>
-                        {job.isPaid ? <DollarSign size={10} /> : <Gift size={10} />}
                         {pay.label}
                       </span>
                     </div>
@@ -694,7 +693,6 @@ const Jobs = () => {
                             {rounds.map((r, i) => (
                               <div key={r._id || i} className="job-round-item">
                                 <div className="job-round-num">{r.order || i + 1}</div>
-                                <div className="job-round-icon">{ROUND_ICONS[r.type] || "➕"}</div>
                                 <div className="job-round-info">
                                   <div className="job-round-title">{r.title || ROUND_TYPE_LABELS[r.type] || r.type}</div>
                                   {r.description && (

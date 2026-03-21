@@ -46,19 +46,6 @@ const ROUND_TYPE_LABELS = {
   other: "Other",
 };
 
-const ROUND_ICONS = {
-  resume_screening: "📄",
-  online_test: "💻",
-  aptitude_test: "🧠",
-  technical_interview: "⚙️",
-  hr_interview: "🤝",
-  group_discussion: "💬",
-  assignment: "📝",
-  final_interview: "🎯",
-  offer: "🏆",
-  other: "➕",
-};
-
 const JobDetail = () => {
   const { jobId } = useParams();
   const navigate = useNavigate();
@@ -649,7 +636,6 @@ setApplied(checkRes.data.applied || false);
                       <div key={r._id || i} className="jd-round-item">
                         <div className="jd-round-left">
                           <div className="jd-round-num-badge">{r.order || i + 1}</div>
-                          <div className="jd-round-icon-badge">{ROUND_ICONS[r.type] || "➕"}</div>
                         </div>
                         <div className="jd-round-body">
                           <div className="jd-round-title">
