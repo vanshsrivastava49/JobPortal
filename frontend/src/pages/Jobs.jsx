@@ -290,7 +290,10 @@ const Jobs = () => {
         .jobs-wrapper { background: #f8fafc; min-height: 100vh; }
 
         /* ── Hero ── */
-        .hero-section { background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); padding: 64px 24px 80px; }
+        .hero-section { background: linear-gradient(160deg, #052e16 0%, #14532d 50%, #166534 100%); padding: 64px 24px 80px; }
+        .hero-section::before { content: ''; position: absolute; width: 600px; height: 600px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.06); top: -200px; left: -200px; pointer-events: none; }
+.hero-section::after  { content: ''; position: absolute; width: 400px; height: 400px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.06); top: 40px; right: -140px; pointer-events: none; }
+.hero-glow { position: absolute; inset: 0; background-image: radial-gradient(circle at 70% 20%, rgba(16,185,129,0.15) 0%, transparent 60%); pointer-events: none; }
         .hero-container { max-width: 900px; margin: 0 auto; text-align: center; }
         .hero-badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px; background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); border-radius: 50px; color: #10b981; font-size: 13px; font-weight: 600; margin-bottom: 24px; }
         .hero-title { font-size: 40px; font-weight: 700; color: white; margin-bottom: 16px; line-height: 1.2; }
@@ -473,6 +476,7 @@ const Jobs = () => {
       <div className="jobs-wrapper">
         {/* Hero */}
         <div className="hero-section">
+          <div className="hero-glow" />
           <div className="hero-container">
             <div className="hero-badge">
               <Sparkles size={14} />

@@ -73,10 +73,10 @@ export default function Businesses() {
         .biz-wrapper { background: #f8fafc; min-height: 100vh; }
 
         /* ══ HERO ══ */
-        .biz-hero {
-          background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-          padding: 64px 24px 80px;
-        }
+        .biz-hero { background: linear-gradient(160deg, #052e16 0%, #14532d 50%, #166534 100%); padding: 64px 24px 80px; }
+.biz-hero::before { content: ''; position: absolute; width: 600px; height: 600px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.06); top: -200px; left: -200px; pointer-events: none; }
+.biz-hero::after  { content: ''; position: absolute; width: 400px; height: 400px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.06); top: 40px; right: -140px; pointer-events: none; }
+.biz-hero-glow { position: absolute; inset: 0; background-image: radial-gradient(circle at 70% 20%, rgba(16,185,129,0.15) 0%, transparent 60%); pointer-events: none; }
         .biz-hero-inner { max-width: 900px; margin: 0 auto; text-align: center; }
 
         .biz-hero-badge {

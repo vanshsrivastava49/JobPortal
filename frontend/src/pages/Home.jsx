@@ -180,7 +180,7 @@ export default function GreenJobsHomepage() {
 
         /* ── Title: single line with inline animated phrase ── */
         .hero-title {
-          font-size: 52px;
+          font-size: 48px;
           font-weight: 800;
           color: #0f172a;
           margin-bottom: 10px;
@@ -279,7 +279,7 @@ export default function GreenJobsHomepage() {
         .hero-stat-label { font-size: 11.5px; color: #94a3b8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
 
         .hero-right { flex: 0 0 460px; display: flex; justify-content: center; align-items: flex-end; position: relative; align-self: stretch; }
-        .hero-image-wrapper { width: 100%; height: 100%; display: flex; align-items: flex-end; justify-content: center; position: relative; }
+        .hero-image-wrapper { width: 90%; height: 90%; display: flex; align-items: flex-end; justify-content: center; position: relative; }
         .hero-image-bg { display: none; }
         .hero-person { mix-blend-mode: screen; width: 100%; max-width: 500px; height: auto; object-fit: contain; object-position: bottom center; display: block; position: relative; z-index: 2; filter: brightness(0.88) contrast(1.08) saturate(1.05); transform: translateX(100px); }
 
@@ -451,7 +451,7 @@ export default function GreenJobsHomepage() {
                   "Green Industry. " [static]  +  [clip window → animated phrase]
               */}
               <h1 className="hero-title">
-                <span className="hero-title-static">Your Dream Job.</span>
+                <span className="hero-title-static">Your Dream Solar Job.</span>
 
                 {/* overflow:hidden clip — sits inline next to the static text */}
                 <span className="hero-title-clip">
@@ -497,7 +497,7 @@ export default function GreenJobsHomepage() {
             <div className="hero-right">
               <div className="hero-image-wrapper">
                 <div className="hero-image-bg" />
-                <img src="/home-right.png" alt="Green energy professional" className="hero-person" onError={e => { e.target.style.display = "none"; }} />
+                <img src="/home-right2.png" alt="Green energy professional" className="hero-person" onError={e => { e.target.style.display = "none"; }} />
               </div>
             </div>
           </div>
