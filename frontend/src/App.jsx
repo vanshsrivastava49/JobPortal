@@ -39,7 +39,35 @@ function App() {
   return (
     <AuthProvider>
       <div className="App">
-        <Toaster position="top-right" />
+        <Toaster
+  position="top-center"
+  containerStyle={{
+    top: 90,
+    zIndex: 999999,
+  }}
+  toastOptions={{
+    duration: 4000,
+    style: {
+      fontSize: "14px",
+      fontWeight: "500",
+      maxWidth: "420px",
+    },
+    success: {
+      style: {
+        background: "#f0fdf4",
+        color: "#15803d",
+        border: "1px solid #bbf7d0",
+      },
+    },
+    error: {
+      style: {
+        background: "#fef2f2",
+        color: "#dc2626",
+        border: "1px solid #fecaca",
+      },
+    },
+  }}
+/>
 
         <Routes>
           {/* Public */}

@@ -52,8 +52,6 @@ exports.verifySignupOtp = async (req, res) => {
   try {
     const { email, otp, role, firstName, lastName, mobile } = req.body;
 
-    console.log("verifySignupOtp body:", req.body);
-
     if (!email || !otp || !role || !firstName || !lastName) {
       return res.status(400).json({
         success: false,
@@ -64,29 +62,26 @@ exports.verifySignupOtp = async (req, res) => {
     const fullName = `${firstName.trim()} ${lastName.trim()}`;
 
     const otpDoc = await Otp.findOne({ email, otp, purpose: "signup" });
-    if (!otpDoc) {
+    if (!otpDoc)
       return res.status(400).json({ success: false, message: "Invalid OTP" });
-    }
+
     if (otpDoc.expiresAt < new Date()) {
       await otpDoc.deleteOne();
       return res.status(400).json({ success: false, message: "OTP expired" });
     }
 
     const existing = await User.findOne({ email });
-    if (existing) {
+    if (existing)
       return res.status(400).json({ success: false, message: "User already exists. Please login." });
-    }
 
-    // Only set jobSeekerProfile for jobseekers with actual data
-    // Do NOT spread empty {} objects for other roles — it triggers pre-save hook unnecessarily
     const userData = {
       email,
-      name:     fullName,
+      name:       fullName,
       role,
-      mobile:   mobile || "",
-      password: "OTP_AUTH",
+      mobile:     mobile || "",
+      password:   "OTP_AUTH",
       isVerified: true,
-      status:   "active",
+      status:     "active",
     };
 
     if (role === "jobseeker") {
@@ -101,7 +96,7 @@ exports.verifySignupOtp = async (req, res) => {
 
     await otpDoc.deleteOne();
 
-    const token   = createToken(user);
+    const token    = createToken(user);
     const fullUser = await User.findById(user._id).select("-password");
 
     return res.json({
@@ -128,11 +123,33 @@ exports.verifySignupOtp = async (req, res) => {
 
 exports.sendLoginOtp = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, expectedRole } = req.body;
 
     const user = await User.findOne({ email });
     if (!user)
-      return res.status(400).json({ success: false, message: "User not found" });
+      return res.status(400).json({ success: false, message: "No account found with this email." });
+
+    // ── Role guard at OTP send stage ────────────────────────────────────────
+    if (expectedRole && user.role !== expectedRole) {
+      const portalMap = {
+        jobseeker: "/login",
+        recruiter: "/recruiter/login",
+        business:  "/business/login",
+        admin:     "/admin/login",
+      };
+      const roleLabel = {
+        jobseeker: "Job Seeker",
+        recruiter: "Recruiter",
+        business:  "Business Owner",
+        admin:     "Administrator",
+      };
+      return res.status(403).json({
+        success: false,
+        message: `This email belongs to a ${roleLabel[user.role] || user.role} account. Please sign in from the correct portal.`,
+        correctPortal: portalMap[user.role] || "/login",
+      });
+    }
+    // ────────────────────────────────────────────────────────────────────────
 
     const otp = generateOtp();
 
@@ -140,7 +157,7 @@ exports.sendLoginOtp = async (req, res) => {
     await Otp.create({
       email,
       otp,
-      purpose: "login",
+      purpose:   "login",
       expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     });
 
@@ -155,13 +172,12 @@ exports.sendLoginOtp = async (req, res) => {
 
 exports.verifyLoginOtp = async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    const { email, otp, expectedRole } = req.body;
 
     if (!email || !otp)
       return res.status(400).json({ success: false, message: "Email & OTP required" });
 
     const otpDoc = await Otp.findOne({ email, otp, purpose: "login" });
-
     if (!otpDoc)
       return res.status(400).json({ success: false, message: "Invalid OTP" });
 
@@ -173,6 +189,23 @@ exports.verifyLoginOtp = async (req, res) => {
     const user = await User.findOne({ email }).select("-password");
     if (!user)
       return res.status(400).json({ success: false, message: "User not found" });
+
+    // ── Role guard ──────────────────────────────────────────────────────────
+    if (expectedRole && user.role !== expectedRole) {
+      // Do NOT delete the OTP — user may retry on the correct portal
+      const portalMap = {
+        jobseeker: "/login",
+        recruiter: "/recruiter/login",
+        business:  "/business/login",
+        admin:     "/admin/login",
+      };
+      return res.status(403).json({
+        success: false,
+        message: `This email is registered as a "${user.role}" account. Please use the correct login portal.`,
+        correctPortal: portalMap[user.role] || "/login",
+      });
+    }
+    // ───────────────────────────────────────────────────────────────────────
 
     await otpDoc.deleteOne();
 
@@ -198,7 +231,7 @@ exports.googleAuth = async (req, res) => {
       audience: process.env.GOOGLE_CLIENT_ID,
     });
 
-    const payload        = ticket.getPayload();
+    const payload         = ticket.getPayload();
     const { email, name } = payload;
 
     let user = await User.findOne({ email });
@@ -211,7 +244,6 @@ exports.googleAuth = async (req, res) => {
           message:     "Role required for first-time signup",
         });
 
-      // No empty profile objects — just core fields
       user = await User.create({
         email,
         name,
@@ -223,7 +255,7 @@ exports.googleAuth = async (req, res) => {
     }
 
     const jwtToken = createToken(user);
-    const fullUser  = await User.findById(user._id).select("-password");
+    const fullUser = await User.findById(user._id).select("-password");
 
     res.json({
       success: true,

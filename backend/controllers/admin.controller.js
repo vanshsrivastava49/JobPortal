@@ -12,7 +12,7 @@ exports.getStats = async (req, res) => {
       totalUsers, jobseekers, recruiters, businesses, admins,
       approvedBusinesses, pendingBusinesses, rejectedBusinesses,
       liveJobs, pendingJobs, rejectedJobs, profilesCompleted,
-      pendingRecruiterVerifications,  // ← NEW
+      pendingRecruiterVerifications,
     ] = await Promise.all([
       User.countDocuments({}),
       User.countDocuments({ role: "jobseeker" }),
@@ -26,7 +26,6 @@ exports.getStats = async (req, res) => {
       Job.countDocuments({ status: "pending_business" }),
       Job.countDocuments({ status: "rejected_business" }),
       User.countDocuments({ profileCompleted: true }),
-      // ← NEW: recruiters awaiting admin verification
       User.countDocuments({ role: "recruiter", "recruiterProfile.verificationStatus": "pending" }),
     ]);
 
@@ -35,7 +34,7 @@ exports.getStats = async (req, res) => {
       totalUsers, jobseekers, recruiters, businesses, admins,
       approvedBusinesses, pendingBusinesses, rejectedBusinesses,
       liveJobs, pendingJobs, rejectedJobs, profilesCompleted,
-      pendingRecruiters: pendingRecruiterVerifications, // ← NEW
+      pendingRecruiters: pendingRecruiterVerifications,
     });
   } catch (err) {
     console.error("GET STATS ERROR:", err);
@@ -363,8 +362,7 @@ exports.revokeBusiness = async (req, res) => {
 };
 
 /* =========================================================
-   GET PENDING RECRUITER VERIFICATIONS  ← NEW
-   Returns all recruiters with verificationStatus = "pending"
+   GET PENDING RECRUITER VERIFICATIONS
 ========================================================= */
 exports.getPendingVerificationRecruiters = async (req, res) => {
   try {
@@ -373,7 +371,7 @@ exports.getPendingVerificationRecruiters = async (req, res) => {
       "recruiterProfile.verificationStatus": "pending",
     })
       .select("-password")
-      .sort({ "recruiterProfile.verificationRequestedAt": 1 }); // oldest first
+      .sort({ "recruiterProfile.verificationRequestedAt": 1 });
 
     res.json(recruiters);
   } catch (err) {
@@ -383,9 +381,8 @@ exports.getPendingVerificationRecruiters = async (req, res) => {
 };
 
 /* =========================================================
-   VERIFY RECRUITER  ← NEW
+   VERIFY RECRUITER
    PATCH /api/admin/recruiters/:id/verify
-   Body: { status: "approved" | "rejected", reason?: string }
 ========================================================= */
 exports.verifyRecruiter = async (req, res) => {
   try {
@@ -401,16 +398,14 @@ exports.verifyRecruiter = async (req, res) => {
       return res.status(404).json({ success: false, message: "Recruiter not found" });
     }
 
-    // Build update payload
     const updateFields = {
-      "recruiterProfile.verificationStatus": status,
+      "recruiterProfile.verificationStatus":    status,
       "recruiterProfile.verificationReviewedAt": new Date(),
     };
 
     if (status === "rejected") {
       updateFields["recruiterProfile.rejectionReason"] = reason || "No reason provided";
     } else {
-      // Clear any old rejection reason on approval
       updateFields["recruiterProfile.rejectionReason"] = "";
     }
 
@@ -419,23 +414,14 @@ exports.verifyRecruiter = async (req, res) => {
     const companyName = recruiter.recruiterProfile?.companyName;
 
     if (status === "approved") {
-      // ✅ Email recruiter — verified, can now post jobs
       email.sendRecruiterVerifiedEmail(
-        recruiter.email,
-        recruiter.name,
-        companyName
+        recruiter.email, recruiter.name, companyName
       ).catch(console.error);
-
       console.log(`✅ Recruiter ${recruiter.name} (${recruiter.email}) verified by admin`);
     } else {
-      // ✅ Email recruiter — rejected with reason
       email.sendRecruiterVerificationRejectedEmail(
-        recruiter.email,
-        recruiter.name,
-        companyName,
-        reason
+        recruiter.email, recruiter.name, companyName, reason
       ).catch(console.error);
-
       console.log(`❌ Recruiter ${recruiter.name} verification rejected by admin`);
     }
 
@@ -450,5 +436,92 @@ exports.verifyRecruiter = async (req, res) => {
   } catch (err) {
     console.error("VERIFY RECRUITER ERROR:", err);
     res.status(500).json({ success: false, message: "Failed to update verification status" });
+  }
+};
+
+/* =========================================================
+   CREATE ADMIN
+   POST /api/admin/create-admin
+   Only callable by an existing admin. Creates a new admin
+   account directly — no signup flow, no password needed.
+   The new admin logs in via OTP like everyone else.
+========================================================= */
+exports.createAdmin = async (req, res) => {
+  try {
+    const { name, email: adminEmail, phone } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, message: "Name is required" });
+    }
+    if (!adminEmail || !adminEmail.trim()) {
+      return res.status(400).json({ success: false, message: "Email is required" });
+    }
+
+    // Normalise email
+    const normalised = adminEmail.toLowerCase().trim();
+
+    // Check for existing account
+    const existing = await User.findOne({ email: normalised });
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        message: `An account with the email "${normalised}" already exists (role: ${existing.role})`,
+      });
+    }
+
+    // The User model requires a password field — use a long random placeholder.
+    // It will never be used since login is OTP-only, but it satisfies the schema
+    // minlength: 6 validator.
+    const crypto = require("crypto");
+    const placeholderPassword = crypto.randomBytes(32).toString("hex");
+
+    const newAdmin = await User.create({
+      name:             name.trim(),
+      email:            normalised,
+      mobile:           phone?.trim() || "",
+      password:         placeholderPassword,
+      role:             "admin",
+      isVerified:       true,
+      profileCompleted: true,
+      profileProgress:  100,
+      status:           "active",
+      adminProfile: {
+        permissions: ["read", "write", "delete", "approve"],
+      },
+    });
+
+    // Optionally notify the new admin by email
+    email.sendAdminWelcomeEmail?.(
+      normalised,
+      name.trim()
+    ).catch(err => console.warn("Admin welcome email failed (non-fatal):", err.message));
+
+    console.log(`🛡️  New admin created: ${name.trim()} <${normalised}> by admin ${req.user.id}`);
+
+    res.status(201).json({
+      success: true,
+      message: `Admin account created for ${normalised}. They can sign in immediately via OTP.`,
+      admin: {
+        id:    newAdmin._id,
+        name:  newAdmin.name,
+        email: newAdmin.email,
+        role:  newAdmin.role,
+      },
+    });
+  } catch (err) {
+    console.error("CREATE ADMIN ERROR:", err);
+
+    // Mongoose validation errors (e.g. invalid email format)
+    if (err.name === "ValidationError") {
+      const messages = Object.values(err.errors).map(e => e.message).join(", ");
+      return res.status(400).json({ success: false, message: messages });
+    }
+
+    // Duplicate key race condition (two requests at the same time)
+    if (err.code === 11000) {
+      return res.status(409).json({ success: false, message: "An account with this email already exists" });
+    }
+
+    res.status(500).json({ success: false, message: "Failed to create admin account" });
   }
 };

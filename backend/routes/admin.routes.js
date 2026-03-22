@@ -16,8 +16,9 @@ const {
   getBusinesses,
   rejectBusiness,
   revokeBusiness,
-  getPendingVerificationRecruiters, // ← NEW
-  verifyRecruiter,                  // ← NEW
+  getPendingVerificationRecruiters, 
+  verifyRecruiter,
+  createAdmin            
 } = require("../controllers/admin.controller");
 
 // ── Stats ──────────────────────────────────────────────────
@@ -54,5 +55,5 @@ router.patch(
   authorizeRoles("admin"),
   verifyRecruiter
 );
-
+router.post("/create-admin", protect, authorizeRoles("admin"), createAdmin);
 module.exports = router;

@@ -668,7 +668,6 @@ export default function GreenJobsHomepage() {
     <div className="footer-title">Admin</div>
     <div className="footer-links">
       <span className="footer-link" onClick={() => navigate("/admin/login")} >Sign In</span>
-      <span className="footer-link" onClick={() => navigate("/admin/signup")} >Sign Up</span>
     </div>
   </div>
 </div>

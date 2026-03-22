@@ -39,30 +39,48 @@ const BusinessLogin = () => {
   };
   const otpString = otp.join("");
 
-  const handleSendOtp = async (e) => {
-    e?.preventDefault();
-    if (!email) { toast.error("Enter your email"); return; }
-    if (!captchaToken && import.meta.env.VITE_RECAPTCHA_SITE_KEY) { toast.error("Complete the captcha"); return; }
-    setLoading(true);
-    try {
-      const res = await sendOTP(email, "login", captchaToken || "dev");
-      if (res.success) { toast.success("OTP sent!"); setStep("verify"); }
-      else toast.error(res.message || "Failed");
-    } catch (err) { toast.error(err.response?.data?.message || "Failed"); }
-    finally { setLoading(false); }
-  };
+const handleSendOtp = async (e) => {
+  e?.preventDefault();
+  if (!email) { toast.error("Enter your email"); return; }
+  if (!captchaToken && import.meta.env.VITE_RECAPTCHA_SITE_KEY) { toast.error("Complete the captcha"); return; }
+  setLoading(true);
+  try {
+    const res = await sendOTP(email, "login", captchaToken || "dev", "business");
+    if (res.success) { toast.success("OTP sent!"); setStep("verify"); }
+    else toast.error(res.message || "Failed to send OTP");
+  } catch (err) {
+    toast.error(err.response?.data?.message || "Failed to send OTP");
+    if (err.response?.data?.correctPortal) {
+      setTimeout(() => navigate(err.response.data.correctPortal), 1500);
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault();
-    if (otpString.length !== 6) { toast.error("Enter all 6 digits"); return; }
-    setLoading(true);
-    try {
-      const res = await verifyOTP(email, otpString, null, null, null, "login");
-      if (res.success) { toast.success("Welcome!"); login(res.user, res.token); navigate("/business/dashboard"); }
-      else toast.error(res.message || "Invalid OTP");
-    } catch (err) { toast.error(err.response?.data?.message || "Invalid OTP"); }
-    finally { setLoading(false); }
-  };
+const handleVerifyOtp = async (e) => {
+  e.preventDefault();
+  if (otpString.length !== 6) { toast.error("Enter all 6 digits"); return; }
+  setLoading(true);
+  try {
+    const res = await verifyOTP(email, otpString, null, null, null, null, "login", "business");
+    if (res.success) {
+      toast.success("Welcome!");
+      login(res.user, res.token);
+      navigate("/business/dashboard");
+    } else {
+      toast.error(res.message || "Invalid OTP");
+      if (res.correctPortal) setTimeout(() => navigate(res.correctPortal), 1500);
+    }
+  } catch (err) {
+    toast.error(err.response?.data?.message || "Invalid OTP");
+    if (err.response?.data?.correctPortal) {
+      setTimeout(() => navigate(err.response.data.correctPortal), 1500);
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <>

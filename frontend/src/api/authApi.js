@@ -13,10 +13,11 @@ authApi.interceptors.request.use((config) => {
   return config;
 });
 
-export const sendOTP = async (email, type = "login", captchaToken = null) => {
+export const sendOTP = async (email, type = "login", captchaToken = null, expectedRole = null) => {
   const endpoint = type === "signup" ? "/signup/send-otp" : "/login/send-otp";
   const payload  = { email };
   if (captchaToken) payload.captchaToken = captchaToken;
+  if (type === "login" && expectedRole) payload.expectedRole = expectedRole;
   const response = await authApi.post(endpoint, payload);
   return response.data;
 };
@@ -24,11 +25,12 @@ export const sendOTP = async (email, type = "login", captchaToken = null) => {
 export const verifyOTP = async (
   email,
   otp,
-  role      = null,
-  mobile    = null,
-  firstName = null,
-  lastName  = null,
-  type      = "login"
+  role         = null,
+  mobile       = null,
+  firstName    = null,
+  lastName     = null,
+  type         = "login",
+  expectedRole = null
 ) => {
   const endpoint = type === "signup"
     ? "/signup/verify-otp"
@@ -43,14 +45,14 @@ export const verifyOTP = async (
     payload.lastName  = lastName;
   }
 
-  try {
-    const response = await authApi.post(endpoint, payload);
-    return response.data;
-  } catch (err) {
-    const serverMessage = err.response?.data?.message;
-    if (serverMessage) throw new Error(serverMessage);
-    throw err;
+  if (type === "login" && expectedRole) {
+    payload.expectedRole = expectedRole;
   }
+
+  // Always re-throw the full axios error so callers can access
+  // err.response.data.message and err.response.data.correctPortal
+  const response = await authApi.post(endpoint, payload);
+  return response.data;
 };
 
 export const logoutUser = async () => {

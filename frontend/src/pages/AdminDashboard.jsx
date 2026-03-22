@@ -4,7 +4,7 @@ import {
   Users, Briefcase, Building, TrendingUp, CheckCircle,
   Clock, XCircle, Eye, RefreshCw, Loader2, Search,
   MapPin, Mail, Calendar, ArrowUpRight, ShieldOff,
-  ShieldCheck, UserCheck,
+  ShieldCheck, UserCheck, X, UserPlus,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -26,14 +26,19 @@ const AdminDashboard = () => {
   const [liveJobs, setLiveJobs] = useState([]);
   const [businesses, setBusinesses] = useState([]);
   const [pendingBusinesses, setPendingBusinesses] = useState([]);
-  const [pendingRecruiters, setPendingRecruiters] = useState([]); // ← NEW
+  const [pendingRecruiters, setPendingRecruiters] = useState([]);
 
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [revokingId, setRevokingId] = useState(null);
-  const [verifyingId, setVerifyingId] = useState(null); // ← NEW
+  const [verifyingId, setVerifyingId] = useState(null);
+
+  // ── Add Admin modal state ───────────────────────────────────────────────────
+  const [showAddAdmin, setShowAddAdmin] = useState(false);
+  const [newAdmin, setNewAdmin] = useState({ name: "", email: "", phone: "" });
+  const [addingAdmin, setAddingAdmin] = useState(false);
 
   // ── Fetch all data ──────────────────────────────────────────────────────────
   const fetchAllData = useCallback(async () => {
@@ -49,22 +54,17 @@ const AdminDashboard = () => {
           axios.get(`${API_BASE_URL}/api/jobs/public`).catch(() => ({ data: { jobs: [] } })),
           axios.get(`${API_BASE_URL}/api/profile/business/approved`, { headers }).catch(() => ({ data: [] })),
           axios.get(`${API_BASE_URL}/api/profile/business/pending`, { headers }).catch(() => ({ data: [] })),
-          // ← NEW: fetch recruiters awaiting verification
-          axios
-            .get(`${API_BASE_URL}/api/admin/recruiters/pending-verification`, { headers })
-            .catch(() => ({ data: [] })),
+          axios.get(`${API_BASE_URL}/api/admin/recruiters/pending-verification`, { headers }).catch(() => ({ data: [] })),
         ]);
 
-      const usersData = Array.isArray(usersRes.data) ? usersRes.data : [];
-      setUsers(usersData);
-
-      const jobsData = liveJobsRes.data?.jobs || [];
-      setLiveJobs(jobsData);
-
+      const usersData      = Array.isArray(usersRes.data)       ? usersRes.data       : [];
+      const jobsData       = liveJobsRes.data?.jobs             || [];
       const approvedBizData = Array.isArray(approvedBizRes.data) ? approvedBizRes.data : [];
-      const pendingBizData = Array.isArray(pendingBizRes.data) ? pendingBizRes.data : [];
-      const pendingRecData = Array.isArray(pendingRecRes.data) ? pendingRecRes.data : [];
+      const pendingBizData  = Array.isArray(pendingBizRes.data)  ? pendingBizRes.data  : [];
+      const pendingRecData  = Array.isArray(pendingRecRes.data)  ? pendingRecRes.data  : [];
 
+      setUsers(usersData);
+      setLiveJobs(jobsData);
       setBusinesses(approvedBizData);
       setPendingBusinesses(pendingBizData);
       setPendingRecruiters(pendingRecData);
@@ -132,7 +132,7 @@ const AdminDashboard = () => {
 
   const handleRejectRecruiter = async (recruiterId, recruiterName) => {
     const reason = window.prompt(`Reason for rejecting ${recruiterName}? (Optional)`);
-    if (reason === null) return; // cancelled
+    if (reason === null) return;
     try {
       setVerifyingId(recruiterId);
       await axios.patch(
@@ -149,9 +149,38 @@ const AdminDashboard = () => {
     }
   };
 
+  // ── Add Admin ───────────────────────────────────────────────────────────────
+  const handleAddAdmin = async (e) => {
+    e.preventDefault();
+    if (!newAdmin.name.trim()) { toast.error("Name is required"); return; }
+    if (!newAdmin.email.trim()) { toast.error("Email is required"); return; }
+    try {
+      setAddingAdmin(true);
+      const res = await axios.post(
+        `${API_BASE_URL}/api/admin/create-admin`,
+        { name: newAdmin.name.trim(), email: newAdmin.email.trim(), phone: newAdmin.phone.trim() },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(res.data.message || `Admin account created for ${newAdmin.email}`);
+      setShowAddAdmin(false);
+      setNewAdmin({ name: "", email: "", phone: "" });
+      fetchAllData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to create admin account");
+    } finally {
+      setAddingAdmin(false);
+    }
+  };
+
+  const closeAddAdminModal = () => {
+    if (addingAdmin) return;
+    setShowAddAdmin(false);
+    setNewAdmin({ name: "", email: "", phone: "" });
+  };
+
   // ── Filtered lists ──────────────────────────────────────────────────────────
   const filteredUsers = users.filter((u) => {
-    const matchesRole = roleFilter === "all" || u.role === roleFilter;
+    const matchesRole   = roleFilter === "all" || u.role === roleFilter;
     const matchesSearch =
       u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -269,16 +298,15 @@ const AdminDashboard = () => {
         .tab-button { padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; background: transparent; color: #64748b; }
         .tab-button.active { background: #3b82f6; color: white; }
         .tab-button:hover:not(.active) { background: #f1f5f9; }
-        .tab-button.has-badge { position: relative; }
         .section-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
-        .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #e2e8f0; }
+        .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; gap: 12px; }
         .section-title { font-size: 18px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px; }
         .search-box { position: relative; max-width: 400px; width: 100%; }
-        .search-input { width: 100%; padding: 10px 16px 10px 40px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; outline: none; transition: all 0.2s; }
+        .search-input { width: 100%; padding: 10px 16px 10px 40px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; outline: none; transition: all 0.2s; font-family: inherit; }
         .search-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
         .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
         .action-group { display: flex; gap: 12px; flex-wrap: wrap; }
-        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; outline: none; }
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; outline: none; font-family: inherit; }
         .btn:disabled { opacity: 0.6; cursor: not-allowed; }
         .btn-primary { background: #3b82f6; color: white; }
         .btn-primary:hover:not(:disabled) { background: #2563eb; }
@@ -297,8 +325,6 @@ const AdminDashboard = () => {
         .user-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 16px; flex-shrink: 0; }
         .user-name { font-weight: 600; color: #0f172a; margin-bottom: 2px; }
         .user-email { font-size: 13px; color: #64748b; }
-
-        /* ── Recruiter Verification Cards ── */
         .rec-card { border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; margin-bottom: 14px; transition: all 0.2s; border-left: 4px solid #f59e0b; }
         .rec-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
         .rec-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; flex-wrap: wrap; gap: 10px; }
@@ -309,7 +335,6 @@ const AdminDashboard = () => {
         .rec-meta-label { font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
         .rec-meta-value { font-size: 14px; color: #0f172a; font-weight: 500; }
         .rec-actions { display: flex; gap: 10px; padding-top: 14px; border-top: 1px solid #e2e8f0; justify-content: flex-end; }
-
         .job-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 12px; transition: all 0.2s; }
         .job-card:hover { border-color: #cbd5e1; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .job-title { font-size: 16px; font-weight: 600; color: #0f172a; margin-bottom: 8px; }
@@ -329,12 +354,27 @@ const AdminDashboard = () => {
         .empty-desc  { font-size: 14px; color: #64748b; }
         .urgent-dot { width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block; margin-left: 6px; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+        /* ── Add Admin Modal ── */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+        .modal-box { background: white; border-radius: 16px; padding: 32px; width: 100%; max-width: 460px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); position: relative; }
+        .modal-close { position: absolute; top: 16px; right: 16px; background: none; border: none; cursor: pointer; color: #94a3b8; padding: 4px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+        .modal-close:hover { background: #f1f5f9; color: #475569; }
+        .modal-title { font-size: 20px; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
+        .modal-desc  { font-size: 13px; color: #64748b; margin-bottom: 24px; line-height: 1.6; }
+        .modal-field { margin-bottom: 16px; }
+        .modal-label { display: block; font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .modal-input { width: 100%; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; outline: none; transition: all 0.2s; font-family: inherit; box-sizing: border-box; }
+        .modal-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+        .modal-input:disabled { opacity: 0.5; background: #f8fafc; }
+        .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
+        .modal-actions .btn { flex: 1; }
         @media (max-width: 768px) {
           .dashboard-container { padding: 16px; }
           .page-title { font-size: 24px; }
           .stats-grid { grid-template-columns: 1fr; }
           .rec-actions { flex-direction: column; }
           .btn { width: 100%; }
+          .modal-actions { flex-direction: column; }
         }
       `}</style>
 
@@ -349,9 +389,14 @@ const AdminDashboard = () => {
               <h1 className="page-title">Admin Dashboard</h1>
               <p className="page-subtitle">Monitor and manage all platform activities</p>
             </div>
-            <button className="btn btn-secondary" onClick={fetchAllData}>
-              <RefreshCw size={16} /> Refresh Data
-            </button>
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+              <button className="btn btn-success" onClick={() => setShowAddAdmin(true)}>
+                <UserPlus size={16} /> Add Admin
+              </button>
+              <button className="btn btn-secondary" onClick={fetchAllData}>
+                <RefreshCw size={16} /> Refresh
+              </button>
+            </div>
           </div>
 
           {/* Stats Grid */}
@@ -390,6 +435,9 @@ const AdminDashboard = () => {
               </button>
               <button className="btn btn-secondary" onClick={() => setActiveTab("jobs")}>
                 <Briefcase size={16} /> View All Jobs ({stats.liveJobs})
+              </button>
+              <button className="btn btn-success" onClick={() => setShowAddAdmin(true)}>
+                <UserPlus size={16} /> Add Admin
               </button>
             </div>
           </div>
@@ -445,7 +493,6 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              {/* Pending recruiter verifications callout */}
               {stats.pendingRecruiters > 0 && (
                 <div style={{ background: "#fffbeb", border: "1px solid #fde047", borderRadius: "12px", padding: "20px", marginBottom: "24px", display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
                   <ShieldCheck size={28} color="#f59e0b" style={{ flexShrink: 0 }} />
@@ -469,10 +516,10 @@ const AdminDashboard = () => {
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
                   {[
-                    { label: "Live Jobs",              value: stats.liveJobs,           bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d", icon: "✅" },
+                    { label: "Live Jobs",               value: stats.liveJobs,           bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d", icon: "✅" },
                     { label: "Pending Recruiter Verif", value: stats.pendingRecruiters,  bg: "#fefce8", border: "#fef08a", text: "#a16207", icon: "🛡️" },
-                    { label: "Approved Businesses",    value: stats.approvedBusinesses, bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d", icon: "🏆" },
-                    { label: "Pending Businesses",     value: stats.pendingBusinesses,  bg: "#fef2f2", border: "#fecaca", text: "#dc2626", icon: "🔔" },
+                    { label: "Approved Businesses",     value: stats.approvedBusinesses, bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d", icon: "🏆" },
+                    { label: "Pending Businesses",      value: stats.pendingBusinesses,  bg: "#fef2f2", border: "#fecaca", text: "#dc2626", icon: "🔔" },
                   ].map((item, i) => (
                     <div key={i} style={{ padding: "20px", background: item.bg, borderRadius: "12px", border: `1px solid ${item.border}` }}>
                       <div style={{ fontSize: "22px", marginBottom: "6px" }}>{item.icon}</div>
@@ -530,7 +577,6 @@ const AdminDashboard = () => {
                           <Clock size={12} /> Pending Review
                         </span>
                       </div>
-
                       <div className="rec-meta">
                         {p.companyName && (
                           <div className="rec-meta-item">
@@ -571,21 +617,12 @@ const AdminDashboard = () => {
                           </span>
                         </div>
                       </div>
-
                       <div className="rec-actions">
-                        <button
-                          className="btn btn-danger btn-sm"
-                          disabled={isActing}
-                          onClick={() => handleRejectRecruiter(rec._id, rec.name)}
-                        >
+                        <button className="btn btn-danger btn-sm" disabled={isActing} onClick={() => handleRejectRecruiter(rec._id, rec.name)}>
                           {isActing ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} />}
                           Reject
                         </button>
-                        <button
-                          className="btn btn-success btn-sm"
-                          disabled={isActing}
-                          onClick={() => handleVerifyRecruiter(rec._id, rec.name)}
-                        >
+                        <button className="btn btn-success btn-sm" disabled={isActing} onClick={() => handleVerifyRecruiter(rec._id, rec.name)}>
                           {isActing ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
                           Approve & Verify
                         </button>
@@ -609,7 +646,7 @@ const AdminDashboard = () => {
               </div>
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "20px" }}>
                 {[
-                  { key: "all",       label: `All (${stats.totalUsers})`,        bg: "#f1f5f9", active: "#0f172a" },
+                  { key: "all",       label: `All (${stats.totalUsers})`,         bg: "#f1f5f9", active: "#0f172a" },
                   { key: "jobseeker", label: `Job Seekers (${stats.jobseekers})`, bg: "#dbeafe", active: "#1e40af" },
                   { key: "recruiter", label: `Recruiters (${stats.recruiters})`,  bg: "#fef3c7", active: "#92400e" },
                   { key: "business",  label: `Businesses (${stats.businesses})`,  bg: "#d1fae5", active: "#065f46" },
@@ -758,6 +795,77 @@ const AdminDashboard = () => {
 
         </div>
       </div>
+
+      {/* ── Add Admin Modal ── */}
+      {showAddAdmin && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && closeAddAdminModal()}>
+          <div className="modal-box">
+            <button className="modal-close" onClick={closeAddAdminModal} disabled={addingAdmin}>
+              <X size={18} />
+            </button>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
+              <UserPlus size={20} color="#10b981" />
+              <h2 className="modal-title">Add New Admin</h2>
+            </div>
+            <p className="modal-desc">
+              The account will be created immediately with full admin access.
+              The new admin can sign in straight away using OTP — no password needed.
+            </p>
+
+            <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "8px", padding: "10px 14px", marginBottom: "20px", fontSize: "13px", color: "#15803d" }}>
+              <strong>Note:</strong> Only add people you fully trust. Admin accounts have unrestricted platform access.
+            </div>
+
+            <form onSubmit={handleAddAdmin}>
+              <div className="modal-field">
+                <label className="modal-label">Full Name *</label>
+                <input
+                  type="text"
+                  className="modal-input"
+                  placeholder="Jane Smith"
+                  value={newAdmin.name}
+                  onChange={(e) => setNewAdmin((p) => ({ ...p, name: e.target.value }))}
+                  disabled={addingAdmin}
+                  autoFocus
+                />
+              </div>
+              <div className="modal-field">
+                <label className="modal-label">Email Address *</label>
+                <input
+                  type="email"
+                  className="modal-input"
+                  placeholder="jane@example.com"
+                  value={newAdmin.email}
+                  onChange={(e) => setNewAdmin((p) => ({ ...p, email: e.target.value }))}
+                  disabled={addingAdmin}
+                />
+              </div>
+              <div className="modal-field">
+                <label className="modal-label">Phone Number <span style={{ color: "#94a3b8", fontWeight: 400, textTransform: "none" }}>(optional)</span></label>
+                <input
+                  type="tel"
+                  className="modal-input"
+                  placeholder="+91 98765 43210"
+                  value={newAdmin.phone}
+                  onChange={(e) => setNewAdmin((p) => ({ ...p, phone: e.target.value }))}
+                  disabled={addingAdmin}
+                />
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn btn-secondary" onClick={closeAddAdminModal} disabled={addingAdmin}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-success" disabled={addingAdmin}>
+                  {addingAdmin
+                    ? <><Loader2 size={14} className="animate-spin" /> Creating...</>
+                    : <><UserCheck size={14} /> Create Admin</>}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 };
