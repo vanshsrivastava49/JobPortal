@@ -148,28 +148,31 @@ export default function GreenJobsHomepage() {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
-        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f8fafc; }
 
-        /* ── Keyframes ── */
         @keyframes spin    { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes fadeUp  { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes pulse   { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
         @keyframes statPop { from { opacity: 0; transform: translateY(5px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
         @keyframes shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
-        @keyframes phraseSlideOutUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-56px); } }
-        @keyframes phraseSlideInUp  { 0% { opacity: 0; transform: translateY(56px); } 100% { opacity: 1; transform: translateY(0); } }
 
-        /* ══ WRAPPER ══ */
+        @keyframes phraseSlideOutUp {
+          0%   { opacity: 1; transform: translateY(0); }
+          100% { opacity: 0; transform: translateY(-56px); }
+        }
+        @keyframes phraseSlideInUp {
+          0%   { opacity: 0; transform: translateY(56px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+
         .homepage-wrapper { min-height: 100vh; background: #f8fafc; overflow-x: hidden; }
 
-        /* ══════════════════════════════════════════
-           HERO
-        ══════════════════════════════════════════ */
+        /* ══ HERO ══ */
         .hero-section {
           background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 40%, #d1fae5 100%);
+          padding: 0;
           position: relative;
           overflow: hidden;
         }
@@ -192,209 +195,169 @@ export default function GreenJobsHomepage() {
           pointer-events: none; z-index: 0;
         }
 
-        /* Container: side-by-side on desktop, stacked on mobile */
+        /* Desktop: side-by-side layout */
         .hero-container {
           max-width: 1320px;
           margin: 0 auto;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 60px 72px;
+          min-height: 560px;
+          padding: 0 72px;
           position: relative;
           z-index: 1;
-          gap: 40px;
         }
 
-        /* LEFT column */
         .hero-left {
           flex: 1;
           z-index: 2;
+          padding: 72px 0;
           max-width: 580px;
-          display: flex;
-          flex-direction: column;
-          align-items: flex-start;
         }
 
         .hero-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          background: white;
-          border: 1.5px solid #bbf7d0;
-          color: #15803d;
-          font-size: 12.5px;
-          font-weight: 600;
-          padding: 6px 14px;
-          border-radius: 50px;
-          margin-bottom: 24px;
-          letter-spacing: 0.3px;
-          box-shadow: 0 2px 8px rgba(16,185,129,0.12);
+          display: inline-flex; align-items: center; gap: 8px;
+          background: white; border: 1.5px solid #bbf7d0; color: #15803d;
+          font-size: 12.5px; font-weight: 600; padding: 6px 14px;
+          border-radius: 50px; margin-bottom: 24px; letter-spacing: 0.3px;
+          box-shadow: 0 2px 8px rgba(16,185,129,0.12); width: fit-content;
         }
         .hero-badge-dot {
-          width: 7px; height: 7px;
-          background: #16a34a;
-          border-radius: 50%;
-          animation: pulse 2s infinite;
-          flex-shrink: 0;
+          width: 7px; height: 7px; background: #16a34a;
+          border-radius: 50%; animation: pulse 2s infinite; flex-shrink: 0;
         }
 
-        /* Title: flex row — static text + animated clip */
+        /* Title */
         .hero-title {
-          font-size: 46px;
+          font-size: 48px;
           font-weight: 800;
           color: #0f172a;
+          margin-bottom: 10px;
           letter-spacing: -2px;
-          line-height: 1.1;
+          line-height: 1.08;
           display: flex;
-          flex-wrap: wrap;
           align-items: baseline;
-          gap: 0 12px;
-          margin-bottom: 8px;
-          width: 100%;
+          flex-wrap: wrap;
+          gap: 0;
         }
+
         .hero-title-static {
           white-space: nowrap;
           flex-shrink: 0;
+          margin-right: 14px;
         }
-        /* Clip window — sits inline next to static text */
+
         .hero-title-clip {
           display: inline-flex;
           overflow: hidden;
           height: 1.2em;
           align-items: flex-end;
           vertical-align: bottom;
-          /* wide enough for longest phrase; no layout jump */
-          min-width: 220px;
-          position: relative;
           flex-shrink: 0;
+          min-width: 50px;
+          position: relative;
         }
+
         .hero-phrase {
           display: inline-block;
           color: #10b981;
           white-space: nowrap;
           will-change: transform, opacity;
-          line-height: 1.1;
+          line-height: 1.08;
         }
-        .hero-phrase.state-visible      { opacity: 1; transform: translateY(0); }
-        .hero-phrase.state-exit         { animation: phraseSlideOutUp 0.32s cubic-bezier(0.55,0,0.45,1) forwards; }
-        .hero-phrase.state-enter        { opacity: 0; transform: translateY(56px); animation: none; }
-        .hero-phrase.state-visible-anim { animation: phraseSlideInUp 0.38s cubic-bezier(0.16,1,0.3,1) forwards; }
 
-        /* Phrase dots */
-        .phrase-dots { display: flex; gap: 5px; margin-top: 6px; margin-bottom: 20px; }
-        .phrase-dot  { height: 4px; width: 4px; border-radius: 2px; background: #bbf7d0; transition: width 0.35s ease, background 0.35s ease; flex-shrink: 0; }
+        .hero-phrase.state-visible { opacity: 1; transform: translateY(0); }
+        .hero-phrase.state-exit { animation: phraseSlideOutUp 0.32s cubic-bezier(0.55, 0, 0.45, 1) forwards; }
+        .hero-phrase.state-enter { opacity: 0; transform: translateY(56px); animation: none; }
+        .hero-phrase.state-visible-anim { animation: phraseSlideInUp 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+        .phrase-dots {
+          display: flex; gap: 5px; margin-top: 6px; margin-bottom: 20px;
+        }
+        .phrase-dot {
+          height: 4px; width: 4px; border-radius: 2px; background: #bbf7d0;
+          transition: width 0.35s ease, background 0.35s ease; flex-shrink: 0;
+        }
         .phrase-dot.active { width: 20px; background: #10b981; }
 
         .hero-subtitle {
-          font-size: 17px;
-          color: #64748b;
-          margin-bottom: 36px;
-          max-width: 460px;
-          line-height: 1.72;
-          font-weight: 400;
+          font-size: 17px; color: #64748b; margin-bottom: 38px;
+          max-width: 460px; line-height: 1.72; font-weight: 400;
         }
 
-        /* ── Search Box ── */
         .search-container { width: 100%; max-width: 520px; }
         .search-box {
-          display: flex;
-          align-items: center;
-          background: white;
-          border-radius: 14px;
-          padding: 5px;
+          display: flex; align-items: center; background: white;
+          border-radius: 14px; padding: 5px;
           box-shadow: 0 4px 24px rgba(0,0,0,0.09), 0 1px 3px rgba(0,0,0,0.05);
-          border: 1px solid #e2e8f0;
-          width: 100%;
-          gap: 4px;
+          border: 1px solid #e2e8f0; width: 100%;
         }
         .search-input-wrapper { position: relative; flex: 1; min-width: 0; }
-        .search-divider { width: 1px; height: 22px; background: #e2e8f0; flex-shrink: 0; }
+        .search-divider { width: 1px; height: 22px; background: #e2e8f0; flex-shrink: 0; margin: 0 2px; }
         .search-input {
-          width: 100%;
-          height: 46px;
-          border: none;
-          background: transparent;
-          padding: 0 12px 0 40px;
-          font-size: 13.5px;
-          color: #0f172a;
-          outline: none;
+          width: 100%; height: 46px; border: none; background: transparent;
+          padding: 0 12px 0 40px; font-size: 13.5px; color: #0f172a; outline: none;
           font-family: 'Inter', sans-serif;
         }
         .search-input::placeholder { color: #94a3b8; }
         .search-icon {
-          position: absolute;
-          left: 12px; top: 50%;
-          transform: translateY(-50%);
-          color: #10b981;
-          pointer-events: none;
+          position: absolute; left: 12px; top: 50%;
+          transform: translateY(-50%); color: #10b981; pointer-events: none;
         }
         .search-btn {
-          height: 46px;
-          min-width: 100px;
-          padding: 0 18px;
-          border: none;
+          height: 46px; min-width: 108px; padding: 0 20px; border: none;
           border-radius: 10px;
           background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-          color: white;
-          font-size: 14px;
-          font-weight: 700;
-          cursor: pointer;
-          white-space: nowrap;
-          flex-shrink: 0;
-          font-family: 'Inter', sans-serif;
+          color: white; font-size: 14px; font-weight: 700; cursor: pointer;
+          white-space: nowrap; flex-shrink: 0; font-family: 'Inter', sans-serif;
           transition: all 0.18s;
-          box-shadow: 0 4px 14px rgba(16,185,129,0.40);
-          letter-spacing: 0.2px;
+          box-shadow: 0 4px 14px rgba(16,185,129,0.40); letter-spacing: 0.2px;
         }
         .search-btn:hover {
           background: linear-gradient(135deg, #059669 0%, #047857 100%);
-          box-shadow: 0 6px 20px rgba(16,185,129,0.50);
-          transform: translateY(-1px);
+          box-shadow: 0 6px 20px rgba(16,185,129,0.50); transform: translateY(-1px);
         }
 
-        /* ── Hero Stats ── */
-        .hero-stats { display: flex; flex-wrap: wrap; gap: 0; margin-top: 36px; }
+        .hero-stats { display: flex; gap: 0; margin-top: 36px; }
         .hero-stat {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-          padding-right: 32px;
-          margin-right: 32px;
+          display: flex; flex-direction: column; gap: 4px;
+          padding-right: 32px; margin-right: 32px;
           border-right: 1px solid #d1fae5;
         }
         .hero-stat:last-child { border-right: none; padding-right: 0; margin-right: 0; }
-        .hero-stat-num { font-size: 26px; font-weight: 800; color: #0f172a; line-height: 1; letter-spacing: -0.5px; min-width: 56px; }
+        .hero-stat-num {
+          font-size: 26px; font-weight: 800; color: #0f172a;
+          line-height: 1; letter-spacing: -0.5px; min-width: 56px;
+        }
         .hero-stat-num.loaded { animation: statPop 0.45s cubic-bezier(0.34,1.56,0.64,1); }
         .stat-skeleton {
-          display: inline-block;
-          height: 26px; width: 68px;
-          border-radius: 6px;
+          display: inline-block; height: 26px; width: 68px; border-radius: 6px;
           background: linear-gradient(90deg, #d1fae5 0%, #f0fdf4 50%, #d1fae5 100%);
-          background-size: 400px 100%;
-          animation: shimmer 1.4s infinite linear;
-          vertical-align: middle;
+          background-size: 400px 100%; animation: shimmer 1.4s infinite linear; vertical-align: middle;
         }
-        .hero-stat-label { font-size: 11.5px; color: #94a3b8; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+        .hero-stat-label {
+          font-size: 11.5px; color: #94a3b8; font-weight: 500;
+          text-transform: uppercase; letter-spacing: 0.5px;
+        }
 
-        /* RIGHT column — hero image */
+        /* Desktop hero-right */
         .hero-right {
-          flex: 0 0 420px;
+          flex: 0 0 460px;
           display: flex;
           justify-content: center;
           align-items: flex-end;
-          align-self: stretch;
           position: relative;
+          align-self: stretch;
         }
         .hero-image-wrapper {
-          width: 100%;
-          height: 100%;
-          display: flex;
-          align-items: flex-end;
-          justify-content: center;
+          width: 90%; height: 90%;
+          display: flex; align-items: flex-end; justify-content: center;
+          position: relative;
         }
+        .hero-image-bg { display: none; }
         .hero-person {
           width: 100%;
-          max-width: 460px;
+          max-width: 500px;
           height: auto;
           object-fit: contain;
           object-position: bottom center;
@@ -402,195 +365,123 @@ export default function GreenJobsHomepage() {
           position: relative;
           z-index: 2;
           filter: brightness(0.88) contrast(1.08) saturate(1.05);
-          mix-blend-mode: screen;
+          /* Desktop offset */
+          transform: translateX(40px);
         }
 
-        /* ══════════════════════════════════════════
-           CATEGORIES
-        ══════════════════════════════════════════ */
+        /* ══ CATEGORIES ══ */
         .categories-carousel {
-          background: white;
-          padding: 56px 40px;
-          border-bottom: 1px solid #f1f5f9;
-          overflow: hidden;
+          background: white; padding: 56px 40px;
+          overflow: hidden; border-bottom: 1px solid #f1f5f9;
         }
-        .categories-title    { text-align: center; font-size: 30px; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
+        .categories-title { text-align: center; font-size: 30px; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
         .categories-subtitle { text-align: center; font-size: 15px; color: #64748b; margin-bottom: 36px; }
         .categories-track-wrapper { position: relative; max-width: 1200px; margin: 0 auto; }
         .categories-scroll {
-          display: flex;
-          gap: 12px;
-          overflow-x: auto;
-          scroll-behavior: smooth;
-          padding: 6px 4px 10px;
-          scrollbar-width: none;
+          display: flex; gap: 12px; overflow-x: auto; scroll-behavior: smooth;
+          padding: 6px 4px 10px; scrollbar-width: none;
         }
         .categories-scroll::-webkit-scrollbar { display: none; }
         .category-card {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          min-width: 200px;
-          background: #f8fafc;
-          border: 1.5px solid #e2e8f0;
-          border-radius: 12px;
-          padding: 14px 18px;
-          cursor: pointer;
-          transition: all 0.2s;
-          flex-shrink: 0;
+          display: flex; align-items: center; gap: 12px; min-width: 210px;
+          background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px;
+          padding: 14px 18px; cursor: pointer; transition: all 0.2s; flex-shrink: 0;
         }
-        .category-card:hover { border-color: #10b981; background: #f0fdf4; box-shadow: 0 4px 16px rgba(16,185,129,0.12); transform: translateY(-2px); }
+        .category-card:hover {
+          border-color: #10b981; background: #f0fdf4;
+          box-shadow: 0 4px 16px rgba(16,185,129,0.12); transform: translateY(-2px);
+        }
         .category-icon-box {
-          width: 42px; height: 42px;
-          border-radius: 10px;
-          background: white;
-          border: 1.5px solid #e2e8f0;
-          display: flex; align-items: center; justify-content: center;
-          flex-shrink: 0;
-          color: #10b981;
-          transition: all 0.2s;
+          width: 42px; height: 42px; border-radius: 10px; background: white;
+          border: 1.5px solid #e2e8f0; display: flex; align-items: center;
+          justify-content: center; flex-shrink: 0; color: #10b981; transition: all 0.2s;
         }
         .category-card:hover .category-icon-box { background: #10b981; border-color: #10b981; color: white; }
         .category-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-        .category-name  { font-size: 14px; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .category-name { font-size: 14px; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .category-count { font-size: 12px; color: #64748b; font-weight: 500; }
         .cat-arrow {
           position: absolute; top: 50%; transform: translateY(-60%);
-          width: 36px; height: 36px;
-          background: white; border: 1.5px solid #e2e8f0; border-radius: 50%;
-          display: flex; align-items: center; justify-content: center;
-          cursor: pointer; z-index: 10;
-          transition: all 0.2s;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-          font-size: 14px; color: #475569;
+          width: 36px; height: 36px; background: white; border: 1.5px solid #e2e8f0;
+          border-radius: 50%; display: flex; align-items: center; justify-content: center;
+          cursor: pointer; z-index: 10; transition: all 0.2s;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.08); font-size: 14px; color: #475569;
         }
         .cat-arrow:hover { background: #10b981; border-color: #10b981; color: white; box-shadow: 0 4px 12px rgba(16,185,129,0.3); }
-        .cat-arrow-left  { left: -18px; }
+        .cat-arrow-left { left: -18px; }
         .cat-arrow-right { right: -18px; }
 
-        /* ══════════════════════════════════════════
-           COMPANIES
-        ══════════════════════════════════════════ */
+        /* ══ COMPANIES ══ */
         .companies-section { background: #f8fafc; padding: 60px 40px; }
-        .companies-title {
-          text-align: center;
-          font-size: 32px; font-weight: 700; color: #0f172a;
-          margin-bottom: 40px;
-        }
+        .companies-title { text-align: center; font-size: 32px; font-weight: 700; color: #0f172a; margin-bottom: 40px; }
         .companies-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 24px;
-          max-width: 1200px;
-          margin: 0 auto;
+          display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 24px; max-width: 1200px; margin: 0 auto;
         }
         .company-card {
-          background: white;
-          border: 1px solid #e2e8f0;
-          border-radius: 12px;
-          padding: 40px;
-          display: flex; align-items: center; justify-content: center;
-          min-height: 120px;
-          transition: all 0.2s;
-          cursor: pointer;
+          background: white; border: 1px solid #e2e8f0; border-radius: 12px;
+          padding: 40px; display: flex; align-items: center; justify-content: center;
+          min-height: 140px; transition: all 0.2s; cursor: pointer;
         }
         .company-card:hover { border-color: #10b981; box-shadow: 0 4px 12px rgba(16,185,129,0.1); transform: translateY(-2px); }
         .company-logo { max-width: 100%; max-height: 70px; width: auto; height: auto; object-fit: contain; }
 
-        /* ══════════════════════════════════════════
-           FEATURED ADS
-        ══════════════════════════════════════════ */
-        .ads-section {
-          background: #f8fafc;
-          padding: 72px 40px;
-          position: relative;
-        }
-        .ads-section::before {
-          content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
-          background: linear-gradient(90deg, transparent, #e2e8f0 20%, #e2e8f0 80%, transparent);
-        }
-        .ads-section::after {
-          content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
-          background: linear-gradient(90deg, transparent, #e2e8f0 20%, #e2e8f0 80%, transparent);
-        }
+        /* ══ ADS ══ */
+        .ads-section { background: #f8fafc; padding: 72px 40px; position: relative; }
+        .ads-section::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, #e2e8f0 20%, #e2e8f0 80%, transparent); }
+        .ads-section::after  { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, #e2e8f0 20%, #e2e8f0 80%, transparent); }
         .ads-inner { max-width: 1200px; margin: 0 auto; }
-        .ads-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 32px; gap: 16px; flex-wrap: wrap; }
+        .ads-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
         .ads-header-left { display: flex; flex-direction: column; gap: 6px; }
         .ads-eyebrow { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: #10b981; }
         .ads-eyebrow-line { width: 28px; height: 2px; background: #10b981; border-radius: 2px; }
         .ads-title { font-size: 28px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; }
-        .ads-nav { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+        .ads-nav { display: flex; align-items: center; gap: 12px; }
         .ads-dots { display: flex; gap: 6px; align-items: center; }
         .ads-dot { width: 6px; height: 6px; border-radius: 50%; background: #cbd5e1; transition: all 0.3s; cursor: pointer; }
         .ads-dot.active { width: 20px; border-radius: 3px; background: #10b981; }
         .ads-arrow { width: 38px; height: 38px; border-radius: 10px; border: 1.5px solid #e2e8f0; background: white; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; color: #64748b; }
         .ads-arrow:hover { border-color: #10b981; background: #f0fdf4; color: #10b981; }
-
         .ads-spotlight { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: stretch; }
-        .ad-main-card {
-          border-radius: 20px; overflow: hidden; position: relative;
-          min-height: 380px; cursor: pointer;
-          transition: transform 0.3s, box-shadow 0.3s;
-          animation: slideIn 0.4s ease;
-        }
+        .ad-main-card { border-radius: 20px; overflow: hidden; position: relative; min-height: 380px; cursor: pointer; transition: transform 0.3s, box-shadow 0.3s; animation: slideIn 0.4s ease; }
         .ad-main-card:hover { transform: translateY(-4px); box-shadow: 0 24px 48px rgba(0,0,0,0.14); }
         .ad-main-img { width: 100%; height: 100%; object-fit: cover; display: block; position: absolute; inset: 0; transition: transform 0.5s ease; }
         .ad-main-card:hover .ad-main-img { transform: scale(1.04); }
         .ad-main-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.1) 100%); z-index: 1; }
-        .ad-main-content { position: absolute; bottom: 0; left: 0; right: 0; padding: 28px; z-index: 2; }
+        .ad-main-content { position: absolute; bottom: 0; left: 0; right: 0; padding: 32px; z-index: 2; }
         .ad-main-tag { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 50px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 12px; backdrop-filter: blur(8px); }
-        .ad-main-title { font-size: 26px; font-weight: 800; color: white; margin-bottom: 8px; line-height: 1.2; letter-spacing: -0.5px; }
+        .ad-main-title { font-size: 28px; font-weight: 800; color: white; margin-bottom: 8px; line-height: 1.2; letter-spacing: -0.5px; }
         .ad-main-subtitle { font-size: 14px; color: rgba(255,255,255,0.78); margin-bottom: 20px; line-height: 1.5; }
         .ad-main-cta { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; font-family: 'Inter', sans-serif; color: white; }
         .ad-main-cta:hover { transform: translateX(2px); filter: brightness(1.1); }
         .ads-side-stack { display: flex; flex-direction: column; gap: 16px; }
-        .ad-side-card {
-          border-radius: 14px; border: 1.5px solid #e2e8f0; background: white;
-          display: flex; align-items: stretch; overflow: hidden;
-          cursor: pointer; transition: all 0.22s; flex: 1;
-        }
+        .ad-side-card { border-radius: 14px; border: 1.5px solid #e2e8f0; background: white; display: flex; align-items: stretch; overflow: hidden; cursor: pointer; transition: all 0.22s; flex: 1; }
         .ad-side-card:hover { border-color: transparent; box-shadow: 0 8px 24px rgba(0,0,0,0.10); transform: translateX(4px); }
         .ad-side-card.highlighted { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.12), 0 4px 16px rgba(16,185,129,0.12); }
-        .ad-side-thumb { width: 90px; flex-shrink: 0; object-fit: cover; display: block; }
-        .ad-side-body { padding: 14px 16px; display: flex; flex-direction: column; justify-content: center; gap: 5px; flex: 1; min-width: 0; }
+        .ad-side-thumb { width: 100px; flex-shrink: 0; object-fit: cover; display: block; }
+        .ad-side-body { padding: 16px 18px; display: flex; flex-direction: column; justify-content: center; gap: 6px; flex: 1; }
         .ad-side-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; }
-        .ad-side-title { font-size: 14px; font-weight: 700; color: #0f172a; line-height: 1.35; }
+        .ad-side-title { font-size: 15px; font-weight: 700; color: #0f172a; line-height: 1.35; }
         .ad-side-subtitle { font-size: 12px; color: #64748b; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .ad-side-arrow { display: flex; align-items: center; justify-content: center; padding-right: 14px; color: #cbd5e1; transition: color 0.2s; flex-shrink: 0; }
+        .ad-side-arrow { display: flex; align-items: center; justify-content: center; padding-right: 16px; color: #cbd5e1; transition: color 0.2s; flex-shrink: 0; }
         .ad-side-card:hover .ad-side-arrow { color: #10b981; }
 
-        /* ══════════════════════════════════════════
-           JOBS
-        ══════════════════════════════════════════ */
+        /* ══ JOBS ══ */
         .jobs-section { padding: 60px 40px; background: white; }
         .jobs-header { text-align: center; margin-bottom: 48px; }
-        .jobs-title    { font-size: 32px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
+        .jobs-title { font-size: 32px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
         .jobs-subtitle { font-size: 16px; color: #64748b; }
-        .jobs-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-          gap: 24px;
-          max-width: 1200px;
-          margin: 0 auto;
-        }
-        .job-card {
-          background: white; border: 1px solid #e2e8f0; border-radius: 12px;
-          padding: 24px; transition: all 0.2s; cursor: pointer;
-          animation: fadeUp 0.3s ease; display: flex; flex-direction: column;
-        }
+        .jobs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; max-width: 1200px; margin: 0 auto; }
+        .job-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; transition: all 0.2s; cursor: pointer; animation: fadeUp 0.3s ease; display: flex; flex-direction: column; }
         .job-card:hover { border-color: #10b981; box-shadow: 0 4px 20px rgba(16,185,129,0.1); transform: translateY(-2px); }
         .job-tags { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
         .job-tag { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-        .tag-type   { background: #dbeafe; color: #1e40af; }
-        .tag-live   { background: #d1fae5; color: #065f46; display: flex; align-items: center; gap: 4px; }
-        .live-dot   { width: 6px; height: 6px; background: #10b981; border-radius: 50%; animation: pulse 2s infinite; }
-        .tag-pay    { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+        .tag-type { background: #dbeafe; color: #1e40af; }
+        .tag-live { background: #d1fae5; color: #065f46; display: flex; align-items: center; gap: 4px; }
+        .live-dot { width: 6px; height: 6px; background: #10b981; border-radius: 50%; animation: pulse 2s infinite; }
+        .tag-pay { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
         .tag-unpaid { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
-        .job-title-text {
-          font-size: 18px; font-weight: 700; color: #0f172a;
-          margin-bottom: 12px; line-height: 1.4; transition: color 0.2s;
-          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-        }
+        .job-title-text { font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 12px; line-height: 1.4; transition: color 0.2s; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .job-card:hover .job-title-text { color: #10b981; }
         .job-company-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
         .company-logo-box { width: 36px; height: 36px; background: linear-gradient(135deg, #1e293b, #0f172a); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -599,7 +490,7 @@ export default function GreenJobsHomepage() {
         .job-meta-item { display: flex; align-items: center; gap: 8px; }
         .job-skills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
         .job-skill-pill { padding: 3px 10px; border-radius: 100px; font-size: 12px; font-weight: 500; background: #f1f5f9; border: 1px solid #e2e8f0; color: #475569; }
-        .job-salary        { font-size: 16px; font-weight: 700; color: #10b981; margin-top: 4px; }
+        .job-salary { font-size: 16px; font-weight: 700; color: #10b981; margin-top: 4px; }
         .job-salary-unpaid { font-size: 16px; font-weight: 600; color: #64748b; margin-top: 4px; }
         .job-posted { font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 4px; margin-top: 10px; }
         .job-view-btn { margin-top: 16px; width: 100%; padding: 11px; background: #0f172a; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; font-family: 'Inter', sans-serif; }
@@ -607,173 +498,210 @@ export default function GreenJobsHomepage() {
         .jobs-state { max-width: 1200px; margin: 0 auto; text-align: center; padding: 60px 24px; }
         .state-icon { width: 64px; height: 64px; margin: 0 auto 20px; background: #f1f5f9; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
         .state-title { font-size: 18px; font-weight: 600; color: #0f172a; margin-bottom: 8px; }
-        .state-desc  { font-size: 14px; color: #64748b; }
+        .state-desc { font-size: 14px; color: #64748b; }
         .spinner { animation: spin 1s linear infinite; }
-        .view-all-btn {
-          display: block; width: fit-content;
-          margin: 36px auto 0;
-          padding: 14px 36px;
-          background: #0f172a; color: white; border: none;
-          border-radius: 999px;
-          font-size: 15px; font-weight: 700;
-          cursor: pointer; transition: background 0.2s;
-          font-family: 'Inter', sans-serif;
-        }
+        .view-all-btn { display: block; width: fit-content; margin: 36px auto 0; padding: 14px 36px; background: #0f172a; color: white; border: none; border-radius: 999px; font-size: 15px; font-weight: 700; cursor: pointer; transition: background 0.2s; font-family: 'Inter', sans-serif; }
         .view-all-btn:hover { background: #10b981; }
 
-        /* ══════════════════════════════════════════
-           FOOTER
-        ══════════════════════════════════════════ */
-        .footer {
-          background: linear-gradient(to bottom, #1e293b, #0f172a);
-          padding: 60px 40px 32px;
-          color: white;
-        }
-        .footer-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-          gap: 40px;
-          max-width: 1200px;
-          margin: 0 auto 40px;
-        }
+        /* ══ FOOTER ══ */
+        .footer { background: linear-gradient(to bottom, #1e293b, #0f172a); padding: 60px 40px 32px; color: white; }
+        .footer-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 40px; max-width: 1200px; margin: 0 auto 40px; }
         .footer-brand { font-size: 24px; font-weight: 700; color: #10b981; margin-bottom: 12px; }
-        .footer-desc  { font-size: 14px; color: #94a3b8; line-height: 1.6; }
+        .footer-desc { font-size: 14px; color: #94a3b8; line-height: 1.6; }
         .footer-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: white; }
         .footer-links { display: flex; flex-direction: column; gap: 12px; }
-        .footer-link  { font-size: 14px; color: #94a3b8; cursor: pointer; transition: color 0.2s; }
+        .footer-link { font-size: 14px; color: #94a3b8; cursor: pointer; transition: color 0.2s; }
         .footer-link:hover { color: #10b981; }
         .footer-bottom { text-align: center; padding-top: 32px; border-top: 1px solid #334155; color: #64748b; font-size: 14px; }
 
+        /* ══ RESPONSIVE ══ */
 
-        /* ══════════════════════════════════════════
-           RESPONSIVE BREAKPOINTS
-        ══════════════════════════════════════════ */
-
-        /* ── Tablet landscape: 1024px ── */
-        @media (max-width: 1100px) {
-          .hero-container { padding: 52px 48px; gap: 32px; }
+        /* Tablet: 960px–1200px */
+        @media (max-width: 1200px) {
+          .hero-container { padding: 0 48px; }
           .hero-title { font-size: 40px; letter-spacing: -1.5px; }
-          .hero-right { flex: 0 0 360px; }
-          .hero-person { transform: none; }
-          .companies-grid { grid-template-columns: repeat(3, 1fr); }
+          .hero-right { flex: 0 0 380px; }
+          .hero-person { transform: translateX(20px); }
         }
 
-        /* ── Tablet portrait: 960px ── */
+        /* Tablet portrait: 768px–960px */
         @media (max-width: 960px) {
-          /* Hero: stack vertically */
           .hero-container {
             flex-direction: column;
-            padding: 48px 32px 0;
-            gap: 0;
+            padding: 0 32px;
+            min-height: auto;
           }
           .hero-left {
-            max-width: 100%;
+            padding: 48px 0 24px;
             width: 100%;
-            align-items: center;
+            max-width: 100%;
             text-align: center;
-            padding-bottom: 32px;
+            align-items: center;
+            display: flex;
+            flex-direction: column;
           }
           .hero-title {
-            font-size: 36px;
+            font-size: 34px;
             letter-spacing: -1px;
             justify-content: center;
           }
-          .hero-title-clip { min-width: 190px; }
-          .hero-subtitle { max-width: 100%; text-align: center; }
+          .hero-subtitle { max-width: 100%; }
           .search-container { max-width: 100%; }
           .hero-stats { justify-content: center; }
           .phrase-dots { justify-content: center; }
-
-          /* Hide hero image on tablet to save space */
-          .hero-right { display: none; }
-
-          /* Ads: stack to single column */
+          /* Image stacked below text on tablet */
+          .hero-right {
+            flex: 0 0 auto;
+            width: 100%;
+            max-width: 360px;
+            align-self: center;
+          }
+          .hero-image-wrapper {
+            width: 100%; height: auto;
+            justify-content: center;
+          }
+          .hero-person {
+            transform: translateX(0);
+            max-width: 320px;
+            max-height: 280px;
+            object-fit: contain;
+          }
           .ads-spotlight { grid-template-columns: 1fr; }
           .ad-main-card { min-height: 300px; }
-          .ads-side-stack { flex-direction: row; flex-wrap: wrap; gap: 12px; }
-          .ad-side-card { flex: 1 1 calc(50% - 6px); min-width: 220px; }
-
-          /* Companies: 2 columns */
-          .companies-grid { grid-template-columns: repeat(2, 1fr); }
-
-          /* Footer: 3 cols */
-          .footer-grid { grid-template-columns: repeat(3, 1fr); gap: 28px; }
         }
 
-        /* ── Mobile large: 700px ── */
-        @media (max-width: 700px) {
-          .hero-container { padding: 40px 20px 0; }
-          .hero-title { font-size: 30px; letter-spacing: -0.5px; gap: 6px 10px; }
-          .hero-title-clip { min-width: 160px; height: 1.15em; }
-          .hero-subtitle { font-size: 15.5px; }
+        /* Mobile: up to 767px — PRIMARY FIX */
+        @media (max-width: 767px) {
+          .hero-section { overflow: hidden; }
 
-          .search-box { flex-wrap: wrap; padding: 6px; gap: 6px; }
-          .search-input-wrapper { flex: 1 1 calc(50% - 30px); min-width: 120px; }
+          .hero-container {
+            flex-direction: column;
+            padding: 0 20px;
+            min-height: auto;
+          }
+
+          /* Text block */
+          .hero-left {
+            order: 1;
+            padding: 36px 0 20px;
+            width: 100%;
+            max-width: 100%;
+            text-align: center;
+            align-items: center;
+            display: flex;
+            flex-direction: column;
+          }
+
+          .hero-title {
+            font-size: 26px;
+            letter-spacing: -0.5px;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 6px;
+          }
+
+          .hero-title-static { margin-right: 6px; }
+          .hero-title-clip { min-width: 140px; height: 1.15em; }
+
+          .hero-subtitle { font-size: 14px; margin-bottom: 24px; }
+
+          /* Search box stacks vertically */
+          .search-box {
+            flex-direction: column;
+            padding: 8px;
+            gap: 4px;
+            border-radius: 12px;
+          }
+          .search-input-wrapper { width: 100%; flex: none; }
+          .search-input { padding-left: 38px; height: 44px; }
           .search-divider { display: none; }
-          .search-btn { flex: 1 1 100%; width: 100%; height: 44px; margin-top: 0; border-radius: 8px; }
+          .search-btn {
+            width: 100%;
+            height: 44px;
+            border-radius: 8px;
+            margin-top: 2px;
+          }
 
-          .hero-stats { gap: 20px 28px; }
+          .hero-stats {
+            flex-wrap: wrap;
+            gap: 16px 24px;
+            justify-content: center;
+            margin-top: 24px;
+          }
           .hero-stat { border-right: none; padding-right: 0; margin-right: 0; }
-          /* Re-add divider via adjacent sibling border trick */
-          .hero-stat + .hero-stat { border-left: 1px solid #d1fae5; padding-left: 28px; }
+          .hero-stat-num { font-size: 22px; }
 
-          /* Categories */
-          .categories-carousel { padding: 40px 20px; }
-          .categories-title { font-size: 24px; }
-          .cat-arrow { display: none; } /* Swipe on mobile */
+          /* Image block — centered, smaller, NO translateX */
+          .hero-right {
+            order: 2;
+            flex: 0 0 auto;
+            width: 100%;
+            max-width: 100%;
+            align-self: center;
+            /* Limit height so it doesn't dominate */
+            max-height: 240px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+          }
+          .hero-image-wrapper {
+            width: 100%;
+            height: 240px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+          }
+          .hero-person {
+            /* Kill the desktop translateX that was causing the overflow */
+            transform: none !important;
+            width: auto;
+            max-width: 100%;
+            height: 240px;
+            object-fit: contain;
+            object-position: bottom center;
+            display: block;
+            margin: 0 auto;
+          }
 
-          /* Ads */
-          .ads-section { padding: 48px 20px; }
+          /* Section padding */
+          .categories-carousel,
+          .companies-section,
+          .jobs-section,
+          .ads-section,
+          .footer { padding-left: 16px; padding-right: 16px; }
+
+          .categories-carousel { padding-top: 40px; padding-bottom: 40px; }
+          .jobs-section { padding-top: 40px; padding-bottom: 40px; }
+          .ads-section { padding-top: 48px; padding-bottom: 48px; }
+
+          .jobs-grid { grid-template-columns: 1fr; }
+
+          .ads-header { flex-direction: column; align-items: flex-start; gap: 16px; }
           .ads-title { font-size: 22px; }
-          .ads-side-stack { flex-direction: column; }
-          .ad-side-card { flex: unset; }
-          .ad-main-content { padding: 20px; }
-          .ad-main-title { font-size: 22px; }
 
-          /* Jobs */
-          .jobs-section { padding: 48px 20px; }
-          .jobs-title { font-size: 26px; }
-          .jobs-grid { grid-template-columns: 1fr; gap: 16px; }
+          .companies-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+          .company-card { padding: 20px; min-height: 100px; }
 
-          /* Companies */
-          .companies-section { padding: 48px 20px; }
-          .companies-title { font-size: 26px; }
-          .companies-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
-          .company-card { padding: 28px 20px; min-height: 90px; }
+          /* Category arrows: hide on mobile — swipe instead */
+          .cat-arrow { display: none; }
+          .categories-scroll { padding-left: 0; padding-right: 0; }
 
-          /* Footer */
-          .footer { padding: 48px 20px 28px; }
-          .footer-grid { grid-template-columns: 1fr 1fr; gap: 24px; }
+          .footer-grid { grid-template-columns: 1fr 1fr; gap: 28px; }
+          .footer { padding-top: 40px; padding-bottom: 24px; }
+
+          .phrase-dots { justify-content: center; }
         }
 
-        /* ── Mobile small: 480px ── */
-        @media (max-width: 480px) {
-          .hero-title { font-size: 26px; letter-spacing: -0.3px; }
-          .hero-title-clip { min-width: 140px; }
-
-          /* Single-column search on very small screens */
-          .search-input-wrapper { flex: 1 1 100%; }
-
-          .hero-stats { flex-direction: column; gap: 14px; }
-          .hero-stat + .hero-stat { border-left: none; padding-left: 0; border-top: 1px solid #d1fae5; padding-top: 14px; }
-
-          .companies-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
-          .company-card { padding: 20px 12px; min-height: 80px; }
-          .company-logo { max-height: 50px; }
-
-          .footer-grid { grid-template-columns: 1fr; gap: 24px; }
-
-          .ads-section { padding: 40px 16px; }
-          .jobs-section { padding: 40px 16px; }
-          .categories-carousel { padding: 36px 16px; }
-          .companies-section { padding: 40px 16px; }
-        }
-
-        /* ── Tiny: 360px ── */
-        @media (max-width: 360px) {
+        /* Very small phones: up to 380px */
+        @media (max-width: 380px) {
           .hero-title { font-size: 22px; }
           .hero-title-clip { min-width: 120px; }
-          .hero-badge { font-size: 11px; padding: 5px 11px; }
+          .hero-person { height: 200px; }
+          .hero-right { max-height: 200px; }
+          .hero-image-wrapper { height: 200px; }
+          .companies-grid { grid-template-columns: 1fr; }
+          .footer-grid { grid-template-columns: 1fr; }
         }
       `}</style>
 
@@ -794,12 +722,6 @@ export default function GreenJobsHomepage() {
                 </span>
               </h1>
 
-              <div className="phrase-dots">
-                {HERO_PHRASES.map((_, i) => (
-                  <div key={i} className={`phrase-dot${i === phraseIndex ? " active" : ""}`} />
-                ))}
-              </div>
-
               <p className="hero-subtitle">
                 Discover renewable energy opportunities across India and connect
                 with purpose-driven companies building the future.
@@ -809,26 +731,12 @@ export default function GreenJobsHomepage() {
                 <div className="search-box">
                   <div className="search-input-wrapper">
                     <Search className="search-icon" size={18} />
-                    <input
-                      type="text"
-                      placeholder="Job title, skill or company..."
-                      className="search-input"
-                      value={searchKeyword}
-                      onChange={e => setSearchKeyword(e.target.value)}
-                      onKeyDown={e => e.key === "Enter" && handleSearch()}
-                    />
+                    <input type="text" placeholder="Job title, skill or company..." className="search-input" value={searchKeyword} onChange={e => setSearchKeyword(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSearch()} />
                   </div>
                   <div className="search-divider" />
                   <div className="search-input-wrapper" style={{ flex: 0.7 }}>
                     <MapPin className="search-icon" size={18} />
-                    <input
-                      type="text"
-                      placeholder="Location..."
-                      className="search-input"
-                      value={searchLocation}
-                      onChange={e => setSearchLocation(e.target.value)}
-                      onKeyDown={e => e.key === "Enter" && handleSearch()}
-                    />
+                    <input type="text" placeholder="Location..." className="search-input" value={searchLocation} onChange={e => setSearchLocation(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSearch()} />
                   </div>
                   <button className="search-btn" onClick={handleSearch}>Find Jobs</button>
                 </div>
@@ -840,10 +748,7 @@ export default function GreenJobsHomepage() {
                   { value: heroStats.companies, label: "Green Companies" },
                 ].map((stat, i) => (
                   <div className="hero-stat" key={i}>
-                    {stat.value === null
-                      ? <span className="stat-skeleton" />
-                      : <span className="hero-stat-num loaded">{formatStatNum(stat.value)}</span>
-                    }
+                    {stat.value === null ? <span className="stat-skeleton" /> : <span className="hero-stat-num loaded">{formatStatNum(stat.value)}</span>}
                     <span className="hero-stat-label">{stat.label}</span>
                   </div>
                 ))}
@@ -852,12 +757,8 @@ export default function GreenJobsHomepage() {
 
             <div className="hero-right">
               <div className="hero-image-wrapper">
-                <img
-                  src="/home-right2.png"
-                  alt="Green energy professional"
-                  className="hero-person"
-                  onError={e => { e.target.style.display = "none"; }}
-                />
+                <div className="hero-image-bg" />
+                <img src="/home-right2.png" alt="Green energy professional" className="hero-person" onError={e => { e.target.style.display = "none"; }} />
               </div>
             </div>
           </div>
@@ -868,10 +769,7 @@ export default function GreenJobsHomepage() {
           <h2 className="categories-title">Browse Jobs by Category</h2>
           <p className="categories-subtitle">Explore roles across renewable energy and green tech sectors</p>
           <div className="categories-track-wrapper">
-            <button
-              className="cat-arrow cat-arrow-left"
-              onClick={() => document.getElementById("categoriesScroll").scrollBy({ left: -240, behavior: "smooth" })}
-            >←</button>
+            <button className="cat-arrow cat-arrow-left" onClick={() => document.getElementById("categoriesScroll").scrollBy({ left: -240, behavior: "smooth" })}>←</button>
             <div className="categories-scroll" id="categoriesScroll">
               {jobCategories.map((cat, i) => (
                 <div key={i} className="category-card" onClick={() => navigate(`/jobs?category=${cat.name}`)}>
@@ -883,10 +781,7 @@ export default function GreenJobsHomepage() {
                 </div>
               ))}
             </div>
-            <button
-              className="cat-arrow cat-arrow-right"
-              onClick={() => document.getElementById("categoriesScroll").scrollBy({ left: 240, behavior: "smooth" })}
-            >→</button>
+            <button className="cat-arrow cat-arrow-right" onClick={() => document.getElementById("categoriesScroll").scrollBy({ left: 240, behavior: "smooth" })}>→</button>
           </div>
         </section>
 
@@ -896,24 +791,12 @@ export default function GreenJobsHomepage() {
             <h2 className="jobs-title">Jobs Listed Right Now</h2>
             <p className="jobs-subtitle">Explore the latest live opportunities in renewable energy</p>
           </div>
-
           {jobsLoading ? (
-            <div className="jobs-state">
-              <div className="state-icon"><Loader2 size={32} color="#10b981" className="spinner" /></div>
-              <p className="state-title">Loading jobs...</p>
-            </div>
+            <div className="jobs-state"><div className="state-icon"><Loader2 size={32} color="#10b981" className="spinner" /></div><p className="state-title">Loading jobs...</p></div>
           ) : jobsError ? (
-            <div className="jobs-state">
-              <div className="state-icon"><AlertCircle size={32} color="#f59e0b" /></div>
-              <p className="state-title">Could not load jobs</p>
-              <p className="state-desc">{jobsError}</p>
-            </div>
+            <div className="jobs-state"><div className="state-icon"><AlertCircle size={32} color="#f59e0b" /></div><p className="state-title">Could not load jobs</p><p className="state-desc">{jobsError}</p></div>
           ) : featuredJobs.length === 0 ? (
-            <div className="jobs-state">
-              <div className="state-icon"><Briefcase size={32} color="#cbd5e1" /></div>
-              <p className="state-title">No approved jobs yet</p>
-              <p className="state-desc">Check back soon.</p>
-            </div>
+            <div className="jobs-state"><div className="state-icon"><Briefcase size={32} color="#cbd5e1" /></div><p className="state-title">No approved jobs yet</p><p className="state-desc">Check back soon.</p></div>
           ) : (
             <>
               <div className="jobs-grid">
@@ -941,19 +824,12 @@ export default function GreenJobsHomepage() {
                       {skills.length > 0 && (
                         <div className="job-skills">
                           {skills.map(s => <span key={s} className="job-skill-pill">{s}</span>)}
-                          {(job.skills || []).length > 4 && (
-                            <span className="job-skill-pill" style={{ color: "#94a3b8", background: "transparent", border: "none" }}>
-                              +{job.skills.length - 4} more
-                            </span>
-                          )}
+                          {(job.skills || []).length > 4 && <span className="job-skill-pill" style={{ color: "#94a3b8", background: "transparent", border: "none" }}>+{job.skills.length - 4} more</span>}
                         </div>
                       )}
                       <div className={job.isPaid ? "job-salary" : "job-salary-unpaid"}>{salaryLabel}</div>
                       {posted && <div className="job-posted"><Clock size={12} />{posted}</div>}
-                      <button
-                        className="job-view-btn"
-                        onClick={e => { e.stopPropagation(); navigate(`/jobs/${job._id}`); }}
-                      >View Details</button>
+                      <button className="job-view-btn" onClick={e => { e.stopPropagation(); navigate(`/jobs/${job._id}`); }}>View Details</button>
                     </div>
                   );
                 })}
@@ -973,55 +849,27 @@ export default function GreenJobsHomepage() {
               </div>
               <div className="ads-nav">
                 <div className="ads-dots">
-                  {featuredAds.map((_, i) => (
-                    <div key={i} className={`ads-dot${i === activeAd ? " active" : ""}`} onClick={() => setActiveAd(i)} />
-                  ))}
+                  {featuredAds.map((_, i) => <div key={i} className={`ads-dot${i === activeAd ? " active" : ""}`} onClick={() => setActiveAd(i)} />)}
                 </div>
                 <button className="ads-arrow" onClick={() => scrollAds("left")}><ChevronLeft size={18} /></button>
                 <button className="ads-arrow" onClick={() => scrollAds("right")}><ChevronRight size={18} /></button>
               </div>
             </div>
-
             <div className="ads-spotlight">
               <div className="ad-main-card" onClick={() => navigate("/jobs")} key={activeAd}>
-                <img
-                  src={featuredAds[activeAd].image}
-                  alt={featuredAds[activeAd].title}
-                  className="ad-main-img"
-                  onError={e => { e.target.style.background = "#1e293b"; }}
-                />
+                <img src={featuredAds[activeAd].image} alt={featuredAds[activeAd].title} className="ad-main-img" onError={e => { e.target.style.background = "#1e293b"; }} />
                 <div className="ad-main-overlay" />
                 <div className="ad-main-content">
-                  <div
-                    className="ad-main-tag"
-                    style={{
-                      background: featuredAds[activeAd].accentLight + "33",
-                      color: featuredAds[activeAd].accentLight,
-                      border: `1px solid ${featuredAds[activeAd].accentLight}55`,
-                    }}
-                  >{featuredAds[activeAd].tag}</div>
+                  <div className="ad-main-tag" style={{ background: featuredAds[activeAd].accentLight + "33", color: featuredAds[activeAd].accentLight, border: `1px solid ${featuredAds[activeAd].accentLight}55` }}>{featuredAds[activeAd].tag}</div>
                   <div className="ad-main-title">{featuredAds[activeAd].title}</div>
                   <div className="ad-main-subtitle">{featuredAds[activeAd].subtitle}</div>
-                  <button
-                    className="ad-main-cta"
-                    style={{ background: featuredAds[activeAd].accent }}
-                  >{featuredAds[activeAd].cta} <ChevronRight size={16} /></button>
+                  <button className="ad-main-cta" style={{ background: featuredAds[activeAd].accent }}>{featuredAds[activeAd].cta} <ChevronRight size={16} /></button>
                 </div>
               </div>
-
               <div className="ads-side-stack">
                 {featuredAds.map((ad, i) => i !== activeAd && (
-                  <div
-                    key={i}
-                    className={`ad-side-card${i === (activeAd + 1) % featuredAds.length ? " highlighted" : ""}`}
-                    onClick={() => { setActiveAd(i); navigate("/jobs"); }}
-                  >
-                    <img
-                      src={ad.image}
-                      alt={ad.title}
-                      className="ad-side-thumb"
-                      onError={e => { e.target.style.background = "#f1f5f9"; }}
-                    />
+                  <div key={i} className={`ad-side-card${i === (activeAd + 1) % featuredAds.length ? " highlighted" : ""}`} onClick={() => { setActiveAd(i); navigate("/jobs"); }}>
+                    <img src={ad.image} alt={ad.title} className="ad-side-thumb" onError={e => { e.target.style.background = "#f1f5f9"; }} />
                     <div className="ad-side-body">
                       <div className="ad-side-tag" style={{ color: ad.accent }}>{ad.tag}</div>
                       <div className="ad-side-title">{ad.title}</div>
@@ -1041,15 +889,8 @@ export default function GreenJobsHomepage() {
           <div className="companies-grid">
             {topCompanies.map((company, i) => (
               <div key={i} className="company-card" onClick={() => navigate(`/jobs?company=${company.name}`)}>
-                <img
-                  src={company.logo}
-                  alt={company.name}
-                  className="company-logo"
-                  onError={e => {
-                    e.target.style.display = "none";
-                    e.target.parentElement.innerHTML = `<div style="font-size:16px;font-weight:600;color:#374151;text-align:center">${company.name}</div>`;
-                  }}
-                />
+                <img src={company.logo} alt={company.name} className="company-logo"
+                  onError={e => { e.target.style.display = "none"; e.target.parentElement.innerHTML = `<div style="font-size:18px;font-weight:600;color:#374151">${company.name}</div>`; }} />
               </div>
             ))}
           </div>
@@ -1057,7 +898,6 @@ export default function GreenJobsHomepage() {
 
       </div>
 
-      {/* ══ FOOTER ══ */}
       <footer className="footer">
         <div className="footer-grid">
           <div>
