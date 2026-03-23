@@ -237,7 +237,8 @@ export default function GreenJobsHomepage() {
           line-height: 1.08;
           display: flex;
           align-items: baseline;
-          flex-wrap: wrap;
+          flex-wrap: nowrap;
+          white-space:nowrap;
           gap: 0;
         }
 

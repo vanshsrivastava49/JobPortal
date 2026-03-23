@@ -50,7 +50,6 @@ export default function Businesses() {
     return matchSearch && matchCat;
   });
 
-  // ── Navigate to detail page ──
   const goToDetail = (id) => navigate(`/businesses/${id}`);
 
   return (
@@ -58,9 +57,17 @@ export default function Businesses() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
+        /* ── Reset & Base ── */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f8fafc; color: #0f172a; }
+        html { overflow-x: hidden; }
+        body {
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          background: #f8fafc;
+          color: #0f172a;
+          overflow-x: hidden;
+        }
 
+        /* ── Animations ── */
         @keyframes pulse  { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         @keyframes spin   { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
@@ -70,14 +77,52 @@ export default function Businesses() {
         }
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-        .biz-wrapper { background: #f8fafc; min-height: 100vh; }
+        /* ── Wrapper ── */
+        .biz-wrapper {
+          background: #f8fafc;
+          min-height: 100vh;
+          width: 100%;
+          overflow-x: hidden;
+        }
 
         /* ══ HERO ══ */
-        .biz-hero { background: linear-gradient(160deg, #052e16 0%, #14532d 50%, #166534 100%); padding: 64px 24px 80px; }
-.biz-hero::before { content: ''; position: absolute; width: 600px; height: 600px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.06); top: -200px; left: -200px; pointer-events: none; }
-.biz-hero::after  { content: ''; position: absolute; width: 400px; height: 400px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.06); top: 40px; right: -140px; pointer-events: none; }
-.biz-hero-glow { position: absolute; inset: 0; background-image: radial-gradient(circle at 70% 20%, rgba(16,185,129,0.15) 0%, transparent 60%); pointer-events: none; }
-        .biz-hero-inner { max-width: 900px; margin: 0 auto; text-align: center; }
+        .biz-hero {
+          background: linear-gradient(160deg, #052e16 0%, #14532d 50%, #166534 100%);
+          padding: 64px 24px 88px;
+          position: relative;
+          overflow: hidden;
+          width: 100%;
+        }
+        .biz-hero::before {
+          content: '';
+          position: absolute;
+          width: 500px; height: 500px;
+          border-radius: 50%;
+          border: 1px solid rgba(255,255,255,0.06);
+          top: -200px; left: -180px;
+          pointer-events: none;
+        }
+        .biz-hero::after {
+          content: '';
+          position: absolute;
+          width: 350px; height: 350px;
+          border-radius: 50%;
+          border: 1px solid rgba(255,255,255,0.06);
+          top: 40px; right: -120px;
+          pointer-events: none;
+        }
+        .biz-hero-glow {
+          position: absolute; inset: 0;
+          background: radial-gradient(circle at 70% 20%, rgba(16,185,129,0.15) 0%, transparent 60%);
+          pointer-events: none;
+        }
+        .biz-hero-inner {
+          max-width: 900px;
+          margin: 0 auto;
+          text-align: center;
+          position: relative;
+          z-index: 1;
+        }
 
         .biz-hero-badge {
           display: inline-flex; align-items: center; gap: 8px;
@@ -102,22 +147,42 @@ export default function Businesses() {
           margin: 0 auto 40px; line-height: 1.6; font-weight: 400;
         }
 
-        /* ── Search box ── */
-        .biz-search-container { max-width: 900px; margin: 0 auto; }
+        /* ── Search container ── */
+        .biz-search-container {
+          max-width: 900px;
+          margin: 0 auto;
+          position: relative;
+          z-index: 10;
+          width: 100%;
+        }
         .biz-search-box {
           background: white; border-radius: 12px; padding: 8px;
-          box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+          box-shadow: 0 20px 60px rgba(0,0,0,0.15);
           display: flex; gap: 8px; flex-wrap: wrap;
+          width: 100%;
         }
-        .biz-search-wrap { flex: 1; min-width: 250px; position: relative; }
-        .biz-search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
+        .biz-search-wrap {
+          flex: 1 1 200px;
+          position: relative;
+          min-width: 0;
+        }
+        .biz-search-icon {
+          position: absolute; left: 16px; top: 50%;
+          transform: translateY(-50%);
+          color: #94a3b8; pointer-events: none;
+          z-index: 1;
+        }
         .biz-search-input {
-          width: 100%; padding: 14px 16px 14px 48px;
+          width: 100%; padding: 13px 16px 13px 48px;
           font-size: 14px; font-family: 'Inter', sans-serif;
           background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
           outline: none; transition: all 0.2s; color: #0f172a;
         }
-        .biz-search-input:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.1); background: white; }
+        .biz-search-input:focus {
+          border-color: #10b981;
+          box-shadow: 0 0 0 3px rgba(16,185,129,0.1);
+          background: white;
+        }
         .biz-search-input::placeholder { color: #94a3b8; }
         .biz-search-clear {
           position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
@@ -128,13 +193,17 @@ export default function Businesses() {
         .biz-search-clear:hover { background: #e2e8f0; color: #0f172a; }
 
         /* ── Category dropdown ── */
-        .biz-dropdown-wrap { position: relative; min-width: 180px; }
+        .biz-dropdown-wrap {
+          position: relative;
+          flex: 0 0 auto;
+        }
         .biz-dropdown-btn {
           display: flex; align-items: center; justify-content: space-between; gap: 8px;
-          padding: 14px 16px; width: 100%;
+          padding: 13px 14px; width: 100%;
           font-size: 14px; font-weight: 600; font-family: 'Inter', sans-serif;
           background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
           color: #475569; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+          min-width: 0;
         }
         .biz-dropdown-btn:hover, .biz-dropdown-btn.open { border-color: #10b981; color: #10b981; background: #f0fdf4; }
         .biz-dropdown-btn.has-value { border-color: #6ee7b7; background: #d1fae5; color: #065f46; }
@@ -148,6 +217,7 @@ export default function Businesses() {
           overflow: hidden; max-height: 260px; overflow-y: auto;
           animation: dropIn 0.16s cubic-bezier(0.16,1,0.3,1);
           scrollbar-width: thin; scrollbar-color: #e2e8f0 transparent;
+          min-width: 180px;
         }
         .biz-dropdown-panel::-webkit-scrollbar { width: 4px; }
         .biz-dropdown-panel::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
@@ -165,38 +235,61 @@ export default function Businesses() {
         .biz-dd-check::after { content: ''; width: 4px; height: 8px; border: 2px solid white; border-top: none; border-left: none; transform: rotate(45deg) translateY(-1px); display: block; }
         .biz-dd-divider { height: 1px; background: #f1f5f9; margin: 4px 0; }
 
-        /* ── Filter button ── */
+        /* ── Filter / Clear buttons ── */
         .biz-filter-btn {
+          flex: 0 0 auto;
           display: flex; align-items: center; gap: 6px;
-          padding: 14px 16px; font-size: 14px; font-weight: 600;
+          padding: 13px 16px; font-size: 14px; font-weight: 600;
           color: #475569; background: #f8fafc; border: 1px solid #e2e8f0;
           border-radius: 8px; cursor: pointer; font-family: 'Inter', sans-serif;
-          transition: all 0.2s;
+          transition: all 0.2s; white-space: nowrap;
         }
         .biz-filter-btn:hover, .biz-filter-btn.active { border-color: #10b981; color: #10b981; background: #f0fdf4; }
+        .biz-clear-btn {
+          flex: 0 0 auto;
+          padding: 13px 18px; font-size: 14px; font-weight: 600;
+          color: #64748b; background: white; border: 1px solid #e2e8f0; border-radius: 8px;
+          cursor: pointer; display: flex; align-items: center; gap: 6px;
+          transition: background 0.2s, color 0.2s; font-family: 'Inter', sans-serif;
+          white-space: nowrap;
+        }
+        .biz-clear-btn:hover { background: #f8fafc; color: #475569; }
 
         /* ── Stats bar ── */
-        .biz-stats-bar { max-width: 1200px; margin: -24px auto 40px; padding: 0 24px; }
-        .biz-stats-card {
-          background: white; border: 1px solid #e2e8f0; border-radius: 8px;
-          padding: 16px 24px; display: flex; align-items: center; gap: 24px;
-          flex-wrap: wrap; font-size: 14px;
+        .biz-stats-bar {
+          max-width: 1200px;
+          margin: -24px auto 36px;
+          padding: 0 24px;
+          position: relative;
+          z-index: 5;
         }
-        .biz-stat-item { color: #64748b; }
-        .biz-stat-value { font-weight: 600; color: #0f172a; }
-        .biz-stat-divider { color: #cbd5e1; }
+        .biz-stats-card {
+          background: white; border: 1px solid #e2e8f0; border-radius: 10px;
+          padding: 14px 20px; display: flex; align-items: center; gap: 14px;
+          flex-wrap: wrap; font-size: 14px;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        }
+        .biz-stat-item { color: #64748b; white-space: nowrap; }
+        .biz-stat-value { font-weight: 700; color: #0f172a; }
+        .biz-stat-divider { color: #e2e8f0; }
         .biz-verified-badge {
           margin-left: auto; color: #10b981; font-weight: 600;
           display: flex; align-items: center; gap: 6px; font-size: 13px;
+          white-space: nowrap;
         }
 
         /* ══ BODY ══ */
         .biz-body { padding: 0 0 80px; }
-        .biz-container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+        .biz-container {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 0 24px;
+          width: 100%;
+        }
 
         .biz-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
           gap: 20px;
         }
 
@@ -206,6 +299,7 @@ export default function Businesses() {
           overflow: hidden; transition: all 0.2s; cursor: pointer;
           display: flex; flex-direction: column;
           animation: fadeUp 0.3s ease both;
+          min-width: 0;
         }
         .biz-card:hover { border-color: #10b981; box-shadow: 0 4px 20px rgba(16,185,129,0.1); transform: translateY(-2px); }
 
@@ -241,11 +335,12 @@ export default function Businesses() {
           font-size: 12px; font-weight: 600;
         }
 
-        .biz-card-body { padding: 20px 20px 16px; flex: 1; display: flex; flex-direction: column; }
+        .biz-card-body { padding: 20px 20px 16px; flex: 1; display: flex; flex-direction: column; min-width: 0; }
 
         .biz-card-name {
           font-size: 17px; font-weight: 700; color: #0f172a; margin-bottom: 10px;
           line-height: 1.35; transition: color 0.2s;
+          word-break: break-word;
         }
         .biz-card:hover .biz-card-name { color: #10b981; }
 
@@ -260,7 +355,7 @@ export default function Businesses() {
         .biz-card-meta { display: flex; flex-direction: column; gap: 7px; margin-bottom: 16px; }
         .biz-card-meta-item {
           display: flex; align-items: center; gap: 8px;
-          font-size: 13px; color: #64748b;
+          font-size: 13px; color: #64748b; min-width: 0;
         }
         .biz-card-meta-item svg { flex-shrink: 0; color: #10b981; }
         .biz-card-meta-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -271,6 +366,7 @@ export default function Businesses() {
           background: #0f172a; color: white; border: none; border-radius: 8px;
           font-size: 14px; font-weight: 600; cursor: pointer;
           transition: background 0.2s; font-family: 'Inter', sans-serif;
+          white-space: nowrap;
         }
         .biz-card-cta:hover { background: #10b981; }
         .biz-cta-arrow { transition: transform 0.2s; }
@@ -279,7 +375,7 @@ export default function Businesses() {
         /* ── Skeletons ── */
         .biz-loading-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
           gap: 20px;
         }
         .biz-skeleton { background: white; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
@@ -315,17 +411,48 @@ export default function Businesses() {
         }
         .biz-btn-action:hover { background: #059669; }
 
-        /* ── Responsive ── */
-        @media (max-width: 768px) {
-          .biz-hero { padding: 48px 16px 64px; }
+        /* ══ RESPONSIVE — tablet ══ */
+        @media (max-width: 900px) {
           .biz-hero-title { font-size: 32px; }
-          .biz-search-box { flex-direction: column; }
-          .biz-search-wrap { min-width: 100%; }
+          .biz-grid,
+          .biz-loading-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+        }
+
+        /* ══ RESPONSIVE — mobile ══ */
+        @media (max-width: 768px) {
+          .biz-hero { padding: 36px 16px 72px; }
+          .biz-hero-title { font-size: 26px; }
+          .biz-hero-subtitle { font-size: 15px; margin-bottom: 28px; }
+
+          .biz-search-container { padding: 0; }
+          .biz-search-box { flex-direction: column; gap: 8px; border-radius: 10px; }
+          .biz-search-wrap { flex: 1 1 auto; width: 100%; }
           .biz-dropdown-wrap { width: 100%; }
-          .biz-grid, .biz-loading-grid { grid-template-columns: 1fr; }
-          .biz-stats-card { font-size: 13px; gap: 16px; }
-          .biz-verified-badge { margin-left: 0; width: 100%; }
+          .biz-dropdown-btn { width: 100%; }
+          .biz-filter-btn { width: 100%; justify-content: center; }
+          .biz-clear-btn { width: 100%; justify-content: center; }
+
+          .biz-stats-bar { margin: -20px auto 28px; padding: 0 16px; }
+          .biz-stats-card { padding: 12px 16px; gap: 8px; font-size: 13px; flex-wrap: wrap; }
+          .biz-stat-divider { display: none; }
+          .biz-verified-badge { margin-left: 0; }
+
           .biz-container { padding: 0 16px; }
+          .biz-grid,
+          .biz-loading-grid { grid-template-columns: 1fr; gap: 14px; }
+
+          .biz-card-body { padding: 16px; }
+          .biz-card-name { font-size: 16px; }
+        }
+
+        /* ══ RESPONSIVE — small mobile ══ */
+        @media (max-width: 480px) {
+          .biz-hero-title { font-size: 22px; }
+          .biz-hero-badge { font-size: 12px; padding: 5px 12px; }
+          .biz-hero-subtitle { font-size: 14px; }
+          .biz-stats-card { flex-direction: column; align-items: flex-start; gap: 6px; }
+          .biz-verified-badge { width: auto; }
+          .biz-search-box { padding: 6px; }
         }
       `}</style>
 
@@ -335,6 +462,7 @@ export default function Businesses() {
 
         {/* ══ HERO ══ */}
         <div className="biz-hero">
+          <div className="biz-hero-glow" />
           <div className="biz-hero-inner">
             <div className="biz-hero-badge">
               <span className="biz-hero-badge-dot" />
@@ -401,9 +529,8 @@ export default function Businesses() {
 
               {(search || activeCategory !== "All") && (
                 <button
-                  className="biz-filter-btn"
+                  className="biz-clear-btn"
                   onClick={() => { setSearch(""); setActiveCategory("All"); }}
-                  style={{ color: "#64748b" }}
                 >
                   <X size={15} />
                   Clear
@@ -470,7 +597,7 @@ export default function Businesses() {
                     key={b._id}
                     className="biz-card"
                     style={{ animationDelay: `${idx * 0.05}s` }}
-                    onClick={() => goToDetail(b._id)}   // ← whole card is clickable
+                    onClick={() => goToDetail(b._id)}
                   >
                     {/* Image */}
                     <div className="biz-card-img-wrap">
@@ -527,7 +654,6 @@ export default function Businesses() {
                         )}
                       </div>
 
-                      {/* CTA — stopPropagation so it doesn't double-fire with card click */}
                       <button
                         className="biz-card-cta"
                         onClick={(e) => { e.stopPropagation(); goToDetail(b._id); }}

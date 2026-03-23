@@ -15,13 +15,12 @@ export default function BusinessDetail() {
   const [business, setBusiness] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [lightboxIdx, setLightboxIdx] = useState(null); // null = closed
+  const [lightboxIdx, setLightboxIdx] = useState(null);
 
   useEffect(() => {
     const fetchBusiness = async () => {
       try {
         setLoading(true);
-        // Try fetching all approved businesses and find by id
         const res = await axios.get(`${API_BASE_URL}/api/profile/business/approved`);
         const found = res.data.find(b => b._id === id);
         if (found) {
@@ -39,7 +38,6 @@ export default function BusinessDetail() {
     fetchBusiness();
   }, [id]);
 
-  // Keyboard nav for lightbox
   useEffect(() => {
     if (lightboxIdx === null) return;
     const handler = (e) => {
@@ -60,36 +58,66 @@ export default function BusinessDetail() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
+        /* ── Reset & Base ── */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f8fafc; color: #0f172a; }
+        html { overflow-x: hidden; }
+        body {
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          background: #f8fafc;
+          color: #0f172a;
+          overflow-x: hidden;
+        }
 
-        @keyframes fadeUp  { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-        @keyframes pulse   { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
-        @keyframes spin    { from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
-        @keyframes lbIn    { from{opacity:0;} to{opacity:1;} }
-        @keyframes shimmer { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+        /* ── Animations ── */
+        @keyframes fadeUp  { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse   { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        @keyframes spin    { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes lbIn    { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-        .bd-page { min-height: 100vh; background: #f8fafc; }
+        .bd-page { min-height: 100vh; background: #f8fafc; width: 100%; overflow-x: hidden; }
 
         /* ══ HERO BANNER ══ */
         .bd-hero {
-          background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
-          padding: 48px 24px 80px;
-          position: relative; overflow: hidden;
+          background: linear-gradient(160deg, #052e16 0%, #14532d 50%, #166534 100%);
+          padding: 48px 24px 88px;
+          position: relative;
+          overflow: hidden;
+          width: 100%;
+        }
+        .bd-hero::before {
+          content: '';
+          position: absolute;
+          width: 500px; height: 500px;
+          border-radius: 50%;
+          border: 1px solid rgba(255,255,255,0.06);
+          top: -200px; left: -180px;
+          pointer-events: none;
         }
         .bd-hero::after {
-          content:''; position:absolute; inset:0; pointer-events:none;
-          background: radial-gradient(ellipse at 70% 50%, rgba(16,185,129,0.08) 0%, transparent 65%);
+          content: '';
+          position: absolute;
+          width: 350px; height: 350px;
+          border-radius: 50%;
+          border: 1px solid rgba(255,255,255,0.06);
+          top: 40px; right: -120px;
+          pointer-events: none;
+        }
+        .bd-hero-glow {
+          position: absolute; inset: 0;
+          background: radial-gradient(circle at 70% 20%, rgba(16,185,129,0.15) 0%, transparent 60%);
+          pointer-events: none;
         }
 
         .bd-back-btn {
           display: inline-flex; align-items: center; gap: 6px;
-          color: #64748b; font-size: 13px; font-weight: 500;
+          color: #86efac; font-size: 13px; font-weight: 500;
           background: none; border: none; cursor: pointer;
           font-family: 'Inter', sans-serif; margin-bottom: 28px;
           transition: color 0.15s; padding: 0;
+          position: relative; z-index: 1;
         }
-        .bd-back-btn:hover { color: #94a3b8; }
+        .bd-back-btn:hover { color: #ffffff; }
 
         .bd-hero-inner {
           max-width: 900px; margin: 0 auto;
@@ -101,13 +129,14 @@ export default function BusinessDetail() {
         /* Logo / avatar */
         .bd-logo-wrap {
           width: 88px; height: 88px; border-radius: 18px;
-          background: white; border: 2px solid rgba(255,255,255,0.12);
+          background: rgba(255,255,255,0.08);
+          border: 2px solid rgba(16,185,129,0.3);
           display: flex; align-items: center; justify-content: center;
           flex-shrink: 0; overflow: hidden;
-          box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+          box-shadow: 0 8px 24px rgba(0,0,0,0.25);
         }
         .bd-logo-wrap img { width: 100%; height: 100%; object-fit: cover; }
-        .bd-logo-fallback { color: #94a3b8; }
+        .bd-logo-fallback { color: #86efac; }
 
         .bd-hero-text { flex: 1; min-width: 200px; }
         .bd-hero-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
@@ -117,12 +146,21 @@ export default function BusinessDetail() {
           padding: 4px 11px; border-radius: 6px;
           font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
         }
-        .bd-tag-verified { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.25); }
-        .bd-tag-cat      { background: rgba(255,255,255,0.08); color: #94a3b8; border: 1px solid rgba(255,255,255,0.1); }
+        .bd-tag-verified {
+          background: rgba(16,185,129,0.15);
+          color: #10b981;
+          border: 1px solid rgba(16,185,129,0.3);
+        }
+        .bd-tag-cat {
+          background: rgba(255,255,255,0.08);
+          color: #94a3b8;
+          border: 1px solid rgba(255,255,255,0.12);
+        }
 
         .bd-hero-name {
           font-size: 32px; font-weight: 800; color: white;
           margin-bottom: 10px; line-height: 1.15; letter-spacing: -0.5px;
+          word-break: break-word;
         }
 
         .bd-hero-meta { display: flex; gap: 20px; flex-wrap: wrap; }
@@ -148,6 +186,7 @@ export default function BusinessDetail() {
           background: white; border: 1px solid #e2e8f0;
           border-radius: 12px; overflow: hidden; margin-bottom: 20px;
           animation: fadeUp 0.4s ease both;
+          min-width: 0;
         }
         .bd-section:nth-child(1) { animation-delay: 0.05s; }
         .bd-section:nth-child(2) { animation-delay: 0.10s; }
@@ -157,7 +196,8 @@ export default function BusinessDetail() {
         .bd-section-header {
           display: flex; align-items: center; gap: 10px;
           padding: 14px 20px;
-          background: #f8fafc; border-bottom: 1px solid #e2e8f0;
+          background: #f0fdf4;
+          border-bottom: 1px solid #d1fae5;
           border-left: 3px solid #10b981;
         }
         .bd-section-icon {
@@ -165,14 +205,14 @@ export default function BusinessDetail() {
           background: #d1fae5; display: flex; align-items: center; justify-content: center;
           flex-shrink: 0;
         }
-        .bd-section-title { font-size: 14px; font-weight: 700; color: #0f172a; }
+        .bd-section-title { font-size: 14px; font-weight: 700; color: #065f46; }
 
         .bd-section-body { padding: 20px; }
 
         /* Description */
         .bd-desc {
           font-size: 14.5px; color: #334155; line-height: 1.75;
-          font-weight: 400; white-space: pre-wrap;
+          font-weight: 400; white-space: pre-wrap; word-break: break-word;
         }
 
         /* Info grid */
@@ -186,7 +226,7 @@ export default function BusinessDetail() {
         }
         .bd-info-item:last-child { border-bottom: none; }
         .bd-info-label {
-          font-size: 11px; font-weight: 700; color: #94a3b8;
+          font-size: 11px; font-weight: 700; color: #10b981;
           text-transform: uppercase; letter-spacing: 0.5px;
           margin-bottom: 5px; display: flex; align-items: center; gap: 4px;
         }
@@ -212,11 +252,32 @@ export default function BusinessDetail() {
           border: 1px solid #e2e8f0; cursor: pointer;
           transition: all 0.2s;
         }
-        .bd-gallery-thumb:hover { transform: scale(1.03); box-shadow: 0 4px 16px rgba(0,0,0,0.12); border-color: #10b981; }
+        .bd-gallery-thumb:hover {
+          transform: scale(1.03);
+          box-shadow: 0 4px 16px rgba(16,185,129,0.15);
+          border-color: #10b981;
+        }
 
         /* ══ SIDEBAR ══ */
-        .bd-sidebar { position: sticky; top: 96px; }
+        .bd-sidebar { position: sticky; top: 96px; min-width: 0; }
 
+        /* Status card */
+        .bd-status-card {
+          background: #f0fdf4;
+          border: 1px solid #d1fae5;
+          border-radius: 12px;
+          padding: 16px; margin-bottom: 16px;
+          animation: fadeUp 0.4s ease 0.05s both;
+        }
+        .bd-status-row { display: flex; align-items: center; gap: 10px; }
+        .bd-status-dot {
+          width: 8px; height: 8px; border-radius: 50%;
+          background: #10b981; animation: pulse 2s infinite; flex-shrink: 0;
+        }
+        .bd-status-label { font-size: 13px; font-weight: 700; color: #065f46; }
+        .bd-status-sub { font-size: 12px; color: #16a34a; margin-top: 4px; margin-left: 18px; }
+
+        /* Contact card */
         .bd-contact-card {
           background: white; border: 1px solid #e2e8f0; border-radius: 12px;
           overflow: hidden; margin-bottom: 16px;
@@ -224,7 +285,7 @@ export default function BusinessDetail() {
         }
         .bd-contact-header {
           padding: 14px 18px;
-          background: linear-gradient(135deg, #0f172a, #1e293b);
+          background: linear-gradient(160deg, #052e16 0%, #14532d 100%);
           display: flex; align-items: center; gap: 10px;
         }
         .bd-contact-header-title { font-size: 14px; font-weight: 700; color: white; }
@@ -234,6 +295,7 @@ export default function BusinessDetail() {
         .bd-contact-item {
           display: flex; align-items: center; gap: 10px;
           font-size: 13.5px; color: #374151; font-weight: 500;
+          min-width: 0;
         }
         .bd-contact-icon {
           width: 34px; height: 34px; border-radius: 9px;
@@ -241,21 +303,13 @@ export default function BusinessDetail() {
           display: flex; align-items: center; justify-content: center;
           flex-shrink: 0; color: #10b981;
         }
+        .bd-contact-item span {
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+        }
         .bd-contact-item a { color: #374151; text-decoration: none; }
         .bd-contact-item a:hover { color: #10b981; }
 
-        /* Status card */
-        .bd-status-card {
-          background: white; border: 1px solid #e2e8f0; border-radius: 12px;
-          padding: 16px; margin-bottom: 16px;
-          animation: fadeUp 0.4s ease 0.15s both;
-        }
-        .bd-status-row { display: flex; align-items: center; gap: 10px; }
-        .bd-status-dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; animation: pulse 2s infinite; flex-shrink: 0; }
-        .bd-status-label { font-size: 13px; font-weight: 700; color: #065f46; }
-        .bd-status-sub { font-size: 12px; color: #64748b; margin-top: 4px; margin-left: 18px; }
-
-        /* Jobs CTA */
+        /* CTA buttons */
         .bd-jobs-btn {
           width: 100%; padding: 13px 16px;
           background: linear-gradient(135deg, #16a34a, #10b981);
@@ -266,7 +320,11 @@ export default function BusinessDetail() {
           box-shadow: 0 3px 12px rgba(16,185,129,0.3);
           margin-bottom: 10px;
         }
-        .bd-jobs-btn:hover { background: linear-gradient(135deg, #15803d, #059669); box-shadow: 0 5px 18px rgba(16,185,129,0.4); transform: translateY(-1px); }
+        .bd-jobs-btn:hover {
+          background: linear-gradient(135deg, #15803d, #059669);
+          box-shadow: 0 5px 18px rgba(16,185,129,0.4);
+          transform: translateY(-1px);
+        }
 
         .bd-back-link {
           width: 100%; padding: 11px 16px;
@@ -276,7 +334,7 @@ export default function BusinessDetail() {
           transition: all 0.18s; font-family: 'Inter', sans-serif;
           display: flex; align-items: center; justify-content: center; gap: 8px;
         }
-        .bd-back-link:hover { border-color: #94a3b8; background: #f8fafc; color: #0f172a; }
+        .bd-back-link:hover { border-color: #10b981; background: #f0fdf4; color: #065f46; }
 
         /* ══ LIGHTBOX ══ */
         .bd-lightbox {
@@ -305,7 +363,7 @@ export default function BusinessDetail() {
         }
         .bd-lb-prev { left: 20px; }
         .bd-lb-next { right: 20px; }
-        .bd-lb-prev:hover, .bd-lb-next:hover { background: rgba(255,255,255,0.2); }
+        .bd-lb-prev:hover, .bd-lb-next:hover { background: rgba(16,185,129,0.3); }
         .bd-lb-counter {
           position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
           color: rgba(255,255,255,0.6); font-size: 13px; font-weight: 500;
@@ -319,28 +377,61 @@ export default function BusinessDetail() {
           text-align: center;
         }
         .bd-state-icon {
-          width: 64px; height: 64px; background: #f1f5f9; border-radius: 50%;
+          width: 64px; height: 64px; background: #f0fdf4;
+          border: 1px solid #d1fae5;
+          border-radius: 50%;
           display: flex; align-items: center; justify-content: center; margin: 0 auto;
         }
         .bd-state-title { font-size: 20px; font-weight: 600; color: #0f172a; }
         .bd-state-desc  { font-size: 14px; color: #64748b; }
         .bd-btn-back {
           display: inline-flex; align-items: center; gap: 8px;
-          padding: 12px 24px; background: #10b981; color: white;
+          padding: 12px 24px;
+          background: linear-gradient(135deg, #16a34a, #10b981);
+          color: white;
           border: none; border-radius: 8px; font-size: 14px; font-weight: 600;
-          cursor: pointer; font-family: 'Inter', sans-serif; transition: background 0.2s;
+          cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.2s;
+          box-shadow: 0 3px 12px rgba(16,185,129,0.3);
         }
-        .bd-btn-back:hover { background: #059669; }
+        .bd-btn-back:hover { background: linear-gradient(135deg, #15803d, #059669); }
         .spinner { animation: spin 1s linear infinite; }
 
-        /* ══ RESPONSIVE ══ */
+        /* ══ RESPONSIVE — tablet ══ */
+        @media (max-width: 900px) {
+          .bd-hero-name { font-size: 26px; }
+          .bd-main { grid-template-columns: 1fr 240px; }
+        }
+
+        /* ══ RESPONSIVE — mobile ══ */
         @media (max-width: 768px) {
-          .bd-main { grid-template-columns: 1fr; margin-top: -24px; padding: 0 16px 60px; }
-          .bd-sidebar { position: static; }
-          .bd-hero { padding: 36px 16px 60px; }
-          .bd-hero-name { font-size: 24px; }
+          .bd-hero { padding: 36px 16px 72px; }
+          .bd-hero-name { font-size: 22px; }
+          .bd-hero-meta { gap: 12px; }
+          .bd-hero-meta-item { font-size: 13px; }
+
+          .bd-main {
+            grid-template-columns: 1fr;
+            margin-top: -24px;
+            padding: 0 16px 60px;
+            gap: 0;
+          }
+          .bd-sidebar { position: static; margin-top: 0; }
+
           .bd-gallery-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
           .bd-info-grid { grid-template-columns: 1fr; }
+
+          .bd-logo-wrap { width: 72px; height: 72px; border-radius: 14px; }
+        }
+
+        /* ══ RESPONSIVE — small mobile ══ */
+        @media (max-width: 480px) {
+          .bd-hero { padding: 28px 16px 64px; }
+          .bd-hero-name { font-size: 20px; }
+          .bd-hero-inner { gap: 16px; }
+          .bd-logo-wrap { width: 60px; height: 60px; border-radius: 12px; }
+          .bd-section-body { padding: 16px; }
+          .bd-info-item { padding: 12px 16px; }
+          .bd-gallery-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
         }
       `}</style>
 
@@ -359,7 +450,7 @@ export default function BusinessDetail() {
         {/* ── Error ── */}
         {!loading && error && (
           <div className="bd-center">
-            <div className="bd-state-icon"><Building2 size={32} color="#cbd5e1" /></div>
+            <div className="bd-state-icon"><Building2 size={32} color="#10b981" /></div>
             <h3 className="bd-state-title">{error}</h3>
             <p className="bd-state-desc">The business you're looking for may not exist.</p>
             <button className="bd-btn-back" onClick={() => navigate("/businesses")}>
@@ -373,7 +464,8 @@ export default function BusinessDetail() {
           <>
             {/* HERO */}
             <div className="bd-hero">
-              <div style={{ maxWidth: 900, margin: "0 auto" }}>
+              <div className="bd-hero-glow" />
+              <div style={{ maxWidth: 900, margin: "0 auto", position: "relative", zIndex: 1 }}>
                 <button className="bd-back-btn" onClick={() => navigate("/businesses")}>
                   <ArrowLeft size={14} /> Back to Companies
                 </button>
