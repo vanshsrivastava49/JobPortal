@@ -479,10 +479,10 @@ const AdminDashboard = () => {
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
                   {[
-                    { label: "Job Seekers",     value: stats.jobseekers, bg: "#eff6ff", border: "#bfdbfe", text: "#1e40af", dark: "#1e3a8a", icon: "🎯" },
-                    { label: "Recruiters",      value: stats.recruiters, bg: "#fef3c7", border: "#fde047", text: "#92400e", dark: "#78350f", icon: "💼" },
-                    { label: "Business Owners", value: stats.businesses, bg: "#d1fae5", border: "#6ee7b7", text: "#065f46", dark: "#064e3b", icon: "🏢" },
-                    { label: "Total Platform",  value: stats.totalUsers, bg: "#f3e8ff", border: "#e9d5ff", text: "#6b21a8", dark: "#581c87", icon: "📊" },
+                    { label: "Job Seekers",     value: stats.jobseekers, bg: "#eff6ff", border: "#bfdbfe", text: "#1e40af", dark: "#1e3a8a" },
+                    { label: "Recruiters",      value: stats.recruiters, bg: "#fef3c7", border: "#fde047", text: "#92400e", dark: "#78350f" },
+                    { label: "Business Owners", value: stats.businesses, bg: "#d1fae5", border: "#6ee7b7", text: "#065f46", dark: "#064e3b" },
+                    { label: "Total Platform",  value: stats.totalUsers, bg: "#f3e8ff", border: "#e9d5ff", text: "#6b21a8", dark: "#581c87" },
                   ].map((item, i) => (
                     <div key={i} style={{ padding: "24px", background: item.bg, borderRadius: "12px", border: `1px solid ${item.border}` }}>
                       <div style={{ fontSize: "28px", marginBottom: "8px" }}>{item.icon}</div>
@@ -516,10 +516,10 @@ const AdminDashboard = () => {
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
                   {[
-                    { label: "Live Jobs",               value: stats.liveJobs,           bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d", icon: "✅" },
-                    { label: "Pending Recruiter Verif", value: stats.pendingRecruiters,  bg: "#fefce8", border: "#fef08a", text: "#a16207", icon: "🛡️" },
-                    { label: "Approved Businesses",     value: stats.approvedBusinesses, bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d", icon: "🏆" },
-                    { label: "Pending Businesses",      value: stats.pendingBusinesses,  bg: "#fef2f2", border: "#fecaca", text: "#dc2626", icon: "🔔" },
+                    { label: "Live Jobs",               value: stats.liveJobs,           bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d" },
+                    { label: "Pending Recruiter Verif", value: stats.pendingRecruiters,  bg: "#fefce8", border: "#fef08a", text: "#a16207" },
+                    { label: "Approved Businesses",     value: stats.approvedBusinesses, bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d" },
+                    { label: "Pending Businesses",      value: stats.pendingBusinesses,  bg: "#fef2f2", border: "#fecaca", text: "#dc2626" },
                   ].map((item, i) => (
                     <div key={i} style={{ padding: "20px", background: item.bg, borderRadius: "12px", border: `1px solid ${item.border}` }}>
                       <div style={{ fontSize: "22px", marginBottom: "6px" }}>{item.icon}</div>
