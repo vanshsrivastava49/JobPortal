@@ -16,7 +16,7 @@ const ROLE_LABELS = {
   admin:        "Admin",
 };
 
-/* ─── Role Dropdown (Login / Signup) ─── */
+/* ─── Role Dropdown ─── */
 const RoleDropdown = ({ type, onSelect, onClose, wrapperRef }) => {
   useEffect(() => {
     const handler = (e) => {
@@ -48,7 +48,7 @@ const RoleDropdown = ({ type, onSelect, onClose, wrapperRef }) => {
       </div>
       <div className="rd-footer">
         {type === "login"
-          ? <>No account? <span className="rd-flink" onMouseDown={(e) => { e.preventDefault(); onClose(); }}>Sign up free →</span></>
+          ? <>No account? <span className="rd-flink" onMouseDown={(e) => { e.preventDefault(); onClose(); }}>Sign up →</span></>
           : <>Have an account? <span className="rd-flink" onMouseDown={(e) => { e.preventDefault(); onClose(); }}>Sign in →</span></>
         }
       </div>
@@ -58,6 +58,8 @@ const RoleDropdown = ({ type, onSelect, onClose, wrapperRef }) => {
 
 /* ─── User Menu Dropdown ─── */
 const UserMenu = ({ user, roleLabel, dashboardRoute, onProfile, onLogout, onClose, wrapperRef }) => {
+  const navigate = useNavigate();
+
   useEffect(() => {
     const handler = (e) => {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target)) onClose();
@@ -68,11 +70,8 @@ const UserMenu = ({ user, roleLabel, dashboardRoute, onProfile, onLogout, onClos
 
   return (
     <div className="um-panel">
-      {/* User info header */}
       <div className="um-header">
-        <div className="um-avatar-lg">
-          {user?.name?.charAt(0).toUpperCase() || "U"}
-        </div>
+        <div className="um-avatar-lg">{user?.name?.charAt(0).toUpperCase() || "U"}</div>
         <div className="um-info">
           <div className="um-name">{user?.name || "User"}</div>
           <div className="um-email">{user?.email}</div>
@@ -82,8 +81,8 @@ const UserMenu = ({ user, roleLabel, dashboardRoute, onProfile, onLogout, onClos
 
       <div className="um-divider" />
 
-      {/* Menu items */}
       <div className="um-list">
+        {/* My Profile */}
         <div className="um-item" onMouseDown={(e) => { e.preventDefault(); onProfile(); }}>
           <div className="um-item-icon">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -97,7 +96,8 @@ const UserMenu = ({ user, roleLabel, dashboardRoute, onProfile, onLogout, onClos
           </div>
         </div>
 
-        <div className="um-item" onMouseDown={(e) => { e.preventDefault(); window.location.href = dashboardRoute; }}>
+        {/* Dashboard */}
+        <div className="um-item" onMouseDown={(e) => { e.preventDefault(); onClose(); navigate(dashboardRoute); }}>
           <div className="um-item-icon">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
@@ -113,7 +113,6 @@ const UserMenu = ({ user, roleLabel, dashboardRoute, onProfile, onLogout, onClos
 
       <div className="um-divider" />
 
-      {/* Logout */}
       <div className="um-list">
         <div className="um-item um-item-danger" onMouseDown={(e) => { e.preventDefault(); onLogout(); }}>
           <div className="um-item-icon">
@@ -141,8 +140,8 @@ const Navbar = ({ title }) => {
   const [signupDropdown, setSignupDropdown] = useState(false);
   const [userMenuOpen,   setUserMenuOpen]   = useState(false);
 
-  const loginRef   = useRef(null);
-  const signupRef  = useRef(null);
+  const loginRef    = useRef(null);
+  const signupRef   = useRef(null);
   const userMenuRef = useRef(null);
 
   const handleLogout = () => { setUserMenuOpen(false); logout(); navigate("/"); };
@@ -161,15 +160,15 @@ const Navbar = ({ title }) => {
     user?.role === "business"  ? "/business/dashboard" :
     "/dashboard";
 
-  const handleProfile = () => {
-    setUserMenuOpen(false);
-    navigate("/profile");
-  };
+  // Job seekers: Jobs only. Recruiters / Business / Admin: Jobs + Companies
+  const isJobSeeker = user?.role === "jobseeker" || user?.role === "job-seeker";
+  const showCompanies = !isJobSeeker;
+
+  const handleProfile = () => { setUserMenuOpen(false); navigate("/profile"); };
 
   return (
     <>
       <style>{`
-        /* ══ SHELL ══ */
         .navbar-fixed {
           position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
           background: white; border-bottom: 1px solid #e5e7eb;
@@ -182,7 +181,6 @@ const Navbar = ({ title }) => {
           height: 82px; position: relative;
         }
 
-        /* ── LEFT ── */
         .navbar-left { display: flex; align-items: center; gap: 16px; }
         .navbar-logo { display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; cursor: pointer; min-width: 120px; }
         .logo-image { height: 52px; width: auto; object-fit: contain; }
@@ -191,15 +189,12 @@ const Navbar = ({ title }) => {
         .logo-green { color: #16a34a; }
         .logo-black { color: #111827; }
 
-        /* ── CENTER ── */
         .navbar-center {
           position: absolute; left: 50%; transform: translateX(-50%);
-          display: flex; align-items: center;
-          pointer-events: none; z-index: 0;
+          display: flex; align-items: center; pointer-events: none; z-index: 0;
         }
         .worker-image { height: 75px; width: auto; object-fit: contain; border-radius: 8px; }
 
-        /* ── RIGHT ── */
         .navbar-right { display: flex; align-items: center; gap: 8px; position: relative; z-index: 1; }
 
         .nav-links {
@@ -216,9 +211,7 @@ const Navbar = ({ title }) => {
 
         .nav-sep { width: 1px; height: 22px; background: #e5e7eb; flex-shrink: 0; margin: 0 2px; }
 
-        /* ── User chip with dropdown ── */
         .user-menu-wrap { position: relative; }
-
         .user-chip {
           display: flex; align-items: center; gap: 9px;
           padding: 5px 12px 5px 5px;
@@ -227,7 +220,6 @@ const Navbar = ({ title }) => {
         }
         .user-chip:hover { border-color: #10b981; background: #f0fdf4; }
         .user-chip.open  { border-color: #10b981; background: #f0fdf4; box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }
-
         .user-avatar {
           width: 32px; height: 32px;
           background: linear-gradient(135deg, #10b981, #059669);
@@ -238,31 +230,20 @@ const Navbar = ({ title }) => {
         .user-details { display: flex; flex-direction: column; gap: 1px; }
         .user-name-txt  { font-size: 13px; font-weight: 700; color: #111827; line-height: 1.1; }
         .user-role-txt  { font-size: 10.5px; color: #9ca3af; font-weight: 500; }
-        .user-chip-caret {
-          font-size: 9px; color: #9ca3af; transition: transform 0.2s;
-          display: inline-block; line-height: 1; margin-left: 2px;
-        }
+        .user-chip-caret { font-size: 9px; color: #9ca3af; transition: transform 0.2s; display: inline-block; line-height: 1; margin-left: 2px; }
         .user-chip-caret.open { transform: rotate(180deg); color: #10b981; }
 
-        /* ══ USER MENU PANEL ══ */
+        /* USER MENU */
         .um-panel {
           position: absolute; top: calc(100% + 10px); right: 0; z-index: 99999;
           width: 272px; background: white;
           border: 1px solid #f0f0f0; border-radius: 16px;
           box-shadow: 0 20px 60px rgba(0,0,0,0.13), 0 4px 20px rgba(0,0,0,0.06);
-          overflow: hidden;
-          animation: umIn 0.18s cubic-bezier(0.16,1,0.3,1);
+          overflow: hidden; animation: umIn 0.18s cubic-bezier(0.16,1,0.3,1);
         }
-        @keyframes umIn {
-          from { opacity: 0; transform: translateY(-8px) scale(0.97); }
-          to   { opacity: 1; transform: translateY(0)  scale(1); }
-        }
+        @keyframes umIn { from { opacity: 0; transform: translateY(-8px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
-        .um-header {
-          display: flex; align-items: center; gap: 12px;
-          padding: 16px 16px 14px;
-          background: linear-gradient(to bottom, #fafafa, white);
-        }
+        .um-header { display: flex; align-items: center; gap: 12px; padding: 16px 16px 14px; background: linear-gradient(to bottom, #fafafa, white); }
         .um-avatar-lg {
           width: 44px; height: 44px; border-radius: 12px;
           background: linear-gradient(135deg, #10b981, #059669);
@@ -273,29 +254,20 @@ const Navbar = ({ title }) => {
         .um-info { flex: 1; min-width: 0; }
         .um-name  { font-size: 14px; font-weight: 700; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .um-email { font-size: 11.5px; color: #9ca3af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
-        .um-role-badge {
-          display: inline-block; margin-top: 5px;
-          padding: 2px 9px; border-radius: 20px;
-          font-size: 10.5px; font-weight: 700;
-          background: #d1fae5; color: #065f46;
-          letter-spacing: 0.3px;
-        }
+        .um-role-badge { display: inline-block; margin-top: 5px; padding: 2px 9px; border-radius: 20px; font-size: 10.5px; font-weight: 700; background: #d1fae5; color: #065f46; letter-spacing: 0.3px; }
 
         .um-divider { height: 1px; background: #f3f4f6; margin: 0; }
-
         .um-list { padding: 6px; }
         .um-item {
           display: flex; align-items: center; gap: 11px;
-          padding: 10px 10px; border-radius: 10px;
+          padding: 10px; border-radius: 10px;
           cursor: pointer; transition: background 0.13s; user-select: none;
         }
         .um-item:hover { background: #f8fafc; }
         .um-item:hover .um-item-icon { background: #f0fdf4; color: #10b981; }
-
         .um-item-danger:hover { background: #fef2f2; }
         .um-item-danger:hover .um-item-icon { background: #fef2f2; color: #dc2626; }
         .um-item-danger:hover .um-item-label { color: #dc2626; }
-
         .um-item-icon {
           width: 34px; height: 34px; border-radius: 9px;
           background: #f8fafc; border: 1px solid #f0f0f0;
@@ -306,22 +278,17 @@ const Navbar = ({ title }) => {
         .um-item-label { font-size: 13.5px; font-weight: 700; color: #111827; margin-bottom: 1px; transition: color 0.13s; }
         .um-item-desc  { font-size: 11.5px; color: #9ca3af; font-weight: 500; }
 
-        /* ══ ROLE DROPDOWN ══ */
+        /* ROLE DROPDOWN */
         .auth-btn-group { display: flex; align-items: center; gap: 8px; }
         .dropdown-wrapper { position: relative; }
-
         .rd-panel {
           position: absolute; top: calc(100% + 10px); right: 0; z-index: 99999;
           width: 288px; background: white;
           border: 1px solid #f0f0f0; border-radius: 16px;
           box-shadow: 0 20px 60px rgba(0,0,0,0.13), 0 4px 20px rgba(0,0,0,0.06);
-          overflow: hidden;
-          animation: rdIn 0.18s cubic-bezier(0.16,1,0.3,1);
+          overflow: hidden; animation: rdIn 0.18s cubic-bezier(0.16,1,0.3,1);
         }
-        @keyframes rdIn {
-          from { opacity: 0; transform: translateY(-8px) scale(0.97); }
-          to   { opacity: 1; transform: translateY(0) scale(1); }
-        }
+        @keyframes rdIn { from { opacity: 0; transform: translateY(-8px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
         .rd-header { padding: 15px 18px 11px; border-bottom: 1px solid #f3f4f6; background: linear-gradient(to bottom, #fafafa, white); }
         .rd-title  { display: block; font-size: 15px; font-weight: 800; color: #111827; letter-spacing: -0.2px; }
         .rd-sub    { display: block; font-size: 12px; color: #9ca3af; font-weight: 500; margin-top: 2px; }
@@ -337,7 +304,6 @@ const Navbar = ({ title }) => {
         .rd-flink   { color: #10b981; font-weight: 700; cursor: pointer; }
         .rd-flink:hover { color: #059669; }
 
-        /* ── Buttons ── */
         .nav-btn {
           display: inline-flex; align-items: center; gap: 7px;
           padding: 9px 18px; font-size: 13.5px; font-weight: 700;
@@ -350,14 +316,12 @@ const Navbar = ({ title }) => {
         .btn-login.active { border-color: #10b981; color: #15803d; background: #f0fdf4; }
         .btn-signup { background: linear-gradient(135deg, #16a34a 0%, #10b981 100%); color: white; border: none; box-shadow: 0 3px 12px rgba(16,185,129,0.35); }
         .btn-signup:hover  { background: linear-gradient(135deg, #15803d 0%, #059669 100%); box-shadow: 0 5px 18px rgba(16,185,129,0.45); transform: translateY(-1px); }
-        .btn-signup:active { transform: translateY(0); }
         .btn-signup.active { background: linear-gradient(135deg, #15803d 0%, #059669 100%); transform: translateY(-1px); }
         .btn-chevron { font-size: 9px; transition: transform 0.2s; display: inline-block; opacity: 0.6; line-height: 1; }
         .btn-chevron.open { transform: rotate(180deg); opacity: 1; }
 
         .banner-ad-image { height: 0; width: auto; object-fit: contain; }
 
-        /* ── Responsive ── */
         @media (max-width: 1024px) {
           .navbar-container { padding: 0 24px; }
           .navbar-center { position: static; transform: none; }
@@ -381,7 +345,6 @@ const Navbar = ({ title }) => {
       <nav className="navbar-fixed">
         <div className="navbar-container">
 
-          {/* LEFT */}
           <div className="navbar-left">
             <Link to="/" className="navbar-logo">
               <img src="/solar-is-my-passion-logo.jpeg" alt="GreenJobs" className="logo-image" onError={(e) => { e.target.style.display = "none"; }} />
@@ -394,23 +357,23 @@ const Navbar = ({ title }) => {
             </Link>
           </div>
 
-          {/* CENTER */}
           <div className="navbar-center">
             <img src="/worker-navbar.jpeg" alt="Worker" className="worker-image" onError={(e) => { e.target.style.display = "none"; }} />
           </div>
 
-          {/* RIGHT */}
           <div className="navbar-right">
             {isAuthenticated ? (
               <>
+                {/* Job Seeker: Jobs only | Recruiter/Business: Jobs + Companies */}
                 <div className="nav-links">
                   <Link to="/jobs" className="nav-link">Jobs</Link>
-                  <Link to={dashboardRoute} className="nav-link">Dashboard</Link>
+                  {showCompanies && (
+                    <Link to="/businesses" className="nav-link">Companies</Link>
+                  )}
                 </div>
 
                 <div className="nav-sep" />
 
-                {/* ── User chip → opens dropdown ── */}
                 <div className="user-menu-wrap" ref={userMenuRef}>
                   <div
                     className={`user-chip${userMenuOpen ? " open" : ""}`}
@@ -471,7 +434,7 @@ const Navbar = ({ title }) => {
                       className={`nav-btn btn-signup${signupDropdown ? " active" : ""}`}
                       onClick={() => { setSignupDropdown((v) => !v); setLoginDropdown(false); }}
                     >
-                      Sign Up Free
+                      Sign Up
                       <span className={`btn-chevron${signupDropdown ? " open" : ""}`} style={{ color: "rgba(255,255,255,0.75)" }}>▼</span>
                     </button>
                     {signupDropdown && (

@@ -39,60 +39,58 @@ const BusinessLogin = () => {
   };
   const otpString = otp.join("");
 
-const handleSendOtp = async (e) => {
-  e?.preventDefault();
-  if (!email) { toast.error("Enter your email"); return; }
-  if (!captchaToken && import.meta.env.VITE_RECAPTCHA_SITE_KEY) { toast.error("Complete the captcha"); return; }
-  setLoading(true);
-  try {
-    const res = await sendOTP(email, "login", captchaToken || "dev", "business");
-    if (res.success) { toast.success("OTP sent!"); setStep("verify"); }
-    else toast.error(res.message || "Failed to send OTP");
-  } catch (err) {
-    toast.error(err.response?.data?.message || "Failed to send OTP");
-    if (err.response?.data?.correctPortal) {
-      setTimeout(() => navigate(err.response.data.correctPortal), 1500);
-    }
-  } finally {
-    setLoading(false);
-  }
-};
+  const handleSendOtp = async (e) => {
+    e?.preventDefault();
+    if (!email) { toast.error("Enter your email"); return; }
+    if (!captchaToken && import.meta.env.VITE_RECAPTCHA_SITE_KEY) { toast.error("Complete the captcha"); return; }
+    setLoading(true);
+    try {
+      const res = await sendOTP(email, "login", captchaToken || "dev", "business");
+      if (res.success) { toast.success("OTP sent!"); setStep("verify"); }
+      else toast.error(res.message || "Failed to send OTP");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to send OTP");
+      if (err.response?.data?.correctPortal) setTimeout(() => navigate(err.response.data.correctPortal), 1500);
+    } finally { setLoading(false); }
+  };
 
-const handleVerifyOtp = async (e) => {
-  e.preventDefault();
-  if (otpString.length !== 6) { toast.error("Enter all 6 digits"); return; }
-  setLoading(true);
-  try {
-    const res = await verifyOTP(email, otpString, null, null, null, null, "login", "business");
-    if (res.success) {
-      toast.success("Welcome!");
-      login(res.user, res.token);
-      navigate("/business/dashboard");
-    } else {
-      toast.error(res.message || "Invalid OTP");
-      if (res.correctPortal) setTimeout(() => navigate(res.correctPortal), 1500);
-    }
-  } catch (err) {
-    toast.error(err.response?.data?.message || "Invalid OTP");
-    if (err.response?.data?.correctPortal) {
-      setTimeout(() => navigate(err.response.data.correctPortal), 1500);
-    }
-  } finally {
-    setLoading(false);
-  }
-};
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    if (otpString.length !== 6) { toast.error("Enter all 6 digits"); return; }
+    setLoading(true);
+    try {
+      const res = await verifyOTP(email, otpString, null, null, null, null, "login", "business");
+      if (res.success) { toast.success("Welcome!"); login(res.user, res.token); navigate("/business/dashboard"); }
+      else { toast.error(res.message || "Invalid OTP"); if (res.correctPortal) setTimeout(() => navigate(res.correctPortal), 1500); }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Invalid OTP");
+      if (err.response?.data?.correctPortal) setTimeout(() => navigate(err.response.data.correctPortal), 1500);
+    } finally { setLoading(false); }
+  };
 
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-        .biz-page {
-          min-height: calc(100vh - 82px);
-          display: flex;
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-          background: #f0fdf4;
+        html, body, #root {
+          height: 100%; min-height: 100%; margin: 0; background: #f0fdf4;
         }
+        body { overflow: hidden; }
+        #root, .App { height: 100%; min-height: 100%; background: #f0fdf4; }
+        *, *::before, *::after { box-sizing: border-box; }
+
+        .biz-page {
+          height: calc(100dvh - 82px);
+          min-height: calc(100dvh - 82px);
+          display: flex;
+          align-items: stretch;
+          background: #f0fdf4;
+          overflow: hidden;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .biz-left, .biz-right { height: 100%; min-height: 100%; }
 
         .biz-left {
           flex: 1; min-width: 0;
@@ -100,17 +98,10 @@ const handleVerifyOtp = async (e) => {
           padding: 48px 40px; overflow-y: auto; background: #f0fdf4;
         }
 
-        .biz-form-box {
-          width: 100%; max-width: 420px; margin: 0 auto;
-          animation: bizUp 0.45s ease both;
-        }
+        .biz-form-box { width: 100%; max-width: 420px; margin: 0 auto; animation: bizUp 0.45s ease both; }
         @keyframes bizUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
 
-        .biz-wordmark {
-          font-size: 20px; font-weight: 800; color: #052e16;
-          margin-bottom: 32px; display: flex; align-items: center; gap: 10px;
-          letter-spacing: -0.4px;
-        }
+        .biz-wordmark { font-size: 20px; font-weight: 800; color: #052e16; margin-bottom: 32px; display: flex; align-items: center; gap: 10px; letter-spacing: -0.4px; }
         .biz-wordmark-dot { width: 8px; height: 8px; border-radius: 50%; background: #16a34a; margin-top: 2px; flex-shrink: 0; }
 
         .biz-heading { font-size: 28px; font-weight: 800; color: #052e16; margin-bottom: 6px; letter-spacing: -0.5px; }
@@ -131,10 +122,7 @@ const handleVerifyOtp = async (e) => {
         .biz-input:disabled { opacity: 0.6; background: #f0fdf4; }
         .biz-input::placeholder { color: #9ca3af; }
 
-        .biz-otp-row {
-          display: grid; grid-template-columns: repeat(6, 1fr);
-          gap: 8px; width: 100%; margin-bottom: 16px; box-sizing: border-box;
-        }
+        .biz-otp-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; width: 100%; margin-bottom: 16px; box-sizing: border-box; }
         .biz-otp-box {
           width: 100%; aspect-ratio: 1/1; max-height: 60px;
           background: white; border: 1.5px solid #d1fae5; border-radius: 10px;
@@ -173,7 +161,6 @@ const handleVerifyOtp = async (e) => {
         .biz-back { background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; color: #6b7280; margin-bottom: 24px; padding: 0; font-family: 'Inter', sans-serif; transition: color 0.15s; font-weight: 500; }
         .biz-back:hover { color: #052e16; }
 
-        /* ── RIGHT brand panel ── */
         .biz-right {
           width: 42%; flex-shrink: 0;
           background: linear-gradient(160deg, #052e16 0%, #14532d 50%, #166534 100%);
@@ -197,7 +184,6 @@ const handleVerifyOtp = async (e) => {
         .biz-feature-icon { width: 36px; height: 36px; border-radius: 8px; background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.25); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .biz-feature-title { font-size: 13px; font-weight: 700; color: white; margin-bottom: 3px; }
         .biz-feature-desc { font-size: 12px; color: rgba(255,255,255,0.45); }
-
         .biz-stats { display: flex; gap: 32px; margin-top: 40px; }
         .biz-stat-num { font-size: 28px; font-weight: 800; color: white; letter-spacing: -0.5px; }
         .biz-stat-label { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 2px; font-weight: 500; }
@@ -206,7 +192,12 @@ const handleVerifyOtp = async (e) => {
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
         @media (max-width: 900px) { .biz-right { display: none; } }
-        @media (max-width: 520px) { .biz-left { padding: 32px 20px; } }
+        @media (max-width: 768px) {
+          html, body, #root, .App { height: auto; min-height: 100%; overflow-y: auto; }
+          body { overflow-x: hidden; }
+          .biz-page { height: auto; min-height: calc(100dvh - 82px); overflow: visible; }
+          .biz-left { height: auto; min-height: calc(100dvh - 82px); padding: 32px 20px; align-items: flex-start; overflow: visible; }
+        }
         @media (max-width: 400px) { .biz-otp-row { gap: 6px; } .biz-otp-box { font-size: 18px; border-radius: 8px; } }
       `}</style>
 

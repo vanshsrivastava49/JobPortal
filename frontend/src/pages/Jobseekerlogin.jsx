@@ -39,60 +39,79 @@ const JobSeekerLogin = () => {
   };
   const otpString = otp.join("");
 
-const handleSendOtp = async (e) => {
-  e?.preventDefault();
-  if (!email) { toast.error("Please enter your email"); return; }
-  if (!captchaToken && import.meta.env.VITE_RECAPTCHA_SITE_KEY) { toast.error("Please complete the captcha"); return; }
-  setLoading(true);
-  try {
-    const res = await sendOTP(email, "login", captchaToken || "dev", "jobseeker");
-    if (res.success) { toast.success("OTP sent!"); setStep("verify"); }
-    else toast.error(res.message || "Failed to send OTP");
-  } catch (err) {
-    toast.error(err.response?.data?.message || "Failed to send OTP");
-    if (err.response?.data?.correctPortal) {
-      setTimeout(() => navigate(err.response.data.correctPortal), 1500);
+  const handleSendOtp = async (e) => {
+    e?.preventDefault();
+    if (!email) { toast.error("Please enter your email"); return; }
+    if (!captchaToken && import.meta.env.VITE_RECAPTCHA_SITE_KEY) { toast.error("Please complete the captcha"); return; }
+    setLoading(true);
+    try {
+      const res = await sendOTP(email, "login", captchaToken || "dev", "jobseeker");
+      if (res.success) { toast.success("OTP sent!"); setStep("verify"); }
+      else toast.error(res.message || "Failed to send OTP");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to send OTP");
+      if (err.response?.data?.correctPortal) {
+        setTimeout(() => navigate(err.response.data.correctPortal), 1500);
+      }
+    } finally {
+      setLoading(false);
     }
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
-const handleVerifyOtp = async (e) => {
-  e.preventDefault();
-  if (otpString.length !== 6) { toast.error("Enter all 6 digits"); return; }
-  setLoading(true);
-  try {
-    const res = await verifyOTP(email, otpString, null, null, null, null, "login", "jobseeker");
-    if (res.success) {
-      toast.success("Welcome back!");
-      login(res.user, res.token);
-      navigate("/dashboard");
-    } else {
-      toast.error(res.message || "Invalid OTP");
-      if (res.correctPortal) setTimeout(() => navigate(res.correctPortal), 1500);
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    if (otpString.length !== 6) { toast.error("Enter all 6 digits"); return; }
+    setLoading(true);
+    try {
+      const res = await verifyOTP(email, otpString, null, null, null, null, "login", "jobseeker");
+      if (res.success) {
+        toast.success("Welcome back!");
+        login(res.user, res.token);
+        navigate("/dashboard");
+      } else {
+        toast.error(res.message || "Invalid OTP");
+        if (res.correctPortal) setTimeout(() => navigate(res.correctPortal), 1500);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Invalid OTP");
+      if (err.response?.data?.correctPortal) {
+        setTimeout(() => navigate(err.response.data.correctPortal), 1500);
+      }
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    toast.error(err.response?.data?.message || "Invalid OTP");
-    if (err.response?.data?.correctPortal) {
-      setTimeout(() => navigate(err.response.data.correctPortal), 1500);
-    }
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-        .js-page {
-          min-height: calc(100vh - 82px);
-          display: flex;
+        html, body, #root {
+          height: 100%;
+          min-height: 100%;
+          margin: 0;
           background: #f0fdf4;
+        }
+        body { overflow: hidden; }
+        #root, .App {
+          height: 100%;
+          min-height: 100%;
+          background: #f0fdf4;
+        }
+        *, *::before, *::after { box-sizing: border-box; }
+
+        .js-page {
+          height: calc(100dvh - 82px);
+          min-height: calc(100dvh - 82px);
+          display: flex;
+          align-items: stretch;
+          background: #f0fdf4;
+          overflow: hidden;
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
+
+        .js-left, .js-right { height: 100%; min-height: 100%; }
 
         /* ── LEFT PANEL ── */
         .js-left {
@@ -135,7 +154,7 @@ const handleVerifyOtp = async (e) => {
         .js-right {
           flex: 1; min-width: 0;
           display: flex; align-items: center; justify-content: center;
-          padding: 48px 40px; overflow-y: auto;
+          padding: 48px 40px; overflow-y: auto; background: #f0fdf4;
         }
 
         .js-form-box {
@@ -144,11 +163,6 @@ const handleVerifyOtp = async (e) => {
           animation: jsFadeUp 0.4s ease both;
         }
         @keyframes jsFadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-
-        .js-form-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; }
-        .js-form-logo-icon { width: 40px; height: 40px; background: #052e16; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
-        .js-form-logo-text { font-size: 20px; font-weight: 800; color: #052e16; letter-spacing: -0.4px; }
-        .js-form-logo-text span { color: #16a34a; }
 
         .js-heading { font-size: 28px; font-weight: 800; color: #052e16; margin-bottom: 6px; letter-spacing: -0.5px; }
         .js-subheading { font-size: 14px; color: #6b7280; margin-bottom: 28px; line-height: 1.6; font-weight: 400; }
@@ -169,20 +183,15 @@ const handleVerifyOtp = async (e) => {
         .js-input:disabled { opacity: 0.6; }
         .js-input::placeholder { color: #9ca3af; }
 
-        /* ══ OTP BOXES ══ */
         .js-otp-row {
-          display: grid;
-          grid-template-columns: repeat(6, 1fr);
-          gap: 8px; width: 100%;
-          margin-bottom: 16px; box-sizing: border-box;
+          display: grid; grid-template-columns: repeat(6, 1fr);
+          gap: 8px; width: 100%; margin-bottom: 16px; box-sizing: border-box;
         }
         .js-otp-box {
           width: 100%; aspect-ratio: 1/1; max-height: 60px;
           border: 1.5px solid #d1fae5; border-radius: 10px;
-          font-size: 22px; font-weight: 800;
-          font-family: 'Inter', sans-serif;
-          color: #052e16; text-align: center;
-          background: white; outline: none;
+          font-size: 22px; font-weight: 800; font-family: 'Inter', sans-serif;
+          color: #052e16; text-align: center; background: white; outline: none;
           transition: all 0.18s; padding: 0; box-sizing: border-box;
         }
         .js-otp-box:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.12); background: #f0fdf4; }
@@ -216,28 +225,48 @@ const handleVerifyOtp = async (e) => {
         .js-back { background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; color: #6b7280; margin-bottom: 24px; padding: 0; font-family: 'Inter', sans-serif; transition: color 0.15s; font-weight: 500; }
         .js-back:hover { color: #052e16; }
 
-        .js-role-switch { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 28px; }
-        .js-role-chip {
-          padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
-          border: 1.5px solid #e5e7eb; background: white; color: #6b7280;
-          text-decoration: none; transition: all 0.15s; cursor: pointer;
-        }
-        .js-role-chip:hover { border-color: #10b981; color: #16a34a; }
-        .js-role-chip.active { border-color: #10b981; color: #16a34a; background: #f0fdf4; font-weight: 700; }
-
         .spinner { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-        @media (max-width: 900px) { .js-left { width: 36%; padding: 40px 32px; } .js-tagline-title { font-size: 32px; } }
-        @media (max-width: 768px) { .js-left { display: none; } .js-right { padding: 32px 24px; align-items: flex-start; padding-top: 36px; } .js-form-box { max-width: 100%; } }
-        @media (max-width: 420px) { .js-otp-row { gap: 6px; } .js-otp-box { font-size: 18px; border-radius: 8px; } }
+        @media (max-width: 900px) {
+          .js-left { width: 36%; padding: 40px 32px; }
+          .js-tagline-title { font-size: 32px; }
+        }
+        @media (max-width: 768px) {
+          html, body, #root, .App {
+            height: auto;
+            min-height: 100%;
+            overflow-y: auto;
+          }
+          body { overflow-x: hidden; }
+          .js-page {
+            height: auto;
+            min-height: calc(100dvh - 82px);
+            overflow: visible;
+          }
+          .js-left { display: none; }
+          .js-right {
+            height: auto;
+            min-height: calc(100dvh - 82px);
+            padding: 36px 24px;
+            align-items: flex-start;
+            overflow: visible;
+          }
+          .js-form-box { max-width: 100%; }
+        }
+        @media (max-width: 420px) {
+          .js-otp-row { gap: 6px; }
+          .js-otp-box { font-size: 18px; border-radius: 8px; }
+        }
       `}</style>
 
       <Navbar />
       <div className="js-page">
         <div className="js-left">
           <div className="js-left-circles">
-            <div className="js-circle js-c1" /><div className="js-circle js-c2" /><div className="js-circle js-c3" />
+            <div className="js-circle js-c1" />
+            <div className="js-circle js-c2" />
+            <div className="js-circle js-c3" />
           </div>
           <div className="js-leaf-bg" />
           <div className="js-tagline">

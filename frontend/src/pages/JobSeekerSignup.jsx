@@ -17,23 +17,32 @@ const JobSeekerSignup = () => {
     return <Navigate to={user?.profileCompleted ? "/dashboard" : "/complete-profile"} replace />;
   }
 
-  const handleOTPSent = (userEmail, userRole) => {
-    setEmail(userEmail);
-    setRole(userRole);
-    setStep("verify");
-  };
+  const handleOTPSent = (userEmail, userRole) => { setEmail(userEmail); setRole(userRole); setStep("verify"); };
   const handleBack = () => { setStep("signup"); setEmail(""); };
 
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        html, body, #root {
+          height: 100%; min-height: 100%; margin: 0; background: #f0fdf4;
+        }
+        body { overflow: hidden; }
+        #root, .App { height: 100%; min-height: 100%; background: #f0fdf4; }
+        *, *::before, *::after { box-sizing: border-box; }
+
         .jss-page {
-          min-height: calc(100vh - 82px);
+          height: calc(100dvh - 82px);
+          min-height: calc(100dvh - 82px);
           display: flex;
+          align-items: stretch;
           background: #f0fdf4;
+          overflow: hidden;
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
+
+        .jss-left, .jss-right { height: 100%; min-height: 100%; }
 
         .jss-left {
           width: 42%; flex-shrink: 0;
@@ -60,7 +69,7 @@ const JobSeekerSignup = () => {
         .jss-step-num { width: 28px; height: 28px; border-radius: 50%; background: rgba(16,185,129,0.2); border: 1px solid rgba(110,231,183,0.3); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #6ee7b7; flex-shrink: 0; }
         .jss-step-text { font-size: 13px; color: rgba(255,255,255,0.5); font-weight: 500; }
 
-        .jss-right { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; padding: 48px 40px; overflow-y: auto; }
+        .jss-right { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; padding: 48px 40px; overflow-y: auto; background: #f0fdf4; }
         .jss-form-box { width: 100%; max-width: 420px; margin: 0 auto; animation: jssFadeUp 0.5s ease both; }
         @keyframes jssFadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -79,20 +88,24 @@ const JobSeekerSignup = () => {
         .jss-back { background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; color: #6b7280; margin-bottom: 20px; padding: 0; font-family: 'Inter', sans-serif; font-weight: 500; transition: color 0.15s; }
         .jss-back:hover { color: #052e16; }
 
-        .jss-form-box .otp-row, .jss-form-box [class*="otp-row"], .jss-form-box [class*="otp_row"] { display: grid !important; grid-template-columns: repeat(6, 1fr) !important; gap: 8px !important; width: 100% !important; }
-        .jss-form-box .otp-row input, .jss-form-box [class*="otp-row"] input, .jss-form-box [class*="otp_row"] input { width: 100% !important; flex: unset !important; aspect-ratio: 1/1 !important; max-height: 60px !important; padding: 0 !important; box-sizing: border-box !important; }
-
         .jss-form-box input { background: white !important; border: 1.5px solid #d1fae5 !important; border-radius: 10px !important; font-family: 'Inter', sans-serif !important; font-size: 14px !important; color: #111827 !important; box-sizing: border-box !important; }
         .jss-form-box input::placeholder { color: #9ca3af !important; }
         .jss-form-box input:focus { border-color: #10b981 !important; box-shadow: 0 0 0 3px rgba(16,185,129,0.12) !important; }
         .jss-form-box label { font-family: 'Inter', sans-serif !important; font-size: 12px !important; font-weight: 700 !important; color: #374151 !important; text-transform: uppercase !important; letter-spacing: 0.06em !important; }
-        .jss-form-box button[type="submit"] { background: #052e16 !important; border-radius: 10px !important; font-family: 'Inter', sans-serif !important; font-size: 15px !important; font-weight: 700 !important; letter-spacing: 0.1px !important; }
-        .jss-form-box button[type="submit"]:hover:not(:disabled) { background: #14532d !important; transform: translateY(-1px) !important; box-shadow: 0 4px 12px rgba(5,46,22,0.25) !important; }
-        .jss-form-box input[maxLength="1"], .jss-form-box input[maxlength="1"] { font-size: 22px !important; font-weight: 800 !important; text-align: center !important; background: white !important; border: 1.5px solid #d1fae5 !important; }
+        .jss-form-box button[type="submit"] { background: #052e16 !important; border-radius: 10px !important; font-family: 'Inter', sans-serif !important; font-size: 15px !important; font-weight: 700 !important; }
+        .jss-form-box button[type="submit"]:hover:not(:disabled) { background: #14532d !important; transform: translateY(-1px) !important; }
+        .jss-form-box input[maxLength="1"], .jss-form-box input[maxlength="1"] { font-size: 22px !important; font-weight: 800 !important; text-align: center !important; }
         .jss-form-box input[maxLength="1"]:focus, .jss-form-box input[maxlength="1"]:focus { background: #f0fdf4 !important; }
 
         @media (max-width: 900px) { .jss-left { width: 36%; padding: 40px 32px; } .jss-title { font-size: 32px; } }
-        @media (max-width: 768px) { .jss-left { display: none; } .jss-right { padding: 32px 24px; align-items: flex-start; padding-top: 36px; } .jss-form-box { max-width: 100%; } }
+        @media (max-width: 768px) {
+          html, body, #root, .App { height: auto; min-height: 100%; overflow-y: auto; }
+          body { overflow-x: hidden; }
+          .jss-page { height: auto; min-height: calc(100dvh - 82px); overflow: visible; }
+          .jss-left { display: none; }
+          .jss-right { height: auto; min-height: calc(100dvh - 82px); padding: 32px 24px; align-items: flex-start; padding-top: 36px; overflow: visible; }
+          .jss-form-box { max-width: 100%; }
+        }
       `}</style>
 
       <Navbar />
@@ -113,7 +126,6 @@ const JobSeekerSignup = () => {
             </div>
           </div>
         </div>
-
         <div className="jss-right">
           <div className="jss-form-box">
             {step === "signup" ? (

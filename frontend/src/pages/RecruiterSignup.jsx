@@ -17,11 +17,7 @@ const RecruiterSignup = () => {
     return <Navigate to={user?.profileCompleted ? "/recruiter/dashboard" : "/complete-profile"} replace />;
   }
 
-  const handleOTPSent = (userEmail, userRole) => {
-    setEmail(userEmail);
-    setRole(userRole);
-    setStep("verify");
-  };
+  const handleOTPSent = (userEmail, userRole) => { setEmail(userEmail); setRole(userRole); setStep("verify"); };
   const handleBack = () => { setStep("signup"); setEmail(""); };
 
   return (
@@ -29,7 +25,24 @@ const RecruiterSignup = () => {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-        .recs-page { min-height: calc(100vh - 82px); display: flex; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f0fdf4; }
+        html, body, #root {
+          height: 100%; min-height: 100%; margin: 0; background: #f0fdf4;
+        }
+        body { overflow: hidden; }
+        #root, .App { height: 100%; min-height: 100%; background: #f0fdf4; }
+        *, *::before, *::after { box-sizing: border-box; }
+
+        .recs-page {
+          height: calc(100dvh - 82px);
+          min-height: calc(100dvh - 82px);
+          display: flex;
+          align-items: stretch;
+          background: #f0fdf4;
+          overflow: hidden;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .recs-left, .recs-right { height: 100%; min-height: 100%; }
 
         .recs-left { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; padding: 48px 40px; overflow-y: auto; background: #f0fdf4; }
         .recs-form-box { width: 100%; max-width: 420px; margin: 0 auto; animation: recsUp 0.45s ease both; }
@@ -53,16 +66,13 @@ const RecruiterSignup = () => {
         .recs-back { background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; color: #6b7280; margin-bottom: 24px; padding: 0; font-family: 'Inter', sans-serif; font-weight: 500; transition: color 0.15s; }
         .recs-back:hover { color: #052e16; }
 
-        .recs-form-box .otp-row, .recs-form-box [class*="otp-row"], .recs-form-box [class*="otp_row"] { display: grid !important; grid-template-columns: repeat(6, 1fr) !important; gap: 8px !important; width: 100% !important; }
-        .recs-form-box .otp-row input, .recs-form-box [class*="otp-row"] input, .recs-form-box [class*="otp_row"] input { width: 100% !important; flex: unset !important; aspect-ratio: 1/1 !important; max-height: 60px !important; padding: 0 !important; box-sizing: border-box !important; }
-
         .recs-form-box input { background: white !important; border: 1.5px solid #d1fae5 !important; border-radius: 10px !important; font-family: 'Inter', sans-serif !important; font-size: 14px !important; color: #111827 !important; box-sizing: border-box !important; }
         .recs-form-box input::placeholder { color: #9ca3af !important; }
         .recs-form-box input:focus { border-color: #10b981 !important; box-shadow: 0 0 0 3px rgba(16,185,129,0.12) !important; background: #f0fdf4 !important; }
         .recs-form-box label { font-family: 'Inter', sans-serif !important; font-size: 12px !important; font-weight: 700 !important; color: #374151 !important; text-transform: uppercase !important; letter-spacing: 0.06em !important; }
-        .recs-form-box button[type="submit"] { background: #052e16 !important; border-radius: 10px !important; font-family: 'Inter', sans-serif !important; font-size: 15px !important; font-weight: 700 !important; letter-spacing: 0.1px !important; }
-        .recs-form-box button[type="submit"]:hover:not(:disabled) { background: #14532d !important; transform: translateY(-1px) !important; box-shadow: 0 4px 12px rgba(5,46,22,0.25) !important; }
-        .recs-form-box input[maxLength="1"], .recs-form-box input[maxlength="1"] { font-size: 22px !important; font-weight: 800 !important; text-align: center !important; background: white !important; border: 1.5px solid #d1fae5 !important; }
+        .recs-form-box button[type="submit"] { background: #052e16 !important; border-radius: 10px !important; font-family: 'Inter', sans-serif !important; font-size: 15px !important; font-weight: 700 !important; }
+        .recs-form-box button[type="submit"]:hover:not(:disabled) { background: #14532d !important; transform: translateY(-1px) !important; }
+        .recs-form-box input[maxLength="1"], .recs-form-box input[maxlength="1"] { font-size: 22px !important; font-weight: 800 !important; text-align: center !important; }
         .recs-form-box input[maxLength="1"]:focus, .recs-form-box input[maxlength="1"]:focus { background: #f0fdf4 !important; border-color: #10b981 !important; }
 
         .recs-right { width: 42%; flex-shrink: 0; background: linear-gradient(160deg, #052e16 0%, #14532d 55%, #166534 100%); display: flex; flex-direction: column; justify-content: center; padding: 64px 56px; position: relative; overflow: hidden; }
@@ -89,7 +99,13 @@ const RecruiterSignup = () => {
         .recs-free-badge-desc { font-size: 12px; color: rgba(255,255,255,0.35); }
 
         @media (max-width: 900px) { .recs-right { display: none; } }
-        @media (max-width: 520px) { .recs-left { padding: 32px 20px; } }
+        @media (max-width: 768px) {
+          html, body, #root, .App { height: auto; min-height: 100%; overflow-y: auto; }
+          body { overflow-x: hidden; }
+          .recs-page { height: auto; min-height: calc(100dvh - 82px); overflow: visible; }
+          .recs-left { height: auto; min-height: calc(100dvh - 82px); padding: 32px 20px; align-items: flex-start; overflow: visible; }
+          .recs-form-box { max-width: 100%; }
+        }
       `}</style>
 
       <Navbar />
@@ -101,7 +117,6 @@ const RecruiterSignup = () => {
               GreenJobs Recruiter
               <div className="recs-wordmark-dot" />
             </div>
-
             {step === "signup" ? (
               <>
                 <h1 className="recs-heading">Recruiter Sign Up</h1>
@@ -118,7 +133,6 @@ const RecruiterSignup = () => {
                 <SignupVerifyOtp email={email} onBack={handleBack} role={role} />
               </>
             )}
-
             <div className="recs-footer">
               Already have an account? <Link to="/recruiter/login">Sign in</Link>
               {" · "}

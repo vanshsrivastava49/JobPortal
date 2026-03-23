@@ -12,7 +12,6 @@ import AdminLogin from "./pages/Adminlogin";
 import JobSeekerSignup from "./pages/JobSeekerSignup";
 import RecruiterSignup from "./pages/RecruiterSignup";
 import BusinessSignup from "./pages/BusinessSignup";
-import AdminSignup from "./pages/AdminSignup";
 
 // Other pages
 import Dashboard from "./pages/Dashboard";
@@ -83,7 +82,6 @@ function App() {
           <Route path="/signup"            element={<JobSeekerSignup />} />
           <Route path="/recruiter/signup"  element={<RecruiterSignup />} />
           <Route path="/business/signup"   element={<BusinessSignup />} />
-          <Route path="/admin/signup"      element={<AdminSignup />} />
           <Route path="/profile"          element={<Myprofile />} />
           <Route path="/jobs"             element={<Jobs />} />
           <Route path="/jobs/:jobId"      element={<JobDetail />} />
