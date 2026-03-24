@@ -12,6 +12,92 @@ import {
   Shield, Clock,
 } from "lucide-react";
 
+/* ─────────────────────────────────────────────
+   ALL CONSTANTS & PURE COMPONENTS OUTSIDE
+   the main component so React never recreates
+   them on re-render → inputs keep focus
+───────────────────────────────────────────── */
+
+const sectionDefs = {
+  jobseeker: [
+    { id: "basicDetails",    label: "Basic Details",   icon: User,          required: true  },
+    { id: "resume",          label: "Resume",           icon: FileText,       required: true  },
+    { id: "about",           label: "About",            icon: Info,           required: true  },
+    { id: "skills",          label: "Skills",           icon: Zap,            required: true  },
+    { id: "education",       label: "Education",        icon: GraduationCap,  required: true  },
+    { id: "experience",      label: "Work Experience",  icon: Briefcase,      required: false },
+    { id: "accomplishments", label: "Accomplishments",  icon: Trophy,         required: false },
+  ],
+  recruiter: [
+    { id: "basicDetails",   label: "Company Basics",  icon: Building2,     required: true },
+    { id: "companyDetails", label: "Company Details", icon: ClipboardList, required: true },
+    { id: "branding",       label: "Branding",        icon: Palette,       required: true },
+  ],
+  business: [
+    { id: "basicDetails",    label: "Business Info",    icon: Store,          required: true },
+    { id: "businessDetails", label: "Business Details", icon: LayoutTemplate, required: true },
+    { id: "media",           label: "Media",            icon: Image,          required: true },
+  ],
+};
+
+const requiredFieldsBySection = {
+  jobseeker: {
+    basicDetails:    ["firstName","lastName","mobile","city","pincode"],
+    resume:          ["resume"],
+    about:           ["about"],
+    skills:          ["skills"],
+    education:       ["education"],
+    experience:      [],
+    accomplishments: [],
+  },
+  recruiter: {
+    basicDetails:   ["companyName","companyWebsite","contactNumber"],
+    companyDetails: ["companyDescription","companyLocation","industryType"],
+    branding:       ["companyLogo"],
+  },
+  business: {
+    basicDetails:    ["businessName","category","contactDetails"],
+    businessDetails: ["street","city","state","pincode","description"],
+    media:           ["images"],
+  },
+};
+
+const skillSuggestions = [
+  "Solar PV Design","AutoCAD","Python","JavaScript","React","Node.js",
+  "Machine Learning","AWS","Docker","SQL","MongoDB","TypeScript","Git",
+  "Data Analysis","GDPR Compliance","Project Management","Embedded Systems",
+  "Asana","HTML","CSS",
+];
+
+const inputStyle = {
+  width:"100%", padding:"12px 16px", background:"#f8fafc",
+  border:"1px solid #e2e8f0", borderRadius:10, fontSize:14.5,
+  fontFamily:"'Inter', sans-serif", color:"#0f172a", outline:"none",
+  transition:"all 0.2s",
+};
+
+/* ── Reusable field wrapper ── */
+const Field = ({ label, required, children, hint, fullWidth }) => (
+  <div style={{ display:"flex", flexDirection:"column", gap:7, ...(fullWidth && { gridColumn:"1/-1" }) }}>
+    <label style={{ fontSize:11.5, fontWeight:700, color:"#94a3b8", textTransform:"uppercase", letterSpacing:"0.6px" }}>
+      {label}{required && <span style={{ color:"#ef4444", marginLeft:3 }}>*</span>}
+    </label>
+    {children}
+    {hint && <span style={{ fontSize:12, color:"#94a3b8" }}>{hint}</span>}
+  </div>
+);
+
+/* ── Section header ── */
+const SectionHeader = ({ title, subtitle }) => (
+  <div style={{ marginBottom: 28 }}>
+    <h2 style={{ fontSize: 22, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.4px", marginBottom: 5 }}>{title}</h2>
+    <p style={{ fontSize: 14, color: "#64748b", fontWeight: 400 }}>{subtitle}</p>
+  </div>
+);
+
+/* ─────────────────────────────────────────────
+   MAIN COMPONENT
+───────────────────────────────────────────── */
 const CompleteProfile = () => {
   const { user, token, login, logout } = useAuth();
   const navigate = useNavigate();
@@ -30,58 +116,6 @@ const CompleteProfile = () => {
   const [selectedSkills, setSelectedSkills] = useState(seedProfile.skills || []);
 
   const API = `${API_BASE_URL}/api/profile`;
-
-  /* ── Section config ── */
-  const sectionDefs = {
-    jobseeker: [
-      { id: "basicDetails",    label: "Basic Details",               icon: User,          required: true  },
-      { id: "resume",          label: "Resume",                      icon: FileText,       required: true  },
-      { id: "about",           label: "About",                       icon: Info,           required: true  },
-      { id: "skills",          label: "Skills",                      icon: Zap,            required: true  },
-      { id: "education",       label: "Education",                   icon: GraduationCap,  required: true  },
-      { id: "experience",      label: "Work Experience",             icon: Briefcase,      required: false },
-      { id: "accomplishments", label: "Accomplishments",             icon: Trophy,         required: false },
-    ],
-    recruiter: [
-      { id: "basicDetails",   label: "Company Basics",  icon: Building2,     required: true },
-      { id: "companyDetails", label: "Company Details", icon: ClipboardList, required: true },
-      { id: "branding",       label: "Branding",        icon: Palette,       required: true },
-    ],
-    business: [
-      { id: "basicDetails",    label: "Business Info",    icon: Store,         required: true },
-      { id: "businessDetails", label: "Business Details", icon: LayoutTemplate,required: true },
-      { id: "media",           label: "Media",            icon: Image,         required: true },
-    ],
-  };
-
-  const requiredFieldsBySection = {
-    jobseeker: {
-      basicDetails:    ["firstName","lastName","mobile","city","pincode"],
-      resume:          ["resume"],
-      about:           ["about"],
-      skills:          ["skills"],
-      education:       ["education"],
-      experience:      [],
-      accomplishments: [],
-    },
-    recruiter: {
-      basicDetails:   ["companyName","companyWebsite","contactNumber"],
-      companyDetails: ["companyDescription","companyLocation","industryType"],
-      branding:       ["companyLogo"],
-    },
-    business: {
-      basicDetails:    ["businessName","category","contactDetails"],
-      businessDetails: ["street","city","state","pincode","description"],
-      media:           ["images"],
-    },
-  };
-
-  const skillSuggestions = [
-    "Solar PV Design","AutoCAD","Python","JavaScript","React","Node.js",
-    "Machine Learning","AWS","Docker","SQL","MongoDB","TypeScript","Git",
-    "Data Analysis","GDPR Compliance","Project Management","Embedded Systems",
-    "Asana","HTML","CSS",
-  ];
 
   /* ── Progress ── */
   const getSectionProgress = (sectionId) => {
@@ -106,6 +140,7 @@ const CompleteProfile = () => {
 
   /* ── Handlers ── */
   const handleChange = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
+
   const handleAddSkill = (skill) => {
     if (skill && !selectedSkills.includes(skill)) {
       setSelectedSkills((p) => [...p, skill]);
@@ -173,25 +208,6 @@ const CompleteProfile = () => {
       login(res.data.user, token);
       navigate("/dashboard");
     } catch (err) { toast.error(err.response?.data?.message || "An error occurred"); }
-  };
-
-  /* ── Field component ── */
-  const Field = ({ label, required, children, hint, fullWidth }) => (
-    <div style={{ display:"flex", flexDirection:"column", gap:7, ...(fullWidth && { gridColumn:"1/-1" }) }}>
-      <label style={{ fontSize:11.5, fontWeight:700, color:"#94a3b8", textTransform:"uppercase", letterSpacing:"0.6px" }}>
-        {label}{required && <span style={{ color:"#ef4444", marginLeft:3 }}>*</span>}
-      </label>
-      {children}
-      {hint && <span style={{ fontSize:12, color:"#94a3b8" }}>{hint}</span>}
-    </div>
-  );
-
-  /* ── Shared input style ── */
-  const inputStyle = {
-    width:"100%", padding:"12px 16px", background:"#f8fafc",
-    border:"1px solid #e2e8f0", borderRadius:10, fontSize:14.5,
-    fontFamily:"'Inter', sans-serif", color:"#0f172a", outline:"none",
-    transition:"all 0.2s",
   };
 
   /* ── Section content ── */
@@ -441,7 +457,6 @@ const CompleteProfile = () => {
         }
         .cp-logout-btn:hover { border-color: #fca5a5; color: #dc2626; background: #fef2f2; }
 
-        /* ── Layout ── */
         .cp-layout {
           display: grid;
           grid-template-columns: 288px 1fr;
@@ -450,7 +465,6 @@ const CompleteProfile = () => {
           min-height: calc(100vh - 82px);
         }
 
-        /* ── Sidebar ── */
         .cp-sidebar {
           background: white; border-right: 1px solid #e2e8f0;
           padding: 24px 16px; overflow-y: auto;
@@ -459,34 +473,27 @@ const CompleteProfile = () => {
         .cp-sidebar::-webkit-scrollbar { width: 5px; }
         .cp-sidebar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 3px; }
 
-        /* Enhance card — mirrors the homepage hero green tint */
         .cp-enhance-card {
           background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
           border: 1.5px solid #bbf7d0; border-radius: 14px;
           padding: 18px 16px; margin-bottom: 20px;
         }
-        .cp-enhance-card h3 {
-          font-size: 13.5px; font-weight: 700; color: #0f172a; margin-bottom: 5px;
-        }
-        .cp-enhance-card p { font-size: 12.5px; color: #64748b; line-height: 1.55; }
+        .cp-enhance-card h3 { font-size: 13.5px; font-weight: 700; color: #0f172a; margin-bottom: 5px; }
+        .cp-enhance-card p  { font-size: 12.5px; color: #64748b; line-height: 1.55; }
 
-        /* Progress strip */
         .cp-overall-progress { padding: 16px 8px 4px; }
         .cp-progress-label {
           display: flex; justify-content: space-between;
           font-size: 11px; font-weight: 700; color: #94a3b8;
           text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
         }
-        .cp-progress-track {
-          height: 5px; background: #e2e8f0; border-radius: 100px; overflow: hidden;
-        }
+        .cp-progress-track { height: 5px; background: #e2e8f0; border-radius: 100px; overflow: hidden; }
         .cp-progress-fill {
           height: 100%;
           background: linear-gradient(90deg, #10b981 0%, #059669 100%);
           border-radius: 100px; transition: width 0.5s ease;
         }
 
-        /* Nav items — mirror job card hover style */
         .cp-nav { display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px; }
         .cp-nav-item {
           display: flex; align-items: center; gap: 11px;
@@ -496,24 +503,19 @@ const CompleteProfile = () => {
           position: relative;
         }
         .cp-nav-item:hover { background: #f8fafc; }
-        .cp-nav-item.active {
-          background: #f0fdf4; border-left: 3px solid #10b981;
-          padding-left: 9px;
-        }
+        .cp-nav-item.active { background: #f0fdf4; border-left: 3px solid #10b981; padding-left: 9px; }
         .cp-nav-icon {
           width: 34px; height: 34px; border-radius: 9px;
           background: #f1f5f9; display: flex; align-items: center; justify-content: center;
           flex-shrink: 0; color: #94a3b8; transition: all 0.18s;
         }
-        .cp-nav-item.active .cp-nav-icon { background: #d1fae5; color: #10b981; }
+        .cp-nav-item.active  .cp-nav-icon { background: #d1fae5; color: #10b981; }
         .cp-nav-item.complete .cp-nav-icon { background: #d1fae5; color: #10b981; }
         .cp-nav-text { flex: 1; min-width: 0; }
         .cp-nav-label { font-size: 13.5px; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .cp-nav-item.active .cp-nav-label { color: #065f46; }
         .cp-nav-sub { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
-        .cp-nav-prog-track {
-          flex: 1; height: 3px; background: #e2e8f0; border-radius: 100px; overflow: hidden;
-        }
+        .cp-nav-prog-track { flex: 1; height: 3px; background: #e2e8f0; border-radius: 100px; overflow: hidden; }
         .cp-nav-prog-fill { height: 100%; background: #10b981; border-radius: 100px; transition: width 0.4s; }
         .cp-nav-badge {
           padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700;
@@ -521,13 +523,8 @@ const CompleteProfile = () => {
         }
         .cp-nav-check { flex-shrink: 0; }
 
-        /* ── Main content ── */
-        .cp-main {
-          padding: 36px 40px 100px;
-          background: #f8fafc; max-width: 100%;width: 100%;
-        }
+        .cp-main { padding: 36px 40px 100px; background: #f8fafc; max-width: 100%; width: 100%; }
 
-        /* Card wrapper for each section */
         .cp-section-card {
           background: white; border: 1px solid #e2e8f0; border-radius: 16px;
           padding: 28px 28px 32px; box-shadow: 0 1px 4px rgba(0,0,0,0.04);
@@ -538,14 +535,12 @@ const CompleteProfile = () => {
           transition: all 0.2s;
         }
 
-        /* ── Inputs ── */
         .cp-input:focus {
           border-color: #6ee7b7 !important; background: white !important;
           box-shadow: 0 0 0 3px rgba(16,185,129,0.10) !important;
         }
         .cp-input::placeholder { color: #94a3b8 !important; }
 
-        /* ── Upload ── */
         .cp-file-input { display: none; }
         .cp-upload-label {
           display: inline-flex; align-items: center; gap: 8px;
@@ -558,7 +553,6 @@ const CompleteProfile = () => {
           transform: translateY(-1px);
         }
 
-        /* Skill suggestion tags */
         .cp-suggestion-tag {
           padding: 5px 13px; border-radius: 100px; font-size: 12.5px; font-weight: 600;
           cursor: pointer; border: 1.5px dashed #e2e8f0;
@@ -569,10 +563,8 @@ const CompleteProfile = () => {
           background: #d1fae5; border-color: #6ee7b7; color: #065f46; border-style: solid;
         }
 
-        /* Remove image btn */
         .cp-remove-img:hover { background: rgba(220,38,38,0.8) !important; }
 
-        /* ── Sticky action bar ── */
         .cp-action-bar {
           position: fixed; bottom: 0; left: 288px; right: 0;
           background: white; border-top: 1px solid #e2e8f0;
@@ -581,7 +573,6 @@ const CompleteProfile = () => {
           box-shadow: 0 -4px 16px rgba(0,0,0,0.06); z-index: 50;
         }
         .cp-action-meta { font-size: 13px; color: #94a3b8; font-weight: 500; }
-        .cp-action-meta strong { color: overallProgress >= 100 ? "#10b981" : "#0f172a"; }
 
         .cp-save-btn {
           display: inline-flex; align-items: center; gap: 10px;
@@ -601,13 +592,9 @@ const CompleteProfile = () => {
           box-shadow: none; transform: none;
         }
 
-        /* ── Responsive ── */
         @media (max-width: 960px) {
           .cp-layout { grid-template-columns: 1fr; }
-          .cp-sidebar {
-            position: static; height: auto; border-right: none;
-            border-bottom: 1px solid #e2e8f0;
-          }
+          .cp-sidebar { position: static; height: auto; border-right: none; border-bottom: 1px solid #e2e8f0; }
           .cp-nav { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); }
           .cp-nav-item.active { border-left: none; border-bottom: 3px solid #10b981; padding-left: 12px; }
           .cp-main { max-width: 100%; padding: 24px 20px 100px; }
@@ -623,10 +610,9 @@ const CompleteProfile = () => {
           .cp-action-meta { display: none; }
         }
       `}</style>
+
       <Navbar />
       <div className="cp-root">
-        {/* Header */}
-
         <div className="cp-layout">
           {/* Sidebar */}
           <aside className="cp-sidebar">
@@ -696,13 +682,5 @@ const CompleteProfile = () => {
     </>
   );
 };
-
-/* ── Section header sub-component ── */
-const SectionHeader = ({ title, subtitle }) => (
-  <div style={{ marginBottom: 28 }}>
-    <h2 style={{ fontSize: 22, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.4px", marginBottom: 5 }}>{title}</h2>
-    <p style={{ fontSize: 14, color: "#64748b", fontWeight: 400 }}>{subtitle}</p>
-  </div>
-);
 
 export default CompleteProfile;
