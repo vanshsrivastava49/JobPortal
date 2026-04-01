@@ -90,14 +90,15 @@ export default function PendingBusinesses() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         .pb-page {
           background: #f8fafc;
           min-height: 100vh;
-          font-family: 'DM Sans', sans-serif;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          font-weight:800;
           color: #0f172a;
         }
 
@@ -134,7 +135,7 @@ export default function PendingBusinesses() {
         .pb-back:hover { color: #0f172a; }
 
         .pb-title {
-          font-family: 'DM Serif Display', serif;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
           font-size: 32px;
           color: #0f172a;
           line-height: 1.15;
@@ -179,7 +180,7 @@ export default function PendingBusinesses() {
           color: #475569;
           cursor: pointer;
           transition: all 0.2s;
-          font-family: 'DM Sans', sans-serif;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
         .pb-refresh-btn:hover:not(:disabled) {
           background: #f8fafc;
@@ -343,7 +344,8 @@ export default function PendingBusinesses() {
         }
 
         .pb-biz-name {
-          font-family: 'DM Serif Display', serif;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          font-weight: 700;
           font-size: 20px;
           color: #0f172a;
           margin-bottom: 4px;
@@ -421,7 +423,7 @@ export default function PendingBusinesses() {
           cursor: pointer;
           border: none;
           transition: all 0.2s;
-          font-family: 'DM Sans', sans-serif;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
         .pb-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
@@ -468,7 +470,8 @@ export default function PendingBusinesses() {
         }
 
         .pb-empty-title {
-          font-family: 'DM Serif Display', serif;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          font-weight: 700;
           font-size: 22px;
           color: #0f172a;
           margin-bottom: 8px;
