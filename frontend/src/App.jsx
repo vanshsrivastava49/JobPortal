@@ -117,9 +117,17 @@ function App() {
             }
           />
           <Route
+  path="/post-job/:jobId"
+  element={
+    <ProtectedRoute allowedRoles={["recruiter", "business"]}>
+      <PostJob />
+    </ProtectedRoute>
+  }
+/>
+          <Route
             path="/post-job"
             element={
-              <ProtectedRoute allowedRoles={["recruiter"]}>
+              <ProtectedRoute allowedRoles={["recruiter", "business"]}>
                 <PostJob />
               </ProtectedRoute>
             }

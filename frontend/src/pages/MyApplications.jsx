@@ -715,10 +715,12 @@ const MyApplications = () => {
                     )}
 
                     {/* Cover letter */}
-                    <div className="ma-body-section">
-                      <div className="ma-body-label">Your Cover Letter</div>
-                      <div className="ma-cover-letter">{app.coverLetter}</div>
-                    </div>
+                    {app.coverLetter && app.coverLetter.trim() !== "" && (
+                      <div className="ma-body-section">
+                        <div className="ma-body-label">Your Cover Letter</div>
+                        <div className="ma-cover-letter">{app.coverLetter}</div>
+                      </div>
+                    )}
 
                     {/* Snapshot */}
                     {app.applicantSnapshot && (

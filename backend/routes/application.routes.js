@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const protect = require("../middleware/auth");
 const authorizeRoles = require("../middleware/role");
+
+// ── Recruiter / jobseeker / admin controllers ────────────────
 const {
   submitApplication,
   getMyApplications,
@@ -18,14 +20,25 @@ const {
   checkApplied,
 } = require("../controllers/application.controller");
 
+// ── Business owner application controllers ───────────────────
+const {
+  getBusinessOwnApplications,
+  getBusinessApplicationDetail,
+  businessShortlistApplicant,
+  businessProceedToNextRound,
+  businessFinalShortlist,
+  businessRejectApplicant,
+  businessRejectAtRound,
+  businessUpdateApplicationNotes,
+} = require("../controllers/businessApplication.controller");
+
 // ─────────────────────────────────────────────────────────────
 // CRITICAL: All fixed-path routes MUST come before /:applicationId
 // Express matches top-to-bottom — a wildcard param like /:applicationId
-// will swallow any fixed segment (e.g. /recruiter, /admin/all, /check/*)
-// that is registered after it.
+// will swallow any fixed segment registered after it.
 // ─────────────────────────────────────────────────────────────
 
-// ── Jobseeker ────────────────────────────────────────────────
+// ── Jobseeker ─────────────────────────────────────────────────
 router.post(
   "/",
   protect,
@@ -55,7 +68,7 @@ router.patch(
   withdrawApplication
 );
 
-// ── Recruiter — fixed paths first ───────────────────────────
+// ── Recruiter — fixed paths first ─────────────────────────────
 router.get(
   "/recruiter",
   protect,
@@ -63,7 +76,15 @@ router.get(
   getRecruiterApplications
 );
 
-// ── Admin — fixed paths MUST come before /:applicationId ────
+// ── Business Owner — fixed paths (all before /:applicationId) ─
+router.get(
+  "/business/own",
+  protect,
+  authorizeRoles("business"),
+  getBusinessOwnApplications
+);
+
+// ── Admin — fixed paths MUST come before /:applicationId ──────
 router.get(
   "/admin/all",
   protect,
@@ -71,9 +92,8 @@ router.get(
   getAllApplications
 );
 
-// ── Wildcard param route — registered LAST among GETs ───────
-// Anything hitting GET /:applicationId that isn't /my, /recruiter,
-// /admin/all, or /check/:jobId will land here.
+// ── Wildcard param route — registered LAST among GETs ─────────
+// Recruiter views a single application → auto-advances applied → under_review
 router.get(
   "/:applicationId",
   protect,
@@ -81,7 +101,15 @@ router.get(
   getApplicationDetail
 );
 
-// ── Recruiter PATCH actions ──────────────────────────────────
+// Business owner views a single application → auto-advances applied → under_review
+router.get(
+  "/:applicationId/business-detail",
+  protect,
+  authorizeRoles("business"),
+  getBusinessApplicationDetail
+);
+
+// ── Recruiter PATCH actions ───────────────────────────────────
 router.patch(
   "/:applicationId/shortlist",
   protect,
@@ -123,6 +151,53 @@ router.patch(
   protect,
   authorizeRoles("recruiter"),
   updateApplicationNotes
+);
+
+// ── Business Owner PATCH actions ──────────────────────────────
+// Full hiring pipeline mirroring the recruiter flow above,
+// but scoped to jobs where business === req.user.id.
+
+router.patch(
+  "/:applicationId/business-shortlist",
+  protect,
+  authorizeRoles("business"),
+  businessShortlistApplicant
+);
+
+router.patch(
+  "/:applicationId/business-next-round",
+  protect,
+  authorizeRoles("business"),
+  businessProceedToNextRound
+);
+
+router.patch(
+  "/:applicationId/business-final-shortlist",
+  protect,
+  authorizeRoles("business"),
+  businessFinalShortlist
+);
+
+router.patch(
+  "/:applicationId/business-reject",
+  protect,
+  authorizeRoles("business"),
+  businessRejectApplicant
+);
+
+// Reject at a specific round with round-failed email
+router.patch(
+  "/:applicationId/business-reject-round",
+  protect,
+  authorizeRoles("business"),
+  businessRejectAtRound
+);
+
+router.patch(
+  "/:applicationId/business-notes",
+  protect,
+  authorizeRoles("business"),
+  businessUpdateApplicationNotes
 );
 
 module.exports = router;

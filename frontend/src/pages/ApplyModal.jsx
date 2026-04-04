@@ -58,12 +58,8 @@ const ApplyModal = ({ job, onClose, onSuccess }) => {
     );
   };
 
-  const handleSubmit = async () => {
-    if (!coverLetter.trim() || coverLetter.trim().length < 30) {
-      setCoverLetterError("Please write at least 30 characters");
-      return;
-    }
-    setCoverLetterError("");
+const handleSubmit = async () => {
+    setCoverLetterError(""); // Clears any old errors, no minimum length check!
 
     try {
       setSubmitting(true);
@@ -448,7 +444,7 @@ const ApplyModal = ({ job, onClose, onSuccess }) => {
                   <>
                     <div className="am-section-label">
                       <FileText size={12} />
-                      Cover Letter <span style={{ color: "#ef4444" }}>*</span>
+                      Cover Letter <span style={{ color: "#94a3b8", textTransform: "none", marginLeft: "4px" }}>(Optional)</span>
                     </div>
                     <p style={{ fontSize: "13px", color: "#64748b", marginBottom: "12px" }}>
                       Tell the recruiter why you're the right fit for <strong>{job?.title}</strong>. Mention relevant skills, experience, or projects.
@@ -470,7 +466,7 @@ const ApplyModal = ({ job, onClose, onSuccess }) => {
                       </div>
                     ) : (
                       <div className="am-char-count">
-                        {coverLetter.length} / 2000 chars · min 30 required
+                        {coverLetter.length} / 2000 chars
                       </div>
                     )}
 

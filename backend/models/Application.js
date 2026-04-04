@@ -15,12 +15,12 @@ const applicationSchema = new mongoose.Schema(
     recruiter: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      default: null,
     },
     business: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: false,
+      default: null,
     },
 
     // Personal snapshot at time of application
@@ -43,8 +43,7 @@ const applicationSchema = new mongoose.Schema(
 
     coverLetter: {
       type: String,
-      required: [true, "Cover letter is required"],
-      minlength: [30, "Cover letter must be at least 30 characters"],
+      default: "", // Makes it optional and defaults to empty string
       maxlength: [2000, "Cover letter cannot exceed 2000 characters"],
     },
 
@@ -119,7 +118,14 @@ const applicationSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
-
+applicationSchema.pre("validate", function () {
+  if (!this.recruiter && !this.business) {
+    this.invalidate(
+      "recruiter",
+      "Application must belong to either a recruiter or a business"
+    );
+  }
+});
 // Compound index: one application per jobseeker per job
 applicationSchema.index({ job: 1, jobseeker: 1 }, { unique: true });
 applicationSchema.index({ recruiter: 1, status: 1 });

@@ -4,8 +4,8 @@ const email = require("../services/emailService");
 
 /* ===============================
    RECRUITER POSTS JOB
-   New flow: verified recruiter → job goes live immediately
-   Old flow (fallback): non-verified recruiter with linkedBusiness → pending_business
+   Verified recruiter → job goes live immediately
+   Non-verified recruiter with linkedBusiness → pending_business (legacy)
 =============================== */
 const createJob = async (req, res) => {
   try {
@@ -13,9 +13,7 @@ const createJob = async (req, res) => {
 
     const recruiter = await User.findById(req.user.id).select("name email recruiterProfile");
 
-    // ── Gate: must have completed profile ──────────────────────────
     const verificationStatus = recruiter.recruiterProfile?.verificationStatus;
-
     if (verificationStatus !== "approved") {
       return res.status(403).json({
         success: false,
@@ -27,9 +25,7 @@ const createJob = async (req, res) => {
       });
     }
 
-    // ── Validate required fields ────────────────────────────────────
     const { title, location, type, description, skills, isPaid, stipend, stipendPeriod, rounds } = req.body;
-
     if (!title || !location || !description) {
       return res.status(400).json({
         success: false,
@@ -46,18 +42,14 @@ const createJob = async (req, res) => {
 
     const roundsArray = Array.isArray(rounds)
       ? rounds.map((r, i) => ({
-          order:       r.order       || i + 1,
-          type:        r.type        || "other",
-          title:       r.title       || "",
-          description: r.description || "",
-          duration:    r.duration    || "",
+          order: r.order || i + 1, type: r.type || "other",
+          title: r.title || "", description: r.description || "", duration: r.duration || "",
         }))
       : [];
 
-    // Company name comes from the recruiter's own profile (no business linking needed)
     const companyName = recruiter.recruiterProfile?.companyName || "Unknown Company";
 
-    const jobData = {
+    const job = await Job.create({
       title:         title.trim(),
       company:       companyName,
       location:      location.trim(),
@@ -69,39 +61,24 @@ const createJob = async (req, res) => {
       stipendPeriod: isPaid !== false ? (stipendPeriod || "monthly") : "",
       rounds:        roundsArray,
       recruiter:     req.user.id,
-      // Verified recruiter: job goes live immediately, no business review step
       status:        "approved",
       isOpen:        true,
       approvedAt:    new Date(),
-    };
+    });
 
-    const job = await Job.create(jobData);
     console.log("✅ Job created & live:", job._id, "Company:", companyName);
 
-    // ✅ Notify all admins — a verified recruiter just posted a live job
     const adminUsers = await User.find({ role: "admin" }).select("email");
     adminUsers.forEach((admin) => {
       email.sendJobPostedDirectlyEmail(
-        admin.email,
-        job.title,
-        recruiter.name,
-        recruiter.email,
-        companyName,
-        job.location,
-        job.type
+        admin.email, job.title, recruiter.name, recruiter.email, companyName, job.location, job.type
       ).catch(console.error);
     });
 
     res.status(201).json({
       success: true,
       message: "Job posted and live immediately! 🎉",
-      job: {
-        _id:     job._id,
-        title:   job.title,
-        company: companyName,
-        status:  job.status,
-        isOpen:  job.isOpen,
-      },
+      job: { _id: job._id, title: job.title, company: companyName, status: job.status, isOpen: job.isOpen },
     });
   } catch (err) {
     console.error("❌ CREATE JOB ERROR:", err);
@@ -112,11 +89,233 @@ const createJob = async (req, res) => {
         code: "VALIDATION_ERROR",
       });
     }
-    res.status(500).json({
-      success: false,
-      message: err.message || "Failed to create job",
-      code: "SERVER_ERROR",
+    res.status(500).json({ success: false, message: err.message || "Failed to create job", code: "SERVER_ERROR" });
+  }
+};
+
+/* ===============================
+   BUSINESS OWNER — POST JOB
+   Approved business → job goes live immediately, no approval needed
+=============================== */
+const createBusinessJob = async (req, res) => {
+  try {
+    console.log("CREATE BUSINESS JOB - Owner:", req.user.id);
+
+    const owner = await User.findById(req.user.id).select("name email businessProfile");
+    if (!owner) {
+  return res.status(404).json({ success: false, message: "User not found" });
+}
+
+    // Must be an approved business
+    const bizStatus = owner.businessProfile?.status;
+    if (bizStatus !== "approved") {
+      return res.status(403).json({
+        success: false,
+        message:
+          bizStatus === "pending"
+            ? "Your business is awaiting admin approval. You can post jobs once approved."
+            : "Your business must be approved by admin before you can post jobs.",
+        code: "BUSINESS_NOT_APPROVED",
+      });
+    }
+
+    const { title, location, type, description, skills, isPaid, stipend, stipendPeriod, rounds } = req.body;
+    if (!title || !location || !description) {
+      return res.status(400).json({
+        success: false,
+        message: "Title, location and description are required",
+        code: "MISSING_FIELDS",
+      });
+    }
+
+    const skillsArray = Array.isArray(skills)
+      ? skills.filter((s) => typeof s === "string" && s.trim())
+      : typeof skills === "string"
+      ? skills.split(",").map((s) => s.trim()).filter(Boolean)
+      : [];
+
+    const roundsArray = Array.isArray(rounds)
+      ? rounds.map((r, i) => ({
+          order: r.order || i + 1, type: r.type || "other",
+          title: r.title || "", description: r.description || "", duration: r.duration || "",
+        }))
+      : [];
+
+    const companyName = owner.businessProfile?.businessName || "Unknown Business";
+
+    const job = await Job.create({
+      title:            title.trim(),
+      company:          companyName,
+      location:         location.trim(),
+      type:             type || "Full Time",
+      description:      description.trim(),
+      skills:           skillsArray,
+      isPaid:           isPaid !== false,
+      stipend:          isPaid !== false ? (stipend || "").trim() : "",
+      stipendPeriod:    isPaid !== false ? (stipendPeriod || "monthly") : "",
+      rounds:           roundsArray,
+      postedByBusiness: true,
+      businessOwner:    req.user.id,
+      // business field also set so public populate queries work
+      business:         req.user.id,
+      status:           "approved",
+      isOpen:           true,
+      approvedAt:       new Date(),
     });
+
+    console.log("Business job created & live:", job._id, "Business:", companyName);
+    // Notify admins
+    const adminUsers = await User.find({ role: "admin" }).select("email");
+    adminUsers.forEach((admin) => {
+      email.sendJobPostedDirectlyEmail(
+        admin.email, job.title, owner.name, owner.email, companyName, job.location, job.type
+      ).catch(console.error);
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Job posted and live immediately! 🎉",
+      job: { _id: job._id, title: job.title, company: companyName, status: job.status, isOpen: job.isOpen },
+    });
+  } catch (err) {
+    console.error("❌ CREATE BUSINESS JOB ERROR:", err);
+    if (err.name === "ValidationError") {
+      return res.status(400).json({
+        success: false,
+        message: Object.values(err.errors).map((e) => e.message).join(", "),
+        code: "VALIDATION_ERROR",
+      });
+    }
+    res.status(500).json({ success: false, message: err.message || "Failed to create job", code: "SERVER_ERROR" });
+  }
+};
+
+/* ===============================
+   BUSINESS OWNER — GET OWN JOBS
+=============================== */
+const getBusinessOwnJobs = async (req, res) => {
+  try {
+    const jobs = await Job.find({ businessOwner: req.user.id, postedByBusiness: true })
+      .sort({ createdAt: -1 });
+    res.json({ success: true, jobs });
+  } catch (err) {
+    console.error("❌ GET BUSINESS OWN JOBS ERROR:", err);
+    res.status(500).json({ success: false, message: "Failed to fetch jobs" });
+  }
+};
+
+/* ===============================
+   BUSINESS OWNER — UPDATE JOB
+=============================== */
+const updateBusinessJob = async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const job = await Job.findOne({ _id: jobId, businessOwner: req.user.id, postedByBusiness: true });
+
+    if (!job) return res.status(404).json({ success: false, message: "Job not found" });
+    if (job.status === "taken_down") {
+      return res.status(400).json({ success: false, message: "Cannot edit a taken-down job. Repost it instead." });
+    }
+
+    const { title, location, type, description, skills, isPaid, stipend, stipendPeriod, rounds } = req.body;
+
+    const skillsArray = Array.isArray(skills)
+      ? skills.filter((s) => s.trim())
+      : typeof skills === "string"
+      ? skills.split(",").map((s) => s.trim()).filter(Boolean)
+      : job.skills;
+
+    const roundsArray = Array.isArray(rounds)
+      ? rounds.map((r, i) => ({
+          order: r.order || i + 1, type: r.type || "other",
+          title: r.title || "", description: r.description || "", duration: r.duration || "",
+        }))
+      : job.rounds;
+
+    const updated = await Job.findByIdAndUpdate(
+      jobId,
+      {
+        title:         (title       || job.title).trim(),
+        location:      (location    || job.location).trim(),
+        type:          type         || job.type,
+        description:   (description || job.description).trim(),
+        skills:        skillsArray,
+        isPaid:        isPaid !== undefined ? isPaid : job.isPaid,
+        stipend:       isPaid !== false ? (stipend || "").trim() : "",
+        stipendPeriod: isPaid !== false ? (stipendPeriod || job.stipendPeriod) : "",
+        rounds:        roundsArray,
+        // Business owner edits stay live immediately
+        status:        "approved",
+        updatedAt:     new Date(),
+      },
+      { new: true }
+    );
+
+    res.json({ success: true, message: "Job updated and live.", job: updated });
+  } catch (err) {
+    console.error("❌ UPDATE BUSINESS JOB ERROR:", err);
+    res.status(500).json({ success: false, message: "Failed to update job" });
+  }
+};
+
+/* ===============================
+   BUSINESS OWNER — TOGGLE JOB STATUS
+=============================== */
+const toggleBusinessJobStatus = async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const { isOpen } = req.body;
+
+    if (typeof isOpen !== "boolean") {
+      return res.status(400).json({ success: false, message: "isOpen must be true or false" });
+    }
+
+    const job = await Job.findOne({
+      _id: jobId,
+      businessOwner: req.user.id,
+      postedByBusiness: true,
+      status: "approved",
+    });
+
+    if (!job) {
+      return res.status(404).json({ success: false, message: "Job not found or you don't own it" });
+    }
+
+    job.isOpen   = isOpen;
+    job.closedAt = isOpen ? null : new Date();
+    await job.save();
+
+    res.json({
+      success: true,
+      message: isOpen ? "Job reopened successfully!" : "Job closed successfully!",
+      job: { _id: job._id, title: job.title, isOpen: job.isOpen, status: job.status },
+    });
+  } catch (err) {
+    console.error("❌ TOGGLE BUSINESS JOB ERROR:", err);
+    res.status(500).json({ success: false, message: "Failed to toggle job status" });
+  }
+};
+
+/* ===============================
+   BUSINESS OWNER — TAKE DOWN JOB
+=============================== */
+const takedownBusinessJob = async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const job = await Job.findOneAndUpdate(
+      { _id: jobId, businessOwner: req.user.id, postedByBusiness: true, status: "approved" },
+      { status: "taken_down", takenDownAt: new Date() },
+      { new: true }
+    );
+
+    if (!job) {
+      return res.status(404).json({ success: false, message: "Job not found, not live, or you don't have permission" });
+    }
+
+    res.json({ success: true, message: "Job taken offline.", job: { _id: job._id, title: job.title, status: job.status } });
+  } catch (err) {
+    console.error("❌ TAKEDOWN BUSINESS JOB ERROR:", err);
+    res.status(500).json({ success: false, message: "Failed to take down job" });
   }
 };
 
@@ -133,11 +332,7 @@ const updateJob = async (req, res) => {
       return res.status(400).json({ success: false, message: "Cannot edit a taken-down job. Repost it instead." });
     }
     if (job.status === "revoked") {
-      return res.status(400).json({
-        success: false,
-        message: "This job was revoked and cannot be edited.",
-        code: "JOB_REVOKED",
-      });
+      return res.status(400).json({ success: false, message: "This job was revoked and cannot be edited.", code: "JOB_REVOKED" });
     }
 
     const recruiter = await User.findById(req.user.id).select("recruiterProfile");
@@ -158,8 +353,6 @@ const updateJob = async (req, res) => {
         }))
       : job.rounds;
 
-    // Verified recruiters: edits go live immediately
-    // Non-verified (legacy path): edits go back to pending_business
     const newStatus = verificationStatus === "approved" ? "approved" : "pending_business";
 
     const updated = await Job.findByIdAndUpdate(
@@ -183,9 +376,7 @@ const updateJob = async (req, res) => {
 
     res.json({
       success: true,
-      message: newStatus === "approved"
-        ? "Job updated and live."
-        : "Job updated and resubmitted for approval.",
+      message: newStatus === "approved" ? "Job updated and live." : "Job updated and resubmitted for approval.",
       job: updated,
     });
   } catch (err) {
@@ -206,17 +397,9 @@ const toggleJobStatus = async (req, res) => {
       return res.status(400).json({ success: false, message: "isOpen must be true or false" });
     }
 
-    const job = await Job.findOne({
-      _id: jobId,
-      recruiter: req.user.id,
-      status: "approved",
-    });
-
+    const job = await Job.findOne({ _id: jobId, recruiter: req.user.id, status: "approved" });
     if (!job) {
-      return res.status(404).json({
-        success: false,
-        message: "Job not found, not approved, or you don't own it",
-      });
+      return res.status(404).json({ success: false, message: "Job not found, not approved, or you don't own it" });
     }
 
     job.isOpen   = isOpen;
@@ -247,17 +430,10 @@ const takedownJob = async (req, res) => {
     );
 
     if (!job) {
-      return res.status(404).json({
-        success: false,
-        message: "Job not found, not live, or you don't have permission",
-      });
+      return res.status(404).json({ success: false, message: "Job not found, not live, or you don't have permission" });
     }
 
-    res.json({
-      success: true,
-      message: "Job taken offline successfully.",
-      job: { _id: job._id, title: job.title, status: job.status },
-    });
+    res.json({ success: true, message: "Job taken offline successfully.", job: { _id: job._id, title: job.title, status: job.status } });
   } catch (err) {
     console.error("❌ TAKEDOWN JOB ERROR:", err);
     res.status(500).json({ success: false, message: "Failed to take down job" });
@@ -271,7 +447,6 @@ const getJobById = async (req, res) => {
   try {
     const job = await Job.findOne({ _id: req.params.jobId, recruiter: req.user.id })
       .populate("business", "businessProfile.businessName name");
-
     if (!job) return res.status(404).json({ success: false, message: "Job not found" });
     res.json({ success: true, job });
   } catch (err) {
@@ -281,12 +456,11 @@ const getJobById = async (req, res) => {
 };
 
 /* ===============================
-   BUSINESS OWNER - PENDING JOBS
-   (kept for backward compat — legacy recruiters still go through business approval)
+   BUSINESS OWNER - PENDING JOBS (from linked recruiters, legacy)
 =============================== */
 const getBusinessPendingJobs = async (req, res) => {
   try {
-    const jobs = await Job.find({ business: req.user.id, status: "pending_business" })
+    const jobs = await Job.find({ business: req.user.id, status: "pending_business", postedByBusiness: { $ne: true } })
       .populate("recruiter", "name email recruiterProfile.companyName")
       .sort({ createdAt: -1 });
     res.json({ success: true, jobs, count: jobs.length });
@@ -297,12 +471,11 @@ const getBusinessPendingJobs = async (req, res) => {
 };
 
 /* ===============================
-   BUSINESS OWNER - APPROVE JOB  (legacy)
+   BUSINESS OWNER - APPROVE JOB (legacy recruiter flow)
 =============================== */
 const businessApproveJob = async (req, res) => {
   try {
     const { jobId } = req.params;
-
     const job = await Job.findOneAndUpdate(
       { _id: jobId, business: req.user.id, status: "pending_business" },
       { status: "approved", approvedAt: new Date() },
@@ -329,13 +502,12 @@ const businessApproveJob = async (req, res) => {
 };
 
 /* ===============================
-   BUSINESS OWNER - REJECT JOB  (legacy)
+   BUSINESS OWNER - REJECT JOB (legacy recruiter flow)
 =============================== */
 const businessRejectJob = async (req, res) => {
   try {
     const { jobId } = req.params;
     const { reason } = req.body;
-
     const job = await Job.findOneAndUpdate(
       { _id: jobId, business: req.user.id, status: "pending_business" },
       { status: "rejected_business", rejectedAt: new Date() },
@@ -372,7 +544,7 @@ const getMyJobs = async (req, res) => {
 };
 
 /* ===============================
-   JOBSEEKERS - LIVE JOBS (only OPEN)
+   JOBSEEKERS - LIVE JOBS (open only)
 =============================== */
 const getApprovedJobs = async (req, res) => {
   try {
@@ -388,7 +560,7 @@ const getApprovedJobs = async (req, res) => {
 };
 
 /* ===============================
-   PUBLIC - LIVE JOBS (paginated, only OPEN)
+   PUBLIC - LIVE JOBS (paginated, open only)
 =============================== */
 const getPublicJobs = async (req, res) => {
   try {
@@ -414,11 +586,7 @@ const getPublicJobs = async (req, res) => {
     ]);
 
     res.json({
-      success: true,
-      jobs,
-      count: jobs.length,
-      total,
-      page,
+      success: true, jobs, count: jobs.length, total, page,
       totalPages: Math.ceil(total / limit),
       hasMore: page * limit < total,
     });
@@ -455,15 +623,24 @@ const getPublicJobById = async (req, res) => {
    EXPORTS
 =============================== */
 module.exports = {
+  // Recruiter
   createJob,
   updateJob,
   toggleJobStatus,
   takedownJob,
   getJobById,
+  getMyJobs,
+  // Business owner — own jobs
+  createBusinessJob,
+  getBusinessOwnJobs,
+  updateBusinessJob,
+  toggleBusinessJobStatus,
+  takedownBusinessJob,
+  // Business owner — recruiter job approvals (legacy)
   getBusinessPendingJobs,
   businessApproveJob,
   businessRejectJob,
-  getMyJobs,
+  // Public
   getApprovedJobs,
   getPublicJobs,
   getPublicJobById,

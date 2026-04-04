@@ -373,7 +373,9 @@ const CompleteProfile = () => {
             <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(240px,1fr))", gap:20 }}>
               <Field label="Business Name" required><input name="businessName" value={form.businessName||""} onChange={handleChange} placeholder="Enter business name" style={inputStyle} className="cp-input" /></Field>
               <Field label="Category" required><input name="category" value={form.category||""} onChange={handleChange} placeholder="e.g. Restaurant, Retail" style={inputStyle} className="cp-input" /></Field>
-              <Field label="Contact Details" required><input name="contactDetails" value={form.contactDetails||""} onChange={handleChange} placeholder="Phone / email" style={inputStyle} className="cp-input" /></Field>
+              <Field label="Phone Number" required>
+                <input type="tel" name="contactDetails" value={form.contactDetails||""} onChange={handleChange} placeholder="e.g. +91 9876543210" style={inputStyle} className="cp-input" />
+              </Field>
             </div>
           </div>
         );

@@ -926,12 +926,6 @@ export default function GreenJobsHomepage() {
               <span className="footer-link">Phone No.</span>
             </div>
           </div>
-          <div>
-            <div className="footer-title">Admin</div>
-            <div className="footer-links">
-              <span className="footer-link" onClick={() => navigate("/admin/login")}>Sign In</span>
-            </div>
-          </div>
         </div>
         <div className="footer-bottom">© 2026 GreenJobs. All rights reserved.</div>
       </footer>

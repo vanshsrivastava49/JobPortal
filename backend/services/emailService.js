@@ -891,9 +891,6 @@ const sendApplicationWithdrawnNotice = async (email, recruiterName, jobTitle, ap
 };
 
 
-// ════════════════════════════════════════════════════════════
-//   EXPORTS
-// ════════════════════════════════════════════════════════════
 module.exports = {
   // Business
   sendBusinessPendingEmail,

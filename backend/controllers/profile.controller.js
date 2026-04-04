@@ -39,7 +39,6 @@ exports.completeProfile = async (req, res) => {
       progress  = calculateProgress(required, data);
       if (progress < 100) return res.status(400).json({ success: false, message: "Fill all required fields" });
 
-      // Preserve verificationStatus when updating profile so it isn't wiped
       const existing = user.recruiterProfile || {};
       await User.updateOne(
         { _id: user._id },
@@ -48,11 +47,10 @@ exports.completeProfile = async (req, res) => {
             recruiterProfile: {
               ...existing,
               ...data,
-              // Never overwrite verification fields via profile update
-              verificationStatus:       existing.verificationStatus       || undefined,
-              verificationRequestedAt:  existing.verificationRequestedAt  || undefined,
-              verificationReviewedAt:   existing.verificationReviewedAt   || undefined,
-              rejectionReason:          existing.rejectionReason          || undefined,
+              verificationStatus:      existing.verificationStatus      || undefined,
+              verificationRequestedAt: existing.verificationRequestedAt || undefined,
+              verificationReviewedAt:  existing.verificationReviewedAt  || undefined,
+              rejectionReason:         existing.rejectionReason         || undefined,
             },
             profileCompleted: true,
             profileProgress:  progress,
@@ -107,9 +105,8 @@ exports.getMyProfile = async (req, res) => {
 };
 
 /* =========================================================
-   REQUEST ADMIN VERIFICATION  ← NEW
+   REQUEST ADMIN VERIFICATION (recruiter)
    POST /api/profile/recruiter/request-verification
-   Recruiter submits their completed profile for admin review.
 ========================================================= */
 exports.requestVerification = async (req, res) => {
   try {
@@ -130,27 +127,17 @@ exports.requestVerification = async (req, res) => {
     const currentStatus = recruiter.recruiterProfile?.verificationStatus;
 
     if (currentStatus === "approved") {
-      return res.status(400).json({
-        success: false,
-        message: "Your profile is already verified",
-        code: "ALREADY_VERIFIED",
-      });
+      return res.status(400).json({ success: false, message: "Your profile is already verified", code: "ALREADY_VERIFIED" });
     }
-
     if (currentStatus === "pending") {
-      return res.status(400).json({
-        success: false,
-        message: "Your verification request is already pending admin review",
-        code: "ALREADY_PENDING",
-      });
+      return res.status(400).json({ success: false, message: "Your verification request is already pending admin review", code: "ALREADY_PENDING" });
     }
 
-    // Set verificationStatus to pending
     await User.findByIdAndUpdate(req.user.id, {
       $set: {
         "recruiterProfile.verificationStatus":      "pending",
         "recruiterProfile.verificationRequestedAt": new Date(),
-        "recruiterProfile.rejectionReason":         "", // clear any old rejection
+        "recruiterProfile.rejectionReason":         "",
       },
     });
 
@@ -158,32 +145,18 @@ exports.requestVerification = async (req, res) => {
     const industry    = recruiter.recruiterProfile?.industryType;
     const location    = recruiter.recruiterProfile?.companyLocation;
 
-    // ✅ Email recruiter — confirmation
-    email.sendRecruiterVerificationRequestedEmail(
-      recruiter.email,
-      recruiter.name,
-      companyName
-    ).catch(console.error);
+    email.sendRecruiterVerificationRequestedEmail(recruiter.email, recruiter.name, companyName).catch(console.error);
 
-    // ✅ Email all admins — new verification request
     const adminUsers = await User.find({ role: "admin" }).select("email");
     adminUsers.forEach((admin) => {
       email.sendAdminRecruiterVerificationAlert(
-        admin.email,
-        recruiter.name,
-        recruiter.email,
-        companyName,
-        industry,
-        location
+        admin.email, recruiter.name, recruiter.email, companyName, industry, location
       ).catch(console.error);
     });
 
     console.log(`📧 Verification request sent by ${recruiter.name} (${recruiter.email})`);
 
-    res.json({
-      success: true,
-      message: "Verification request submitted! Admin will review within 24 hours.",
-    });
+    res.json({ success: true, message: "Verification request submitted! Admin will review within 24 hours." });
   } catch (err) {
     console.error("REQUEST VERIFICATION ERROR:", err);
     res.status(500).json({ success: false, message: "Failed to submit verification request" });
@@ -262,7 +235,7 @@ exports.uploadBusinessImages = async (req, res) => {
     const user = await User.findById(req.user.id);
     if (!user || user.role !== "business") return res.status(403).json({ success: false, message: "Business profile required" });
 
-    const newUrls       = req.files.map((f) => f.location);
+    const newUrls        = req.files.map((f) => f.location);
     const existingImages = user.businessProfile?.images || [];
     const allImages      = [...existingImages, ...newUrls];
 
@@ -312,13 +285,9 @@ exports.approveBusiness = async (req, res) => {
     const businessName = businessBefore.businessProfile?.businessName || businessBefore.name;
 
     if (wasRevoked) {
-      await email.sendBusinessReApprovedEmail(
-        businessBefore.email, businessBefore.name, businessName, 0
-      ).catch((err) => console.error("❌ Re-approval email failed:", err));
+      await email.sendBusinessReApprovedEmail(businessBefore.email, businessBefore.name, businessName, 0).catch((err) => console.error("❌ Re-approval email failed:", err));
     } else {
-      await email.sendBusinessApprovedEmail(
-        businessBefore.email, businessBefore.name, businessName
-      ).catch((err) => console.error("❌ Approval email failed:", err));
+      await email.sendBusinessApprovedEmail(businessBefore.email, businessBefore.name, businessName).catch((err) => console.error("❌ Approval email failed:", err));
     }
 
     res.json({ success: true, user });
@@ -358,7 +327,7 @@ exports.getApprovedBusinesses = async (req, res) => {
 };
 
 /* =========================================================
-   RECRUITER — REQUEST BUSINESS LINK  (kept for backward compat)
+   RECRUITER — REQUEST BUSINESS LINK (kept for backward compat)
 ========================================================= */
 exports.requestBusinessLink = async (req, res) => {
   try {
@@ -395,13 +364,13 @@ exports.requestBusinessLink = async (req, res) => {
     });
 
     if (oldLink) {
-      oldLink.status      = "pending";
-      oldLink.requestedAt = new Date();
-      oldLink.approvedAt  = null;
-      oldLink.rejectedAt  = null;
+      oldLink.status         = "pending";
+      oldLink.requestedAt    = new Date();
+      oldLink.approvedAt     = null;
+      oldLink.rejectedAt     = null;
       oldLink.rejectedReason = null;
-      oldLink.unlinkedAt  = null;
-      oldLink.removedAt   = null;
+      oldLink.unlinkedAt     = null;
+      oldLink.removedAt      = null;
       await oldLink.save();
 
       email.sendRecruiterRequestConfirmation(recruiter.email, recruiter.name, businessName).catch(console.error);
@@ -496,11 +465,11 @@ exports.approveRecruiterLink = async (req, res) => {
     const businessName = business.businessProfile?.businessName || business.name;
 
     const syncedCompanyDetails = {
-      "recruiterProfile.linkedBusiness":    businessId,
-      "recruiterProfile.companyName":       businessName,
-      "recruiterProfile.companyWebsite":    business.businessProfile?.contactDetails || "",
-      "recruiterProfile.companyLocation":   business.businessProfile?.address        || "",
-      "recruiterProfile.companyDescription": business.businessProfile?.description   || "",
+      "recruiterProfile.linkedBusiness":     businessId,
+      "recruiterProfile.companyName":        businessName,
+      "recruiterProfile.companyWebsite":     business.businessProfile?.contactDetails || "",
+      "recruiterProfile.companyLocation":    business.businessProfile?.address        || "",
+      "recruiterProfile.companyDescription": business.businessProfile?.description    || "",
     };
 
     linkRequest.status     = "approved";
@@ -528,9 +497,9 @@ exports.approveRecruiterLink = async (req, res) => {
     res.json({
       success: true,
       message: `${linkRequest.recruiter.name} linked successfully! ${restoredJobs.modifiedCount} job(s) restored.`,
-      recruiter:       linkRequest.recruiter,
+      recruiter:         linkRequest.recruiter,
       syncedCompanyName: businessName,
-      jobsRestored:    restoredJobs.modifiedCount,
+      jobsRestored:      restoredJobs.modifiedCount,
     });
   } catch (err) {
     console.error("Approve recruiter ERROR:", err);
@@ -555,8 +524,8 @@ exports.rejectRecruiterLink = async (req, res) => {
 
     if (!linkRequest) return res.status(404).json({ success: false, message: "Request not found" });
 
-    linkRequest.status        = "rejected";
-    linkRequest.rejectedAt    = new Date();
+    linkRequest.status         = "rejected";
+    linkRequest.rejectedAt     = new Date();
     linkRequest.rejectedReason = reason || "No reason provided";
     await linkRequest.save();
 

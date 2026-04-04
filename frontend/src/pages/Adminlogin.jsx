@@ -85,9 +85,8 @@ const handleVerifyOtp = async (e) => {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
         .adm-page {
-          min-height: calc(100vh - 82px);
+          min-height:100vh;
           background: #052e16;
           display: flex; align-items: center; justify-content: center;
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;

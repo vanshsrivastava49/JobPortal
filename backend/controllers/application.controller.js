@@ -39,12 +39,12 @@ exports.submitApplication = async (req, res) => {
     const jobseekerId = req.user.id;
     const { jobId, coverLetter, selectedSkills } = req.body;
 
-    if (!jobId || !coverLetter) {
-      return res.status(400).json({
-        success: false,
-        message: "jobId and coverLetter are required",
-      });
-    }
+    if (!jobId) {
+  return res.status(400).json({
+    success: false,
+    message: "jobId is required",
+  });
+}
 
     const jobseeker = await User.findById(jobseekerId).select("-password");
     if (!jobseeker || jobseeker.role !== "jobseeker") {
@@ -102,18 +102,18 @@ exports.submitApplication = async (req, res) => {
       : [];
 
     const application = await Application.create({
-      job:       jobId,
-      jobseeker: jobseekerId,
-      recruiter: job.recruiter._id,
-      // ✅ THE FIX: job.business is null for verified-recruiter jobs.
-      //    Optional chaining + nullish coalescing prevents the crash.
-      business:  job.business?._id ?? null,
-      applicantSnapshot,
-      selectedSkills: validSelected,
-      coverLetter:    coverLetter.trim(),
-      resumeUrl,
-      status: "applied",
-    });
+  job: jobId,
+  jobseeker: jobseekerId,
+
+  recruiter: job.recruiter?._id ?? null,
+  business:  job.business?._id ?? job.businessOwner ?? null,
+
+  applicantSnapshot,
+  selectedSkills: validSelected,
+coverLetter: coverLetter ? coverLetter.trim() : "",
+  resumeUrl,
+  status: "applied",
+});
 
     const companyName = resolveCompanyName(job);
 
@@ -123,14 +123,24 @@ exports.submitApplication = async (req, res) => {
       job.title,
       companyName
     ).catch(console.error);
+let poster = null;
 
-    sendNewApplicationAlert(
-      job.recruiter.email,
-      job.recruiter.name,
-      job.title,
-      applicantSnapshot.fullName,
-      applicantSnapshot.email
-    ).catch(console.error);
+if (job.recruiter) {
+  poster = job.recruiter;
+}
+if (!poster && job.businessOwner) {
+  poster = await User.findById(job.businessOwner).select("name email");
+}
+
+if (poster?.email) {
+  sendNewApplicationAlert(
+    poster.email,
+    poster.name,
+    job.title,
+    applicantSnapshot.fullName,
+    applicantSnapshot.email
+  ).catch(console.error);
+}
 
     res.status(201).json({
       success: true,
@@ -185,39 +195,50 @@ exports.withdrawApplication = async (req, res) => {
   try {
     const { applicationId } = req.params;
     const jobseekerId = req.user.id;
-
+ 
     const application = await Application.findOne({
       _id:       applicationId,
       jobseeker: jobseekerId,
     })
       .populate("job",       "title")
       .populate("recruiter", "name email");
-
+      // NOTE: do NOT populate "business" here — we do a separate lookup below.
+ 
     if (!application) {
       return res.status(404).json({ success: false, message: "Application not found" });
     }
-
+ 
     if (["rejected", "hired", "withdrawn"].includes(application.status)) {
       return res.status(400).json({
         success: false,
         message: `Cannot withdraw an application that is already ${application.status}`,
       });
     }
-
+ 
     application.status      = "withdrawn";
     application.withdrawnAt = new Date();
     await application.save();
-
+ 
     const jobseeker = await User.findById(jobseekerId).select("name email jobSeekerProfile");
     const applicantName = jobseeker?.jobSeekerProfile?.fullName || jobseeker?.name;
-
-    sendApplicationWithdrawnNotice(
-      application.recruiter.email,
-      application.recruiter.name,
-      application.job.title,
-      applicantName
-    ).catch(console.error);
-
+ 
+    // Resolve who to notify: recruiter takes priority, then business owner.
+    let poster = application.recruiter || null;
+ 
+    if (!poster && application.business) {
+      // application.business is a raw ObjectId — look up the User directly.
+      poster = await User.findById(application.business).select("name email");
+    }
+ 
+    if (poster?.email) {
+      sendApplicationWithdrawnNotice(
+        poster.email,
+        poster.name,
+        application.job.title,
+        applicantName
+      ).catch(console.error);
+    }
+ 
     res.json({ success: true, message: "Application withdrawn successfully" });
   } catch (err) {
     console.error("WITHDRAW APPLICATION ERROR:", err);
