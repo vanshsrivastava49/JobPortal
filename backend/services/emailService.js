@@ -889,7 +889,159 @@ const sendApplicationWithdrawnNotice = async (email, recruiterName, jobTitle, ap
     html,
   });
 };
+// ════════════════════════════════════════════════════════════
+//   PROFILE COMPLETION REMINDER EMAILS
+// ════════════════════════════════════════════════════════════
 
+// Jobseeker — profile incomplete reminder
+const sendJobseekerProfileReminderEmail = async (email, name) => {
+  const html = baseTemplate(`
+    ${greeting(name)}
+    <p style="margin:0 0 20px;color:#0f172a;font-size:22px;font-weight:700;">
+      ✨ Your profile is almost there — finish it today!
+    </p>
+
+    ${paragraph(`You're just a few steps away from standing out to top recruiters on <strong>${APP_NAME}</strong>. A complete profile gets <strong>3× more views</strong> and lands interviews faster.`)}
+
+    <div style="margin:20px 0;">${statusBadge("Profile Incomplete", "pending")}</div>
+
+    <table width="100%" cellpadding="0" cellspacing="0"
+      style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;margin:20px 0;">
+      <tr><td style="padding:22px 24px;">
+        <p style="margin:0 0 14px;color:#065f46;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">
+          What completing your profile unlocks
+        </p>
+        ${[
+          "🎯 Show up in recruiter searches instantly",
+          "⚡ Apply to jobs with one click using your saved profile",
+          "📩 Receive direct recruiter messages & interview invites",
+          "🏆 Get matched to green jobs that fit your exact skills",
+        ].map(item => `
+          <table cellpadding="0" cellspacing="0" style="margin-bottom:10px;">
+            <tr>
+              <td style="color:#065f46;font-size:14.5px;line-height:1.6;">${item}</td>
+            </tr>
+          </table>
+        `).join("")}
+      </td></tr>
+    </table>
+
+    ${paragraph("Don't let your dream job go to someone with a complete profile. It only takes <strong>2 minutes</strong>.")}
+
+    ${ctaButton("Complete My Profile Now →", `${FRONTEND_URL}/complete-profile`)}
+
+    ${divider()}
+    <p style="margin:0;color:#94a3b8;font-size:13px;">Warm regards,<br>
+    <strong style="color:#475569;">The ${APP_NAME} Team</strong></p>
+  `);
+
+  await transporter.sendMail({
+    from: `"${APP_NAME}" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: `🌟 ${name.split(" ")[0]}, your profile is incomplete — finish it & get hired faster`,
+    html,
+  });
+};
+
+// Recruiter — profile incomplete reminder
+const sendRecruiterProfileReminderEmail = async (email, name) => {
+  const html = baseTemplate(`
+    ${greeting(name)}
+    <p style="margin:0 0 20px;color:#0f172a;font-size:22px;font-weight:700;">
+      🚀 Complete your profile & start hiring today
+    </p>
+
+    ${paragraph(`Your recruiter profile on <strong>${APP_NAME}</strong> is still incomplete. Finish it to get <strong>verified</strong> and start posting jobs to thousands of qualified green talent — no waiting, no back-and-forth.`)}
+
+    <div style="margin:20px 0;">${statusBadge("Verification Pending Setup", "pending")}</div>
+
+    <table width="100%" cellpadding="0" cellspacing="0"
+      style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;margin:20px 0;">
+      <tr><td style="padding:22px 24px;">
+        <p style="margin:0 0 14px;color:#065f46;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">
+          Once verified, you can
+        </p>
+        ${[
+          "✅ Post jobs instantly — no per-job approval required",
+          "🔍 Search and shortlist from our pool of pre-vetted candidates",
+          "📋 Manage your entire hiring pipeline in one dashboard",
+          "🏅 Display your company brand to attract the best talent",
+        ].map(item => `
+          <table cellpadding="0" cellspacing="0" style="margin-bottom:10px;">
+            <tr>
+              <td style="color:#065f46;font-size:14.5px;line-height:1.6;">${item}</td>
+            </tr>
+          </table>
+        `).join("")}
+      </td></tr>
+    </table>
+
+    ${paragraph("The sooner you complete your profile, the sooner you can find your next great hire.")}
+
+    ${ctaButton("Complete & Get Verified →", `${FRONTEND_URL}/complete-profile`)}
+
+    ${divider()}
+    <p style="margin:0;color:#94a3b8;font-size:13px;">Warm regards,<br>
+    <strong style="color:#475569;">The ${APP_NAME} Team</strong></p>
+  `);
+
+  await transporter.sendMail({
+    from: `"${APP_NAME}" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: `⚡ ${name.split(" ")[0]}, complete your recruiter profile & start hiring now`,
+    html,
+  });
+};
+
+// Business owner — profile incomplete reminder
+const sendBusinessProfileReminderEmail = async (email, name) => {
+  const html = baseTemplate(`
+    ${greeting(name)}
+    <p style="margin:0 0 20px;color:#0f172a;font-size:22px;font-weight:700;">
+      🏢 Get your business listed — let the world see what you do
+    </p>
+
+    ${paragraph(`Your business profile on <strong>${APP_NAME}</strong> is still incomplete. Finish your setup to get approved, go live, and connect with top green-sector recruiters who'll bring you the talent you need.`)}
+
+    <div style="margin:20px 0;">${statusBadge("Awaiting Profile Completion", "pending")}</div>
+
+    <table width="100%" cellpadding="0" cellspacing="0"
+      style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;margin:20px 0;">
+      <tr><td style="padding:22px 24px;">
+        <p style="margin:0 0 14px;color:#065f46;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">
+          What a complete listing gets you
+        </p>
+        ${[
+          "🌍 Showcase your business to thousands of job seekers & recruiters",
+          "🤝 Approve recruiters to post jobs directly under your brand",
+          "📸 Upload photos & tell your story — make your business unforgettable",
+          "🔒 Get the verified badge that builds instant trust on the platform",
+        ].map(item => `
+          <table cellpadding="0" cellspacing="0" style="margin-bottom:10px;">
+            <tr>
+              <td style="color:#065f46;font-size:14.5px;line-height:1.6;">${item}</td>
+            </tr>
+          </table>
+        `).join("")}
+      </td></tr>
+    </table>
+
+    ${paragraph("Your business has wonders to show — don't keep them hidden. Complete your profile and get listed today.")}
+
+    ${ctaButton("Complete My Business Profile →", `${FRONTEND_URL}/complete-profile`)}
+
+    ${divider()}
+    <p style="margin:0;color:#94a3b8;font-size:13px;">Warm regards,<br>
+    <strong style="color:#475569;">The ${APP_NAME} Team</strong></p>
+  `);
+
+  await transporter.sendMail({
+    from: `"${APP_NAME}" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: `🏢 ${name.split(" ")[0]}, your business listing is incomplete — get approved & go live`,
+    html,
+  });
+};
 
 module.exports = {
   // Business
@@ -933,4 +1085,7 @@ module.exports = {
   sendRejectionEmail,
   sendHiredEmail,
   sendApplicationWithdrawnNotice,
+  sendJobseekerProfileReminderEmail,
+  sendRecruiterProfileReminderEmail,
+  sendBusinessProfileReminderEmail,
 };

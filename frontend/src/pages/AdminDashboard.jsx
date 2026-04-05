@@ -19,7 +19,7 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState({
     totalUsers: 0, jobseekers: 0, recruiters: 0, businesses: 0,
     liveJobs: 0, pendingJobs: 0, pendingBusinesses: 0, approvedBusinesses: 0,
-    pendingRecruiters: 0,
+    pendingRecruiters: 0, incompleteUsers: 0,
   });
 
   const [users, setUsers] = useState([]);
@@ -27,7 +27,7 @@ const AdminDashboard = () => {
   const [businesses, setBusinesses] = useState([]);
   const [pendingBusinesses, setPendingBusinesses] = useState([]);
   const [pendingRecruiters, setPendingRecruiters] = useState([]);
-
+const [sendingReminders, setSendingReminders] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [searchTerm, setSearchTerm] = useState("");
@@ -80,6 +80,7 @@ const AdminDashboard = () => {
         pendingBusinesses:  s.pendingBusinesses  ?? pendingBizData.length,
         approvedBusinesses: s.approvedBusinesses ?? approvedBizData.length,
         pendingRecruiters:  s.pendingRecruiters  ?? pendingRecData.length,
+        incompleteUsers:    s.incompleteUsers    ?? usersData.filter(u => !u.profileCompleted && u.role !== "admin").length,
       });
     } catch (err) {
       console.error("Fetch data error:", err);
@@ -208,6 +209,7 @@ const AdminDashboard = () => {
   );
 
   // ── Stat cards ──────────────────────────────────────────────────────────────
+// ── Stat cards ──────────────────────────────────────────────────────────────
   const statsCards = [
     {
       icon: Users, label: "Total Users", value: stats.totalUsers, color: "#3b82f6",
@@ -224,15 +226,37 @@ const AdminDashboard = () => {
       value: stats.approvedBusinesses + stats.pendingBusinesses, color: "#f59e0b",
       subtitle: `${stats.approvedBusinesses} approved · ${stats.pendingBusinesses} pending`,
       tab: "businesses",
+      urgent: stats.pendingBusinesses > 0 ? "amber" : null,
     },
     {
       icon: ShieldCheck, label: "Recruiter Verifications",
       value: stats.pendingRecruiters, color: "#ef4444",
       subtitle: "Recruiters awaiting verification",
       tab: "recruiters",
+      urgent: stats.pendingRecruiters > 0 ? "red" : null,
     },
   ];
+  const handleSendProfileReminders = async () => {
+  if (!window.confirm(
+    "Send profile completion reminder emails to all users who signed up 24+ hours ago and haven't completed their profile?\n\nThis will send role-specific emails to jobseekers, recruiters, and business owners."
+  )) return;
 
+  try {
+    setSendingReminders(true);
+    const res = await axios.post(
+      `${API_BASE_URL}/api/admin/send-profile-reminders`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    toast.success(
+      `✅ Reminders sent to ${res.data.sent} user(s)${res.data.failed > 0 ? ` · ${res.data.failed} failed` : ""}`
+    );
+  } catch (err) {
+    toast.error(err.response?.data?.message || "Failed to send reminders");
+  } finally {
+    setSendingReminders(false);
+  }
+};
   const getRoleBadge = (role) => {
     const map = {
       jobseeker: { bg: "#dbeafe", color: "#1e40af", label: "Job Seeker" },
@@ -376,6 +400,26 @@ const AdminDashboard = () => {
           .btn { width: 100%; }
           .modal-actions { flex-direction: column; }
         }
+          /* ── Urgent alert banners ── */
+        .alert-banner { border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+        .alert-banner-red    { background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%); border: 1.5px solid #fca5a5; }
+        .alert-banner-amber  { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1.5px solid #fcd34d; }
+        .alert-icon-wrap { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .alert-icon-red   { background: #fee2e2; }
+        .alert-icon-amber { background: #fde68a; }
+        .alert-title   { font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 3px; }
+        .alert-desc    { font-size: 13px; color: #64748b; }
+        .alert-count   { font-size: 36px; font-weight: 800; line-height: 1; margin-right: 4px; }
+        .alert-count-red   { color: #dc2626; }
+        .alert-count-amber { color: #d97706; }
+        /* Pulsing ring around stat cards with pending items */
+        .stat-card-urgent { box-shadow: 0 0 0 3px #fca5a5; border-color: #f87171 !important; animation: ring-pulse 2s ease-in-out infinite; }
+        .stat-card-urgent-amber { box-shadow: 0 0 0 3px #fcd34d; border-color: #fbbf24 !important; animation: ring-pulse-amber 2s ease-in-out infinite; }
+        @keyframes ring-pulse       { 0%,100%{box-shadow:0 0 0 3px #fca5a5;}  50%{box-shadow:0 0 0 6px #fecaca;} }
+        @keyframes ring-pulse-amber { 0%,100%{box-shadow:0 0 0 3px #fcd34d;}  50%{box-shadow:0 0 0 6px #fef08a;} }
+        /* Tab badge */
+        .tab-urgent-badge { display: inline-flex; align-items: center; justify-content: center; background: #ef4444; color: white; border-radius: 100px; font-size: 11px; font-weight: 700; padding: 1px 7px; margin-left: 6px; animation: pulse 1.5s infinite; }
+        .tab-amber-badge  { display: inline-flex; align-items: center; justify-content: center; background: #f59e0b; color: white; border-radius: 100px; font-size: 11px; font-weight: 700; padding: 1px 7px; margin-left: 6px; }
       `}</style>
 
       <Navbar />
@@ -396,15 +440,34 @@ const AdminDashboard = () => {
               <button className="btn btn-secondary" onClick={fetchAllData}>
                 <RefreshCw size={16} /> Refresh
               </button>
+              <button
+  className="btn btn-secondary"
+  onClick={handleSendProfileReminders}
+  disabled={sendingReminders}
+  title="Send profile completion reminder emails to incomplete users"
+>
+  {sendingReminders
+    ? <><Loader2 size={16} className="animate-spin" /> Sending...</>
+    : <><Mail size={16} /> Send Reminders</>}
+</button>
             </div>
           </div>
 
+          {/* Stats Grid */}
           {/* Stats Grid */}
           <div className="stats-grid">
             {statsCards.map((stat, i) => {
               const Icon = stat.icon;
               return (
-                <div key={i} className="stat-card" onClick={() => setActiveTab(stat.tab)}>
+                <div
+                  key={i}
+                  className={[
+                    "stat-card",
+                    stat.urgent === "red"   ? "stat-card-urgent"       : "",
+                    stat.urgent === "amber" ? "stat-card-urgent-amber" : "",
+                  ].join(" ").trim()}
+                  onClick={() => setActiveTab(stat.tab)}
+                >
                   <div className="stat-header">
                     <div className="stat-icon"><Icon size={24} color={stat.color} /></div>
                     <ArrowUpRight size={20} color="#94a3b8" />
@@ -412,6 +475,16 @@ const AdminDashboard = () => {
                   <div className="stat-value">{stat.value}</div>
                   <div className="stat-label">{stat.label}</div>
                   <div className="stat-subtitle">{stat.subtitle}</div>
+                  {stat.urgent && (
+                    <div style={{
+                      marginTop: 10, display: "inline-flex", alignItems: "center", gap: 5,
+                      background: stat.urgent === "red" ? "#fee2e2" : "#fef3c7",
+                      color: stat.urgent === "red" ? "#dc2626" : "#d97706",
+                      padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 700,
+                    }}>
+                      ⚠ Action Required
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -439,25 +512,27 @@ const AdminDashboard = () => {
               <button className="btn btn-success" onClick={() => setShowAddAdmin(true)}>
                 <UserPlus size={16} /> Add Admin
               </button>
+              <button
+  className="btn btn-secondary"
+  onClick={handleSendProfileReminders}
+  disabled={sendingReminders}
+>
+  {sendingReminders
+    ? <><Loader2 size={16} className="animate-spin" /> Sending...</>
+    : <><Mail size={16} /> Send Profile Reminders</>}
+</button>
             </div>
           </div>
 
           {/* Tabs */}
+          {/* Tabs */}
           <div className="tabs-container">
             {[
-              { key: "overview",   label: "Overview" },
-              { key: "users",      label: `Users (${stats.totalUsers})` },
-              { key: "jobs",       label: `Live Jobs (${stats.liveJobs})` },
-              { key: "businesses", label: `Businesses (${stats.approvedBusinesses + stats.pendingBusinesses})` },
-              {
-                key: "recruiters",
-                label: (
-                  <>
-                    Recruiter Verifications ({stats.pendingRecruiters})
-                    {stats.pendingRecruiters > 0 && <span className="urgent-dot" />}
-                  </>
-                ),
-              },
+              { key: "overview",   label: "Overview", badge: null },
+              { key: "users",      label: `Users (${stats.totalUsers})`, badge: null },
+              { key: "jobs",       label: `Live Jobs (${stats.liveJobs})`, badge: null },
+              { key: "businesses", label: `Businesses`, badge: stats.pendingBusinesses > 0 ? { count: stats.pendingBusinesses, type: "amber" } : null },
+              { key: "recruiters", label: "Recruiter Verifications",      badge: stats.pendingRecruiters  > 0 ? { count: stats.pendingRecruiters,  type: "red"   } : null },
             ].map((tab) => (
               <button
                 key={tab.key}
@@ -465,6 +540,11 @@ const AdminDashboard = () => {
                 onClick={() => { setActiveTab(tab.key); setSearchTerm(""); }}
               >
                 {tab.label}
+                {tab.badge && (
+                  <span className={tab.badge.type === "red" ? "tab-urgent-badge" : "tab-amber-badge"}>
+                    {tab.badge.count}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -472,6 +552,55 @@ const AdminDashboard = () => {
           {/* ── Overview Tab ── */}
           {activeTab === "overview" && (
             <div>
+
+              {/* ── Urgent alert banners ── */}
+              {stats.pendingRecruiters > 0 && (
+                <div className="alert-banner alert-banner-red">
+                  <div className="alert-icon-wrap alert-icon-red">
+                    <ShieldCheck size={26} color="#dc2626" />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div className="alert-title">
+                      <span className="alert-count alert-count-red">{stats.pendingRecruiters}</span>
+                      Recruiter{stats.pendingRecruiters !== 1 ? "s" : ""} awaiting verification
+                    </div>
+                    <div className="alert-desc">
+                      Once approved, they can post jobs instantly. Don't keep them waiting.
+                    </div>
+                  </div>
+                  <button className="btn btn-danger btn-sm" style={{ background: "#dc2626", color: "white", border: "none", flexShrink: 0 }} onClick={() => setActiveTab("recruiters")}>
+                    Review Now →
+                  </button>
+                </div>
+              )}
+
+              {stats.pendingBusinesses > 0 && (
+                <div className="alert-banner alert-banner-amber">
+                  <div className="alert-icon-wrap alert-icon-amber">
+                    <Building size={26} color="#d97706" />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div className="alert-title">
+                      <span className="alert-count alert-count-amber">{stats.pendingBusinesses}</span>
+                      Business application{stats.pendingBusinesses !== 1 ? "s" : ""} pending approval
+                    </div>
+                    <div className="alert-desc">
+                      Businesses are waiting to go live. Approve them so recruiters can start linking.
+                    </div>
+                  </div>
+                  <button className="btn btn-sm" style={{ background: "#d97706", color: "white", border: "none", flexShrink: 0 }} onClick={() => navigate("/admin/pending-businesses")}>
+                    Approve Now →
+                  </button>
+                </div>
+              )}
+
+              {stats.pendingRecruiters === 0 && stats.pendingBusinesses === 0 && (
+                <div style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: "12px", padding: "16px 20px", marginBottom: "20px", display: "flex", alignItems: "center", gap: "12px" }}>
+                  <CheckCircle size={22} color="#10b981" />
+                  <span style={{ fontSize: "14px", fontWeight: "600", color: "#065f46" }}>All clear — no pending verifications or approvals right now.</span>
+                </div>
+              )}
+
               <div className="section-card">
                 <div className="section-header">
                   <h2 className="section-title"><Users size={20} /> User Breakdown</h2>
@@ -485,7 +614,6 @@ const AdminDashboard = () => {
                     { label: "Total Platform",  value: stats.totalUsers, bg: "#f3e8ff", border: "#e9d5ff", text: "#6b21a8", dark: "#581c87" },
                   ].map((item, i) => (
                     <div key={i} style={{ padding: "24px", background: item.bg, borderRadius: "12px", border: `1px solid ${item.border}` }}>
-                      <div style={{ fontSize: "28px", marginBottom: "8px" }}>{item.icon}</div>
                       <div style={{ fontSize: "13px", color: item.text, marginBottom: "6px", fontWeight: "600" }}>{item.label}</div>
                       <div style={{ fontSize: "40px", fontWeight: "700", color: item.dark, lineHeight: 1 }}>{item.value}</div>
                     </div>
@@ -493,36 +621,24 @@ const AdminDashboard = () => {
                 </div>
               </div>
 
-              {stats.pendingRecruiters > 0 && (
-                <div style={{ background: "#fffbeb", border: "1px solid #fde047", borderRadius: "12px", padding: "20px", marginBottom: "24px", display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
-                  <ShieldCheck size={28} color="#f59e0b" style={{ flexShrink: 0 }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: "700", fontSize: "15px", marginBottom: "4px" }}>
-                      {stats.pendingRecruiters} Recruiter{stats.pendingRecruiters > 1 ? "s" : ""} Awaiting Verification
-                    </div>
-                    <div style={{ fontSize: "13px", color: "#78350f" }}>
-                      Review and approve their profiles so they can start posting jobs.
-                    </div>
-                  </div>
-                  <button className="btn btn-primary btn-sm" onClick={() => setActiveTab("recruiters")}>
-                    Review Now
-                  </button>
-                </div>
-              )}
-
               <div className="section-card">
                 <div className="section-header">
                   <h2 className="section-title"><TrendingUp size={20} /> Platform Summary</h2>
+                  {stats.incompleteUsers > 0 && (
+                    <button className="btn btn-secondary btn-sm" onClick={handleSendProfileReminders} disabled={sendingReminders}>
+                      {sendingReminders ? <><Loader2 size={13} className="animate-spin" /> Sending...</> : <><Mail size={13} /> Remind {stats.incompleteUsers} incomplete users</>}
+                    </button>
+                  )}
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
                   {[
-                    { label: "Live Jobs",               value: stats.liveJobs,           bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d" },
-                    { label: "Pending Recruiter Verif", value: stats.pendingRecruiters,  bg: "#fefce8", border: "#fef08a", text: "#a16207" },
-                    { label: "Approved Businesses",     value: stats.approvedBusinesses, bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d" },
-                    { label: "Pending Businesses",      value: stats.pendingBusinesses,  bg: "#fef2f2", border: "#fecaca", text: "#dc2626" },
+                    { label: "Live Jobs",               value: stats.liveJobs,            bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d" },
+                    { label: "Pending Recruiter Verif", value: stats.pendingRecruiters,   bg: stats.pendingRecruiters  > 0 ? "#fef2f2" : "#f8fafc", border: stats.pendingRecruiters  > 0 ? "#fca5a5" : "#e2e8f0", text: stats.pendingRecruiters  > 0 ? "#dc2626" : "#64748b" },
+                    { label: "Approved Businesses",     value: stats.approvedBusinesses,  bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d" },
+                    { label: "Pending Businesses",      value: stats.pendingBusinesses,   bg: stats.pendingBusinesses  > 0 ? "#fffbeb" : "#f8fafc", border: stats.pendingBusinesses  > 0 ? "#fcd34d" : "#e2e8f0", text: stats.pendingBusinesses  > 0 ? "#d97706" : "#64748b" },
+                    { label: "Incomplete Profiles",     value: stats.incompleteUsers ?? 0, bg: "#fef2f2", border: "#fecaca", text: "#dc2626" },
                   ].map((item, i) => (
                     <div key={i} style={{ padding: "20px", background: item.bg, borderRadius: "12px", border: `1px solid ${item.border}` }}>
-                      <div style={{ fontSize: "22px", marginBottom: "6px" }}>{item.icon}</div>
                       <div style={{ fontSize: "12px", color: item.text, marginBottom: "4px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>{item.label}</div>
                       <div style={{ fontSize: "36px", fontWeight: "700", color: item.text, lineHeight: 1 }}>{item.value}</div>
                     </div>
