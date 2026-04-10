@@ -4,13 +4,14 @@ import {
   Users, Briefcase, Building, TrendingUp, CheckCircle,
   Clock, XCircle, Eye, RefreshCw, Loader2, Search,
   MapPin, Mail, Calendar, ArrowUpRight, ShieldOff,
-  ShieldCheck, UserCheck, X, UserPlus,
+  ShieldCheck, UserCheck, X, UserPlus, Building2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 import API_BASE_URL from "../config/api";
+import AdminAdsManager from "./AdminAdsManager";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -27,18 +28,80 @@ const AdminDashboard = () => {
   const [businesses, setBusinesses] = useState([]);
   const [pendingBusinesses, setPendingBusinesses] = useState([]);
   const [pendingRecruiters, setPendingRecruiters] = useState([]);
-const [sendingReminders, setSendingReminders] = useState(false);
+  const [sendingReminders, setSendingReminders] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [revokingId, setRevokingId] = useState(null);
   const [verifyingId, setVerifyingId] = useState(null);
+  const [revokingJobId, setRevokingJobId] = useState(null);
+  const [restoringJobId, setRestoringJobId] = useState(null);
 
   // ── Add Admin modal state ───────────────────────────────────────────────────
   const [showAddAdmin, setShowAddAdmin] = useState(false);
   const [newAdmin, setNewAdmin] = useState({ name: "", email: "", phone: "" });
   const [addingAdmin, setAddingAdmin] = useState(false);
+
+  const REVOKE_TYPE_OPTIONS = [
+    { value: "fraud",            label: "Fraudulent Listing" },
+    { value: "non_applicable",   label: "Non-Applicable / Irrelevant Content" },
+    { value: "policy_violation", label: "Policy Violation" },
+    { value: "other",            label: "Other / Admin Discretion" },
+  ];
+
+  // ── Job revoke/restore handlers ─────────────────────────────────────────────
+  const handleAdminRevokeJob = async (jobId, jobTitle) => {
+    const revokeType = window.prompt(
+      `Revoke "${jobTitle}"?\n\nSelect reason type (type the key):\n` +
+      REVOKE_TYPE_OPTIONS.map(o => `  ${o.value} — ${o.label}`).join("\n") +
+      `\n\nType one of: fraud | non_applicable | policy_violation | other`
+    );
+    if (revokeType === null) return;
+
+    const validTypes = REVOKE_TYPE_OPTIONS.map(o => o.value);
+    const type = validTypes.includes(revokeType.trim().toLowerCase())
+      ? revokeType.trim().toLowerCase()
+      : "other";
+
+    const reason = window.prompt(
+      `Add details / reason for revoking "${jobTitle}":\n(This will be sent to the recruiter)`
+    );
+    if (reason === null) return;
+
+    try {
+      setRevokingJobId(jobId);
+      await axios.patch(
+        `${API_BASE_URL}/api/admin/jobs/${jobId}/revoke`,
+        { revokeType: type, reason: reason.trim() || REVOKE_TYPE_OPTIONS.find(o => o.value === type)?.label },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(`"${jobTitle}" revoked. Emails sent to recruiter & business.`);
+      fetchAllData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to revoke job");
+    } finally {
+      setRevokingJobId(null);
+    }
+  };
+
+  const handleAdminRestoreJob = async (jobId, jobTitle) => {
+    if (!window.confirm(`Restore "${jobTitle}" back to live?\n\nThis will email the recruiter that their listing is back up.`)) return;
+    try {
+      setRestoringJobId(jobId);
+      await axios.patch(
+        `${API_BASE_URL}/api/admin/jobs/${jobId}/restore`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(`"${jobTitle}" restored to live!`);
+      fetchAllData();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to restore job");
+    } finally {
+      setRestoringJobId(null);
+    }
+  };
 
   // ── Fetch all data ──────────────────────────────────────────────────────────
   const fetchAllData = useCallback(async () => {
@@ -57,11 +120,11 @@ const [sendingReminders, setSendingReminders] = useState(false);
           axios.get(`${API_BASE_URL}/api/admin/recruiters/pending-verification`, { headers }).catch(() => ({ data: [] })),
         ]);
 
-      const usersData      = Array.isArray(usersRes.data)       ? usersRes.data       : [];
-      const jobsData       = liveJobsRes.data?.jobs             || [];
-      const approvedBizData = Array.isArray(approvedBizRes.data) ? approvedBizRes.data : [];
-      const pendingBizData  = Array.isArray(pendingBizRes.data)  ? pendingBizRes.data  : [];
-      const pendingRecData  = Array.isArray(pendingRecRes.data)  ? pendingRecRes.data  : [];
+      const usersData       = Array.isArray(usersRes.data)        ? usersRes.data        : [];
+      const jobsData        = liveJobsRes.data?.jobs              || [];
+      const approvedBizData = Array.isArray(approvedBizRes.data)  ? approvedBizRes.data  : [];
+      const pendingBizData  = Array.isArray(pendingBizRes.data)   ? pendingBizRes.data   : [];
+      const pendingRecData  = Array.isArray(pendingRecRes.data)   ? pendingRecRes.data   : [];
 
       setUsers(usersData);
       setLiveJobs(jobsData);
@@ -150,6 +213,29 @@ const [sendingReminders, setSendingReminders] = useState(false);
     }
   };
 
+  // ── Send profile reminders ──────────────────────────────────────────────────
+  const handleSendProfileReminders = async () => {
+    if (!window.confirm(
+      "Send profile completion reminder emails to all users who signed up 24+ hours ago and haven't completed their profile?\n\nThis will send role-specific emails to jobseekers, recruiters, and business owners."
+    )) return;
+
+    try {
+      setSendingReminders(true);
+      const res = await axios.post(
+        `${API_BASE_URL}/api/admin/send-profile-reminders`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(
+        `✅ Reminders sent to ${res.data.sent} user(s)${res.data.failed > 0 ? ` · ${res.data.failed} failed` : ""}`
+      );
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to send reminders");
+    } finally {
+      setSendingReminders(false);
+    }
+  };
+
   // ── Add Admin ───────────────────────────────────────────────────────────────
   const handleAddAdmin = async (e) => {
     e.preventDefault();
@@ -209,7 +295,6 @@ const [sendingReminders, setSendingReminders] = useState(false);
   );
 
   // ── Stat cards ──────────────────────────────────────────────────────────────
-// ── Stat cards ──────────────────────────────────────────────────────────────
   const statsCards = [
     {
       icon: Users, label: "Total Users", value: stats.totalUsers, color: "#3b82f6",
@@ -236,27 +321,8 @@ const [sendingReminders, setSendingReminders] = useState(false);
       urgent: stats.pendingRecruiters > 0 ? "red" : null,
     },
   ];
-  const handleSendProfileReminders = async () => {
-  if (!window.confirm(
-    "Send profile completion reminder emails to all users who signed up 24+ hours ago and haven't completed their profile?\n\nThis will send role-specific emails to jobseekers, recruiters, and business owners."
-  )) return;
 
-  try {
-    setSendingReminders(true);
-    const res = await axios.post(
-      `${API_BASE_URL}/api/admin/send-profile-reminders`,
-      {},
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    toast.success(
-      `✅ Reminders sent to ${res.data.sent} user(s)${res.data.failed > 0 ? ` · ${res.data.failed} failed` : ""}`
-    );
-  } catch (err) {
-    toast.error(err.response?.data?.message || "Failed to send reminders");
-  } finally {
-    setSendingReminders(false);
-  }
-};
+  // ── Badge helpers ───────────────────────────────────────────────────────────
   const getRoleBadge = (role) => {
     const map = {
       jobseeker: { bg: "#dbeafe", color: "#1e40af", label: "Job Seeker" },
@@ -287,6 +353,7 @@ const [sendingReminders, setSendingReminders] = useState(false);
     );
   };
 
+  // ── Loading state ───────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div>
@@ -299,6 +366,7 @@ const [sendingReminders, setSendingReminders] = useState(false);
     );
   }
 
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <>
       <style>{`
@@ -378,6 +446,7 @@ const [sendingReminders, setSendingReminders] = useState(false);
         .empty-desc  { font-size: 14px; color: #64748b; }
         .urgent-dot { width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block; margin-left: 6px; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         /* ── Add Admin Modal ── */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
         .modal-box { background: white; border-radius: 16px; padding: 32px; width: 100%; max-width: 460px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); position: relative; }
@@ -392,15 +461,7 @@ const [sendingReminders, setSendingReminders] = useState(false);
         .modal-input:disabled { opacity: 0.5; background: #f8fafc; }
         .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
         .modal-actions .btn { flex: 1; }
-        @media (max-width: 768px) {
-          .dashboard-container { padding: 16px; }
-          .page-title { font-size: 24px; }
-          .stats-grid { grid-template-columns: 1fr; }
-          .rec-actions { flex-direction: column; }
-          .btn { width: 100%; }
-          .modal-actions { flex-direction: column; }
-        }
-          /* ── Urgent alert banners ── */
+        /* ── Urgent alert banners ── */
         .alert-banner { border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
         .alert-banner-red    { background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%); border: 1.5px solid #fca5a5; }
         .alert-banner-amber  { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1.5px solid #fcd34d; }
@@ -412,14 +473,20 @@ const [sendingReminders, setSendingReminders] = useState(false);
         .alert-count   { font-size: 36px; font-weight: 800; line-height: 1; margin-right: 4px; }
         .alert-count-red   { color: #dc2626; }
         .alert-count-amber { color: #d97706; }
-        /* Pulsing ring around stat cards with pending items */
         .stat-card-urgent { box-shadow: 0 0 0 3px #fca5a5; border-color: #f87171 !important; animation: ring-pulse 2s ease-in-out infinite; }
         .stat-card-urgent-amber { box-shadow: 0 0 0 3px #fcd34d; border-color: #fbbf24 !important; animation: ring-pulse-amber 2s ease-in-out infinite; }
         @keyframes ring-pulse       { 0%,100%{box-shadow:0 0 0 3px #fca5a5;}  50%{box-shadow:0 0 0 6px #fecaca;} }
         @keyframes ring-pulse-amber { 0%,100%{box-shadow:0 0 0 3px #fcd34d;}  50%{box-shadow:0 0 0 6px #fef08a;} }
-        /* Tab badge */
         .tab-urgent-badge { display: inline-flex; align-items: center; justify-content: center; background: #ef4444; color: white; border-radius: 100px; font-size: 11px; font-weight: 700; padding: 1px 7px; margin-left: 6px; animation: pulse 1.5s infinite; }
         .tab-amber-badge  { display: inline-flex; align-items: center; justify-content: center; background: #f59e0b; color: white; border-radius: 100px; font-size: 11px; font-weight: 700; padding: 1px 7px; margin-left: 6px; }
+        @media (max-width: 768px) {
+          .dashboard-container { padding: 16px; }
+          .page-title { font-size: 24px; }
+          .stats-grid { grid-template-columns: 1fr; }
+          .rec-actions { flex-direction: column; }
+          .btn { width: 100%; }
+          .modal-actions { flex-direction: column; }
+        }
       `}</style>
 
       <Navbar />
@@ -427,7 +494,7 @@ const [sendingReminders, setSendingReminders] = useState(false);
       <div className="dashboard-wrapper">
         <div className="dashboard-container">
 
-          {/* Header */}
+          {/* ── Header ── */}
           <div className="page-header">
             <div>
               <h1 className="page-title">Admin Dashboard</h1>
@@ -441,20 +508,19 @@ const [sendingReminders, setSendingReminders] = useState(false);
                 <RefreshCw size={16} /> Refresh
               </button>
               <button
-  className="btn btn-secondary"
-  onClick={handleSendProfileReminders}
-  disabled={sendingReminders}
-  title="Send profile completion reminder emails to incomplete users"
->
-  {sendingReminders
-    ? <><Loader2 size={16} className="animate-spin" /> Sending...</>
-    : <><Mail size={16} /> Send Reminders</>}
-</button>
+                className="btn btn-secondary"
+                onClick={handleSendProfileReminders}
+                disabled={sendingReminders}
+                title="Send profile completion reminder emails to incomplete users"
+              >
+                {sendingReminders
+                  ? <><Loader2 size={16} className="animate-spin" /> Sending...</>
+                  : <><Mail size={16} /> Send Reminders</>}
+              </button>
             </div>
           </div>
 
-          {/* Stats Grid */}
-          {/* Stats Grid */}
+          {/* ── Stats Grid ── */}
           <div className="stats-grid">
             {statsCards.map((stat, i) => {
               const Icon = stat.icon;
@@ -490,7 +556,7 @@ const [sendingReminders, setSendingReminders] = useState(false);
             })}
           </div>
 
-          {/* Quick Actions */}
+          {/* ── Quick Actions ── */}
           <div className="section-card">
             <div className="section-header">
               <h2 className="section-title">Quick Actions</h2>
@@ -513,26 +579,26 @@ const [sendingReminders, setSendingReminders] = useState(false);
                 <UserPlus size={16} /> Add Admin
               </button>
               <button
-  className="btn btn-secondary"
-  onClick={handleSendProfileReminders}
-  disabled={sendingReminders}
->
-  {sendingReminders
-    ? <><Loader2 size={16} className="animate-spin" /> Sending...</>
-    : <><Mail size={16} /> Send Profile Reminders</>}
-</button>
+                className="btn btn-secondary"
+                onClick={handleSendProfileReminders}
+                disabled={sendingReminders}
+              >
+                {sendingReminders
+                  ? <><Loader2 size={16} className="animate-spin" /> Sending...</>
+                  : <><Mail size={16} /> Send Profile Reminders</>}
+              </button>
             </div>
           </div>
 
-          {/* Tabs */}
-          {/* Tabs */}
+          {/* ── Tabs ── */}
           <div className="tabs-container">
             {[
-              { key: "overview",   label: "Overview", badge: null },
-              { key: "users",      label: `Users (${stats.totalUsers})`, badge: null },
-              { key: "jobs",       label: `Live Jobs (${stats.liveJobs})`, badge: null },
-              { key: "businesses", label: `Businesses`, badge: stats.pendingBusinesses > 0 ? { count: stats.pendingBusinesses, type: "amber" } : null },
-              { key: "recruiters", label: "Recruiter Verifications",      badge: stats.pendingRecruiters  > 0 ? { count: stats.pendingRecruiters,  type: "red"   } : null },
+              { key: "overview",   label: "Overview",                        badge: null },
+              { key: "users",      label: `Users (${stats.totalUsers})`,     badge: null },
+              { key: "jobs",       label: `Live Jobs (${stats.liveJobs})`,   badge: null },
+              { key: "businesses", label: `Businesses`,                      badge: stats.pendingBusinesses > 0 ? { count: stats.pendingBusinesses, type: "amber" } : null },
+              { key: "recruiters", label: "Recruiter Verifications",         badge: stats.pendingRecruiters > 0 ? { count: stats.pendingRecruiters, type: "red" } : null },
+              { key: "ads",        label: "Ad Manager",                   badge: null },
             ].map((tab) => (
               <button
                 key={tab.key}
@@ -549,11 +615,11 @@ const [sendingReminders, setSendingReminders] = useState(false);
             ))}
           </div>
 
-          {/* ── Overview Tab ── */}
+          {/* ══════════════════════════════════════════
+              ── Overview Tab ──
+          ══════════════════════════════════════════ */}
           {activeTab === "overview" && (
             <div>
-
-              {/* ── Urgent alert banners ── */}
               {stats.pendingRecruiters > 0 && (
                 <div className="alert-banner alert-banner-red">
                   <div className="alert-icon-wrap alert-icon-red">
@@ -568,7 +634,7 @@ const [sendingReminders, setSendingReminders] = useState(false);
                       Once approved, they can post jobs instantly. Don't keep them waiting.
                     </div>
                   </div>
-                  <button className="btn btn-danger btn-sm" style={{ background: "#dc2626", color: "white", border: "none", flexShrink: 0 }} onClick={() => setActiveTab("recruiters")}>
+                  <button className="btn btn-sm" style={{ background: "#dc2626", color: "white", border: "none", flexShrink: 0 }} onClick={() => setActiveTab("recruiters")}>
                     Review Now →
                   </button>
                 </div>
@@ -626,16 +692,18 @@ const [sendingReminders, setSendingReminders] = useState(false);
                   <h2 className="section-title"><TrendingUp size={20} /> Platform Summary</h2>
                   {stats.incompleteUsers > 0 && (
                     <button className="btn btn-secondary btn-sm" onClick={handleSendProfileReminders} disabled={sendingReminders}>
-                      {sendingReminders ? <><Loader2 size={13} className="animate-spin" /> Sending...</> : <><Mail size={13} /> Remind {stats.incompleteUsers} incomplete users</>}
+                      {sendingReminders
+                        ? <><Loader2 size={13} className="animate-spin" /> Sending...</>
+                        : <><Mail size={13} /> Remind {stats.incompleteUsers} incomplete users</>}
                     </button>
                   )}
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
                   {[
                     { label: "Live Jobs",               value: stats.liveJobs,            bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d" },
-                    { label: "Pending Recruiter Verif", value: stats.pendingRecruiters,   bg: stats.pendingRecruiters  > 0 ? "#fef2f2" : "#f8fafc", border: stats.pendingRecruiters  > 0 ? "#fca5a5" : "#e2e8f0", text: stats.pendingRecruiters  > 0 ? "#dc2626" : "#64748b" },
+                    { label: "Pending Recruiter Verif", value: stats.pendingRecruiters,   bg: stats.pendingRecruiters > 0 ? "#fef2f2" : "#f8fafc", border: stats.pendingRecruiters > 0 ? "#fca5a5" : "#e2e8f0", text: stats.pendingRecruiters > 0 ? "#dc2626" : "#64748b" },
                     { label: "Approved Businesses",     value: stats.approvedBusinesses,  bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d" },
-                    { label: "Pending Businesses",      value: stats.pendingBusinesses,   bg: stats.pendingBusinesses  > 0 ? "#fffbeb" : "#f8fafc", border: stats.pendingBusinesses  > 0 ? "#fcd34d" : "#e2e8f0", text: stats.pendingBusinesses  > 0 ? "#d97706" : "#64748b" },
+                    { label: "Pending Businesses",      value: stats.pendingBusinesses,   bg: stats.pendingBusinesses > 0 ? "#fffbeb" : "#f8fafc", border: stats.pendingBusinesses > 0 ? "#fcd34d" : "#e2e8f0", text: stats.pendingBusinesses > 0 ? "#d97706" : "#64748b" },
                     { label: "Incomplete Profiles",     value: stats.incompleteUsers ?? 0, bg: "#fef2f2", border: "#fecaca", text: "#dc2626" },
                   ].map((item, i) => (
                     <div key={i} style={{ padding: "20px", background: item.bg, borderRadius: "12px", border: `1px solid ${item.border}` }}>
@@ -648,7 +716,9 @@ const [sendingReminders, setSendingReminders] = useState(false);
             </div>
           )}
 
-          {/* ── Recruiter Verification Tab ── */}
+          {/* ══════════════════════════════════════════
+              ── Recruiter Verification Tab ──
+          ══════════════════════════════════════════ */}
           {activeTab === "recruiters" && (
             <div className="section-card">
               <div className="section-header">
@@ -750,7 +820,9 @@ const [sendingReminders, setSendingReminders] = useState(false);
             </div>
           )}
 
-          {/* ── Users Tab ── */}
+          {/* ══════════════════════════════════════════
+              ── Users Tab ──
+          ══════════════════════════════════════════ */}
           {activeTab === "users" && (
             <div className="section-card">
               <div className="section-header">
@@ -823,39 +895,148 @@ const [sendingReminders, setSendingReminders] = useState(false);
             </div>
           )}
 
-          {/* ── Jobs Tab ── */}
+          {/* ══════════════════════════════════════════
+              ── Jobs Tab ──
+          ══════════════════════════════════════════ */}
           {activeTab === "jobs" && (
             <div className="section-card">
               <div className="section-header">
-                <h2 className="section-title"><Briefcase size={20} /> Live Jobs ({filteredJobs.length})</h2>
+                <h2 className="section-title"><Briefcase size={20} /> All Jobs ({filteredJobs.length})</h2>
                 <div className="search-box">
                   <Search size={16} className="search-icon" />
-                  <input type="text" placeholder="Search jobs..." className="search-input" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                  <input
+                    type="text"
+                    placeholder="Search jobs…"
+                    className="search-input"
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                  />
                 </div>
               </div>
+
+              {/* Status filter pills — currently visual only; wire up jobStatusFilter state if needed */}
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
+                {[
+                  { key: "all",              label: "All" },
+                  { key: "approved",         label: "Live" },
+                  { key: "revoked",          label: "Revoked" },
+                  { key: "taken_down",       label: "Taken Down" },
+                  { key: "pending_business", label: "Pending" },
+                ].map(f => (
+                  <button
+                    key={f.key}
+                    style={{
+                      padding: "5px 14px", borderRadius: 100, border: "none",
+                      fontSize: 12, fontWeight: 600, cursor: "pointer",
+                      background: "#f1f5f9", color: "#64748b",
+                    }}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+
               {filteredJobs.length === 0 ? (
                 <div className="empty-state">
                   <div className="empty-icon"><Briefcase size={28} color="#cbd5e1" /></div>
                   <div className="empty-title">No jobs found</div>
                 </div>
               ) : (
-                filteredJobs.map((job) => (
-                  <div key={job._id} className="job-card">
-                    <div className="job-title">{job.title}</div>
-                    <div className="job-meta">
-                      <div className="job-meta-item"><Building size={14} />{job.company}</div>
-                      <div className="job-meta-item"><MapPin size={14} />{job.location}</div>
-                      <div className="job-meta-item"><Briefcase size={14} />{job.type}</div>
-                      {job.salary && <div className="job-meta-item">💰 {job.salary}</div>}
-                      <div className="job-meta-item"><Calendar size={14} />{new Date(job.createdAt).toLocaleDateString()}</div>
+                filteredJobs.map(job => {
+                  const isRevoked   = job.status === "revoked";
+                  const isTakenDown = job.status === "taken_down";
+                  const isRevoking  = revokingJobId  === job._id;
+                  const isRestoring = restoringJobId === job._id;
+
+                  const statusColors = {
+                    approved:          { bg: "#d1fae5", color: "#065f46", label: "Live" },
+                    revoked:           { bg: "#fee2e2", color: "#991b1b", label: "Revoked" },
+                    taken_down:        { bg: "#fef3c7", color: "#92400e", label: "Taken Down" },
+                    pending_business:  { bg: "#dbeafe", color: "#1e40af", label: "Pending" },
+                    rejected_business: { bg: "#fee2e2", color: "#991b1b", label: "Rejected" },
+                  };
+                  const sc = statusColors[job.status] || { bg: "#f1f5f9", color: "#64748b", label: job.status };
+
+                  return (
+                    <div
+                      key={job._id}
+                      className="job-card"
+                      style={{
+                        borderLeft: isRevoked ? "3px solid #ef4444" : isTakenDown ? "3px solid #f59e0b" : undefined,
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
+                            <div className="job-title" style={{ margin: 0 }}>{job.title}</div>
+                            <span style={{ padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 700, background: sc.bg, color: sc.color }}>
+                              {sc.label}
+                            </span>
+                            {job.revokedByAdmin && (
+                              <span style={{ padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 700, background: "#fee2e2", color: "#991b1b", border: "1px solid #fecaca" }}>
+                                🛡 Admin Action
+                              </span>
+                            )}
+                          </div>
+                          <div className="job-meta">
+                            {job.company  && <div className="job-meta-item"><Building2 size={14} />{job.company}</div>}
+                            {job.location && <div className="job-meta-item"><MapPin size={14} />{job.location}</div>}
+                            {job.type     && <div className="job-meta-item"><Briefcase size={14} />{job.type}</div>}
+                            {job.salary   && <div className="job-meta-item">💰 {job.salary}</div>}
+                            <div className="job-meta-item"><Calendar size={14} />{new Date(job.createdAt).toLocaleDateString()}</div>
+                            {job.recruiter && <div className="job-meta-item" style={{ color: "#3b82f6" }}>👤 {job.recruiter.name}</div>}
+                          </div>
+                          {isRevoked && job.revokeReason && (
+                            <div style={{ marginTop: 8, padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, fontSize: 12, color: "#991b1b" }}>
+                              <strong>Revoke reason:</strong> {job.revokeReason}
+                            </div>
+                          )}
+                        </div>
+
+                        <div style={{ display: "flex", gap: 8, flexShrink: 0, flexWrap: "wrap", alignItems: "center" }}>
+                          {/* Revoke — only for live / non-revoked jobs */}
+                          {!isRevoked && job.status !== "taken_down" && (
+                            <button
+                              className="btn btn-danger btn-sm"
+                              disabled={isRevoking}
+                              onClick={() => handleAdminRevokeJob(job._id, job.title)}
+                              title="Revoke this job"
+                              style={{ display: "flex", alignItems: "center", gap: 6 }}
+                            >
+                              {isRevoking
+                                ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} />
+                                : <ShieldOff size={13} />}
+                              {isRevoking ? "Revoking…" : "Revoke"}
+                            </button>
+                          )}
+
+                          {/* Restore — only for revoked jobs */}
+                          {isRevoked && (
+                            <button
+                              className="btn btn-success btn-sm"
+                              disabled={isRestoring}
+                              onClick={() => handleAdminRestoreJob(job._id, job.title)}
+                              title="Restore this job back to live"
+                              style={{ display: "flex", alignItems: "center", gap: 6 }}
+                            >
+                              {isRestoring
+                                ? <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} />
+                                : <ShieldCheck size={13} />}
+                              {isRestoring ? "Restoring…" : "Restore to Live"}
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           )}
 
-          {/* ── Businesses Tab ── */}
+          {/* ══════════════════════════════════════════
+              ── Businesses Tab ──
+          ══════════════════════════════════════════ */}
           {activeTab === "businesses" && (
             <div className="section-card">
               <div className="section-header">
@@ -906,6 +1087,15 @@ const [sendingReminders, setSendingReminders] = useState(false);
                   );
                 })
               )}
+            </div>
+          )}
+
+          {/* ══════════════════════════════════════════
+              ── Ad Manager Tab ──
+          ══════════════════════════════════════════ */}
+          {activeTab === "ads" && (
+            <div className="section-card">
+              <AdminAdsManager token={token} />
             </div>
           )}
 

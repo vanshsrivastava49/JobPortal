@@ -1042,7 +1042,169 @@ const sendBusinessProfileReminderEmail = async (email, name) => {
     html,
   });
 };
-
+const REVOKE_TYPE_LABELS = {
+  fraud:             "Fraudulent Listing",
+  non_applicable:    "Non-Applicable Content",
+  policy_violation:  "Policy Violation",
+  other:             "Admin Review",
+};
+ 
+// 1. Notify recruiter their job was revoked by admin
+const sendJobRevokedByAdminEmail = async (email, name, jobTitle, companyName, reason, revokeType) => {
+  // import these from the top of emailService.js — they already exist there
+  const { baseTemplate, greeting, paragraph, infoBox, ctaButton, divider, statusBadge } = require("./emailHelpers"); // adjust path as needed
+ 
+  const typeLabel = REVOKE_TYPE_LABELS[revokeType] || "Admin Review";
+ 
+  const html = baseTemplate(`
+    ${greeting(name)}
+    <p style="margin:0 0 20px;color:#0f172a;font-size:20px;font-weight:700;">
+      ⚠️ Your job listing has been taken down
+    </p>
+ 
+    ${paragraph(`Your job listing <strong>"${jobTitle}"</strong> at <strong>${companyName}</strong> has been reviewed and taken down by our admin team.`)}
+ 
+    <div style="margin:20px 0;">${statusBadge("Listing Taken Down — Action Required", "danger")}</div>
+ 
+    ${infoBox([
+      { label: "Job Title",   value: jobTitle },
+      { label: "Company",     value: companyName },
+      { label: "Reason Type", value: typeLabel },
+      { label: "Details",     value: reason || "Please contact support for more information" },
+    ])}
+ 
+    ${paragraph("This action was taken to protect job seekers and maintain the quality and integrity of listings on our platform.")}
+ 
+    <table width="100%" cellpadding="0" cellspacing="0"
+      style="background:#fff7ed;border:1.5px solid #fdba74;border-radius:10px;margin:20px 0;">
+      <tr><td style="padding:18px 20px;">
+        <p style="margin:0 0 8px;color:#c2410c;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">
+          What happens next
+        </p>
+        <ul style="margin:0;padding-left:18px;color:#9a3412;font-size:14px;line-height:2;">
+          <li>The listing is no longer visible to job seekers</li>
+          <li>Existing applications are preserved but no new ones can be submitted</li>
+          <li>If this was a mistake, please contact our support team</li>
+          <li>You may re-post a corrected listing once the issue is resolved</li>
+        </ul>
+      </td></tr>
+    </table>
+ 
+    ${ctaButton("Contact Support", "mailto:support@greenjobs.in", "#dc2626")}
+ 
+    ${divider()}
+    <p style="margin:0;color:#94a3b8;font-size:13px;">Warm regards,<br>
+    <strong style="color:#475569;">The Green Jobs Trust & Safety Team</strong></p>
+  `);
+ 
+  await transporter.sendMail({
+    from: `"Green Jobs" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: `⚠️ Job Listing Taken Down — "${jobTitle}" Requires Your Attention`,
+    html,
+  });
+};
+ 
+// 2. Notify business owner a recruiter's job under them was revoked
+const sendJobRevokedBusinessNotification = async (businessEmail, businessName, jobTitle, recruiterName, reason, revokeType) => {
+  const typeLabel = REVOKE_TYPE_LABELS[revokeType] || "Admin Review";
+ 
+  const html = baseTemplate(`
+    ${greeting(businessName)}
+ 
+    ${paragraph(`A job listing posted by one of your recruiters — <strong>"${jobTitle}"</strong> by <strong>${recruiterName}</strong> — has been taken down by our admin team.`)}
+ 
+    <div style="margin:20px 0;">${statusBadge("Recruiter Job Taken Down", "danger")}</div>
+ 
+    ${infoBox([
+      { label: "Job Title",   value: jobTitle },
+      { label: "Posted By",   value: recruiterName },
+      { label: "Reason Type", value: typeLabel },
+      { label: "Details",     value: reason || "Please contact support" },
+    ])}
+ 
+    ${paragraph("Please review this recruiter's activity on your account. If you believe this is an error, contact support.")}
+ 
+    ${ctaButton("Review Your Recruiters", `${process.env.FRONTEND_URL || "http://localhost:5173"}/dashboard`, "#f59e0b")}
+ 
+    ${divider()}
+    <p style="margin:0;color:#94a3b8;font-size:13px;">Warm regards,<br>
+    <strong style="color:#475569;">The Green Jobs Trust & Safety Team</strong></p>
+  `);
+ 
+  await transporter.sendMail({
+    from: `"Green Jobs" <${process.env.EMAIL_USER}>`,
+    to: businessEmail,
+    subject: `⚠️ Recruiter Listing Removed — "${jobTitle}"`,
+    html,
+  });
+};
+ 
+// 3. Alert other admins when a job is revoked
+const sendAdminJobRevokeAlert = async (adminEmail, jobTitle, recruiterName, recruiterEmail, reason, revokeType) => {
+  const typeLabel = REVOKE_TYPE_LABELS[revokeType] || "Admin Review";
+ 
+  const html = baseTemplate(`
+    ${greeting("Admin")}
+    ${paragraph(`A job listing was revoked by an admin on the platform.`)}
+ 
+    <div style="margin:20px 0;">${statusBadge("Job Revoked by Admin", "danger")}</div>
+ 
+    ${infoBox([
+      { label: "Job Title",      value: jobTitle },
+      { label: "Recruiter",      value: recruiterName },
+      { label: "Recruiter Email",value: recruiterEmail },
+      { label: "Reason Type",    value: typeLabel },
+      { label: "Details",        value: reason },
+      { label: "Revoked At",     value: new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) },
+    ])}
+ 
+    ${ctaButton("Review in Admin Dashboard", `${process.env.FRONTEND_URL || "http://localhost:5173"}/admin/dashboard`)}
+ 
+    ${divider()}
+    <p style="margin:0;color:#94a3b8;font-size:13px;">Green Jobs Trust & Safety</p>
+  `);
+ 
+  await transporter.sendMail({
+    from: `"Green Jobs" <${process.env.EMAIL_USER}>`,
+    to: adminEmail,
+    subject: `🛡️ Admin Action: Job Revoked — "${jobTitle}"`,
+    html,
+  });
+};
+ 
+// 4. Notify recruiter their job was restored
+const sendJobRestoredEmail = async (email, name, jobTitle, companyName) => {
+  const html = baseTemplate(`
+    ${greeting(name)}
+    <p style="margin:0 0 20px;color:#0f172a;font-size:22px;font-weight:700;">
+      ✅ Your job listing has been restored
+    </p>
+ 
+    ${paragraph(`Good news — our admin team has reviewed the issue and restored your job listing <strong>"${jobTitle}"</strong> at <strong>${companyName}</strong>. It is now live again on the platform.`)}
+ 
+    <div style="margin:20px 0;">${statusBadge("Restored & Live", "success")}</div>
+ 
+    ${infoBox([
+      { label: "Job Title", value: jobTitle },
+      { label: "Company",   value: companyName },
+      { label: "Status",    value: "Live ✓" },
+    ])}
+ 
+    ${ctaButton("View Your Dashboard", `${process.env.FRONTEND_URL || "http://localhost:5173"}/dashboard`)}
+ 
+    ${divider()}
+    <p style="margin:0;color:#94a3b8;font-size:13px;">Warm regards,<br>
+    <strong style="color:#475569;">The Green Jobs Team</strong></p>
+  `);
+ 
+  await transporter.sendMail({
+    from: `"Green Jobs" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: `✅ Job Listing Restored — "${jobTitle}" is Live Again`,
+    html,
+  });
+};
 module.exports = {
   // Business
   sendBusinessPendingEmail,
@@ -1088,4 +1250,9 @@ module.exports = {
   sendJobseekerProfileReminderEmail,
   sendRecruiterProfileReminderEmail,
   sendBusinessProfileReminderEmail,
+
+    sendJobRevokedByAdminEmail,
+  sendJobRevokedBusinessNotification,
+  sendAdminJobRevokeAlert,
+  sendJobRestoredEmail,
 };

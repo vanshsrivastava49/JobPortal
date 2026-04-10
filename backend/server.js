@@ -43,6 +43,7 @@ app.use("/api/profile",      require("./routes/profile.routes"));
 app.use("/api/jobs",         require("./routes/job.routes"));
 app.use("/api/admin",        require("./routes/admin.routes"));
 app.use("/api/applications", require("./routes/application.routes"));
+app.use("/api/ads",          require("./routes/ad.routes"));
 
 app.get("/health", (req, res) => {
   res.json({ success: true, status: "OK", message: "Server is running" });
