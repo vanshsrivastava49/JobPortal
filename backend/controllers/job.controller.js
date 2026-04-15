@@ -500,6 +500,9 @@ const businessApproveJob = async (req, res) => {
       email.sendAdminJobLiveAlert(admin.email, job.title, bizName, job.recruiter.name, job.location, job.type).catch(console.error);
     });
 
+    // ✅ NEW: Automatically trigger skill-matching notifications since the job is now LIVE
+    notifyMatchingJobseekers(job).catch(console.error);
+
     res.json({ success: true, message: "Job approved and LIVE!", job });
   } catch (err) {
     console.error("❌ APPROVE JOB ERROR:", err);
