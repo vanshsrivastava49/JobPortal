@@ -1260,9 +1260,46 @@ const MIN_PROFILE_PROGRESS = 40;
 const BATCH_SIZE            = 20;
 const BATCH_DELAY_MS        = 300;
 
-const normalise = (arr = []) =>
-  arr.map((s) => (s || "").toLowerCase().trim()).filter(Boolean);
+const splitSkills = (value = "") =>
+  String(value)
+    .split(/[,\n/|]+/g)
+    .map((part) => part.trim())
+    .filter(Boolean);
 
+const canonicalSkill = (value = "") =>
+  String(value)
+    .toLowerCase()
+    .trim()
+    .replace(/\bc\+\+\b/g, "cpp")
+    .replace(/\bc#\b/g, "csharp")
+    .replace(/\.js\b/g, " js")
+    .replace(/[^a-z0-9+\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+const normalise = (arr = []) =>
+arr
+    .flatMap((item) => splitSkills(item))
+    .map((s) => canonicalSkill(s))
+    .filter(Boolean);
+
+const wordsOverlap = (a = "", b = "") => {
+  const aNorm = canonicalSkill(a);
+  const bNorm = canonicalSkill(b);
+  if (!aNorm || !bNorm) return false;
+  if (aNorm === bNorm) return true;
+
+  const aTokens = new Set(aNorm.split(" ").filter(Boolean));
+  const bTokens = new Set(bNorm.split(" ").filter(Boolean));
+
+  for (const token of aTokens) {
+    if (token.length >= 2 && bTokens.has(token)) return true;
+  }
+
+  // Fallback for multi-word vs short-form skills (e.g., "react js" vs "react")
+  if (aNorm.length >= 3 && bNorm.includes(aNorm)) return true;
+  if (bNorm.length >= 3 && aNorm.includes(bNorm)) return true;
+  return false;
+};
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function sendInBatches(tasks) {
@@ -1290,7 +1327,11 @@ const notifyMatchingJobseekers = async (job) => {
     const Application = require("../models/Application");
     const Job         = require("../models/Job");
 
-    const jobSkills    = normalise(job.skills);
+    const jobSkillsRaw = (Array.isArray(job.skills) ? job.skills : [])
+      .flatMap((item) => splitSkills(item))
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const jobSkills    = jobSkillsRaw.map((s) => canonicalSkill(s)).filter(Boolean);
     const jobType      = (job.type || "").toLowerCase().trim();
     const jobId        = job._id.toString();
     const jobTitle     = job.title;
@@ -1306,7 +1347,8 @@ const notifyMatchingJobseekers = async (job) => {
     const candidates = await User.find({
       role:            "jobseeker",
       status:          "active",
-      profileProgress: { $gte: MIN_PROFILE_PROGRESS },
+      email:           { $exists: true, $ne: "" },
+      "jobSeekerProfile.skills.0": { $exists: true },
     }).select("name email jobSeekerProfile.skills jobSeekerProfile.firstName profileProgress");
 
     // 3. Jobseeker IDs that have previously applied for the same job type
@@ -1336,10 +1378,7 @@ const notifyMatchingJobseekers = async (job) => {
       const hasSkillMatch =
   jobSkills.length > 0 &&
   profileSkills.some((ps) =>
-    jobSkills.some((js) => js === ps)          // exact match first
-    || jobSkills.some((js) =>                  // then whole-word substring
-        new RegExp(`\\b${ps}\\b`).test(js) ||
-        new RegExp(`\\b${js}\\b`).test(ps))
+    jobSkills.some((js) => wordsOverlap(js, ps))
   );
 
       const hasTypeMatch = typeMatchIds.has(uid);
@@ -1355,11 +1394,7 @@ const notifyMatchingJobseekers = async (job) => {
     const tasks = toNotify.map((u) => () => {
       const profileSkills = normalise(u.jobSeekerProfile?.skills);
       const matchedSkills = jobSkills.filter((js) =>
-  profileSkills.some((ps) =>
-    js === ps ||
-    new RegExp(`\\b${ps}\\b`).test(js) ||
-    new RegExp(`\\b${js}\\b`).test(ps)
-  )
+  profileSkills.some((ps) => wordsOverlap(js, ps))
 );
 
       const firstName =
