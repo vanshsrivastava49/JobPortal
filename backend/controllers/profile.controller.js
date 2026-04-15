@@ -18,7 +18,18 @@ exports.completeProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     const data = req.body;
+    if (data.skills && Array.isArray(data.skills) && data.skills.length === 0) {
+  return res.status(400).json({ success: false, message: "Please add at least one skill" });
+}
 
+// Also fix the calculateProgress check for arrays:
+const calculateProgress = (requiredFields, data) => {
+  const filled = requiredFields.filter((f) => {
+    if (Array.isArray(data[f])) return data[f].length > 0;
+    return data[f] && data[f].toString().trim() !== "";
+  }).length;
+  return Math.round((filled / requiredFields.length) * 100);
+};
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
     let required = [];
@@ -28,6 +39,9 @@ exports.completeProfile = async (req, res) => {
       required = ["fullName", "mobile", "city", "education", "skills", "experience", "resume"];
       progress  = calculateProgress(required, data);
       if (progress < 100) return res.status(400).json({ success: false, message: "Fill all required fields" });
+      if (!data.fullName || data.fullName.trim() === "") {
+  data.fullName = `${data.firstName || ""} ${data.lastName || ""}`.trim();
+}
       await User.updateOne(
         { _id: user._id },
         { $set: { jobSeekerProfile: { ...user.jobSeekerProfile, ...data }, profileCompleted: true, profileProgress: progress } }
@@ -69,7 +83,11 @@ exports.completeProfile = async (req, res) => {
         { _id: user._id },
         {
           $set: {
-            businessProfile:  { ...user.businessProfile, ...data, status: "pending" },
+            businessProfile:  { ...user.businessProfile, ...data, 
+              street:  data.street  || "",
+              city:    data.city    || "",
+              state:   data.state   || "",
+              pincode: data.pincode || "", status: "pending" },
             profileCompleted: true,
             profileProgress:  progress,
           },

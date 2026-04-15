@@ -310,7 +310,7 @@ const CompleteProfile = () => {
           linkedin:        form.linkedin?.trim() || "",
           resume:          form.resume,
           // Send as comma-joined string so .toString().trim() !== "" passes
-          skills:          selectedSkills.join(", "),
+          skills:          selectedSkills,
         };
       } else if (user.role === "recruiter") {
         payload = {
@@ -327,6 +327,10 @@ const CompleteProfile = () => {
           businessName:   form.businessName?.trim(),
           category:       form.category?.trim(),
           contactDetails: form.contactDetails?.trim(),
+          street:         form.street?.trim()   || "",
+          city:           form.city?.trim()     || "",
+          state:          form.state?.trim()    || "",
+          pincode:        form.pincode?.trim()  || "",
           address:        [form.street, form.city, form.state, form.pincode].filter(Boolean).join(", "),
           description:    form.description?.trim(),
           images:         form.images || [],

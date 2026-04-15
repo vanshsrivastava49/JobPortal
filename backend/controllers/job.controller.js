@@ -1,6 +1,7 @@
 const Job  = require("../models/Job");
 const User = require("../models/User");
 const email = require("../services/emailService");
+const { notifyMatchingJobseekers } = require("../services/emailService");
 
 /* ===============================
    RECRUITER POSTS JOB
@@ -80,6 +81,10 @@ const createJob = async (req, res) => {
       message: "Job posted and live immediately! 🎉",
       job: { _id: job._id, title: job.title, company: companyName, status: job.status, isOpen: job.isOpen },
     });
+
+    // Notify matching jobseekers (non-blocking, after response is sent)
+    notifyMatchingJobseekers(job).catch(console.error);
+
   } catch (err) {
     console.error("❌ CREATE JOB ERROR:", err);
     if (err.name === "ValidationError") {
@@ -103,10 +108,9 @@ const createBusinessJob = async (req, res) => {
 
     const owner = await User.findById(req.user.id).select("name email businessProfile");
     if (!owner) {
-  return res.status(404).json({ success: false, message: "User not found" });
-}
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
 
-    // Must be an approved business
     const bizStatus = owner.businessProfile?.status;
     if (bizStatus !== "approved") {
       return res.status(403).json({
@@ -156,7 +160,6 @@ const createBusinessJob = async (req, res) => {
       rounds:           roundsArray,
       postedByBusiness: true,
       businessOwner:    req.user.id,
-      // business field also set so public populate queries work
       business:         req.user.id,
       status:           "approved",
       isOpen:           true,
@@ -164,7 +167,7 @@ const createBusinessJob = async (req, res) => {
     });
 
     console.log("Business job created & live:", job._id, "Business:", companyName);
-    // Notify admins
+
     const adminUsers = await User.find({ role: "admin" }).select("email");
     adminUsers.forEach((admin) => {
       email.sendJobPostedDirectlyEmail(
@@ -177,6 +180,10 @@ const createBusinessJob = async (req, res) => {
       message: "Job posted and live immediately! 🎉",
       job: { _id: job._id, title: job.title, company: companyName, status: job.status, isOpen: job.isOpen },
     });
+
+    // Notify matching jobseekers (non-blocking, after response is sent)
+    notifyMatchingJobseekers(job).catch(console.error);
+
   } catch (err) {
     console.error("❌ CREATE BUSINESS JOB ERROR:", err);
     if (err.name === "ValidationError") {
@@ -244,7 +251,6 @@ const updateBusinessJob = async (req, res) => {
         stipend:       isPaid !== false ? (stipend || "").trim() : "",
         stipendPeriod: isPaid !== false ? (stipendPeriod || job.stipendPeriod) : "",
         rounds:        roundsArray,
-        // Business owner edits stay live immediately
         status:        "approved",
         updatedAt:     new Date(),
       },
