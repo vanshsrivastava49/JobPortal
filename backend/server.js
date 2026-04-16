@@ -43,7 +43,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options("(.*)", cors(corsOptions)); // <-- CRITICAL: Globally handle browser preflight requests
+app.options("/{*path}", cors(corsOptions));
 
 // Body parsers with payload limits (Prevents DoS)
 app.use(express.json({ limit: "50kb" }));
