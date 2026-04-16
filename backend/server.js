@@ -6,21 +6,31 @@ const connectDB = require("./config/db");
 
 const app = express();
 
-//Security Headers
-app.use(helmet()); 
+// ✅ 1. FIXED SECURITY HEADERS (Solves the COOP / Google Auth error)
+app.use(
+  helmet({
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+    // crossOriginResourcePolicy: false, // Uncomment if S3 images break on the frontend
+  })
+);
 
-//CORS — Cleaned up logs for production
+// ✅ 2. FIXED CORS (Solves the XMLHttpRequest error)
 app.use(
   cors({
     origin: function (origin, callback) {
       const allowedOrigins = [
         "http://localhost:5173",
         "http://localhost:5174",
+        "https://green-jobs-alpha.vercel.app", // <-- Hardcoded your Vercel domain
         process.env.FRONTEND_URL,
       ].filter(Boolean);
 
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
+      // Remove trailing slashes just in case your .env has one
+      const normalizedOrigin = origin ? origin.replace(/\/$/, "") : origin;
+
+      if (!normalizedOrigin) return callback(null, true);
+      
+      if (allowedOrigins.includes(normalizedOrigin)) {
         return callback(null, true);
       } else {
         return callback(new Error("Not allowed by CORS"));
@@ -30,14 +40,14 @@ app.use(
   })
 );
 
-//Body parsers with payload limits (Prevents DoS)
+// Body parsers with payload limits (Prevents DoS)
 app.use(express.json({ limit: "50kb" }));
 app.use(express.urlencoded({ extended: true, limit: "50kb" }));
 
-//DB connection
+// DB connection
 connectDB();
 
-//Routes
+// Routes
 app.use("/api/auth",         require("./routes/auth.routes"));
 app.use("/api/profile",      require("./routes/profile.routes"));
 app.use("/api/jobs",         require("./routes/job.routes"));
@@ -53,7 +63,7 @@ app.use((req, res) => {
   res.status(404).json({ success: false, message: "Route not found" });
 });
 
-//Global Error Handler — Masks internal errors in production
+// Global Error Handler — Masks internal errors in production
 app.use((err, req, res, next) => {
   console.error("Error:", err); // Keep full stack trace in your server logs
   const isProd = process.env.NODE_ENV === "production";
