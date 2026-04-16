@@ -1,16 +1,36 @@
 const transporter = require("../config/email");
+const sanitizeHtml = require("sanitize-html"); // ✅ Added sanitization library
+const User = require("../models/User"); // ✅ Moved from inside function
+const Application = require("../models/Application"); // ✅ Moved from inside function
+const Job = require("../models/Job"); // ✅ Moved from inside function
+const JobNotificationLog = require("../models/JobNotificationLog");
 
 const APP_NAME = "Green Jobs";
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+
+// ✅ Added XSS Sanitizer for email templates
+const safe = (str) => sanitizeHtml(str ?? "", { allowedTags: [], allowedAttributes: {} });
+
+// ✅ Added Retry Logic for robust email delivery
+async function sendWithRetry(mailOptions, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try { 
+      return await transporter.sendMail(mailOptions); 
+    } catch (e) { 
+      if (i === retries - 1) throw e; 
+      await new Promise(res => setTimeout(res, 1000 * (i + 1))); 
+    }
+  }
+}
 
 const verifySmtpConnection = async () => {
   try {
     await transporter.verify();
     console.log("✅ SMTP Connection verified successfully. Ready to send emails.");
   } catch (error) {
-    console.error("❌ FATAL: SMTP Connection failed. Check email config/credentials.");
-    console.error(error);
-    process.exit(1); 
+    // ✅ Fix: Removed process.exit(1). Set warning instead.
+    console.error("⚠️ WARNING: SMTP Connection failed. Emails will not send until resolved.");
+    console.error(error.message);
   }
 };
 
@@ -119,8 +139,8 @@ const signOff = () => `
 
 const sendBusinessPendingEmail = async (email, name, businessName) => {
   const html = baseTemplate(`
-    ${greeting(name)}
-    ${paragraph(`Thank you for registering <strong>${businessName}</strong> on ${APP_NAME}. Your application has been received and is now under review by our admin team.`)}
+    ${greeting(safe(name))}
+    ${paragraph(`Thank you for registering <strong>${safe(businessName)}</strong> on ${APP_NAME}. Your application has been received and is now under review by our admin team.`)}
     <div style="margin:20px 0;">${statusBadge("Application Under Review", "pending")}</div>
     ${infoBox([
       { label: "Business Name", value: businessName },
@@ -142,9 +162,9 @@ const sendBusinessPendingEmail = async (email, name, businessName) => {
 
 const sendBusinessApprovedEmail = async (email, name, businessName) => {
   const html = baseTemplate(`
-    ${greeting(name)}
+    ${greeting(safe(name))}
     <p style="margin:0 0 20px;color:#0f172a;font-size:22px;font-weight:700;">🎉 Congratulations! Your business is now live.</p>
-    ${paragraph(`We're thrilled to inform you that <strong>${businessName}</strong> has been approved and is now publicly listed on ${APP_NAME}.`)}
+    ${paragraph(`We're thrilled to inform you that <strong>${safe(businessName)}</strong> has been approved and is now publicly listed on ${APP_NAME}.`)}
     <div style="margin:20px 0;">${statusBadge("Approved & Live", "success")}</div>
     ${infoBox([
       { label: "Business Name", value: businessName },
@@ -170,9 +190,9 @@ const sendBusinessApprovedEmail = async (email, name, businessName) => {
 
 const sendBusinessReApprovedEmail = async (email, name, businessName, jobsRestored = 0) => {
   const html = baseTemplate(`
-    ${greeting(name)}
+    ${greeting(safe(name))}
     <p style="margin:0 0 20px;color:#0f172a;font-size:22px;font-weight:700;">🎉 Welcome back! Your business is live again.</p>
-    ${paragraph(`Great news — <strong>${businessName}</strong> has been reviewed by our admin team and is now re-approved.`)}
+    ${paragraph(`Great news — <strong>${safe(businessName)}</strong> has been reviewed by our admin team and is now re-approved.`)}
     <div style="margin:20px 0;">${statusBadge("Re-Approved & Live", "success")}</div>
     ${infoBox([
       { label: "Business Name", value: businessName },
@@ -196,10 +216,10 @@ const sendBusinessReApprovedEmail = async (email, name, businessName, jobsRestor
 
 const sendBusinessRejectedEmail = async (email, name, businessName, reason) => {
   const html = baseTemplate(`
-    ${greeting(name)}
-    ${paragraph(`We regret to inform you that your application for <strong>${businessName}</strong> has not been approved at this time.`)}
+    ${greeting(safe(name))}
+    ${paragraph(`We regret to inform you that your application for <strong>${safe(businessName)}</strong> has not been approved at this time.`)}
     <div style="margin:20px 0;">${statusBadge("Application Not Approved", "danger")}</div>
-    ${reason ? infoBox([{ label: "Reason", value: reason }]) : ""}
+    ${reason ? infoBox([{ label: "Reason", value: safe(reason) }]) : ""}
     ${paragraph("Don't be discouraged — you're welcome to review the requirements and re-apply with updated information.")}
     ${ctaButton("Update & Re-apply", `${FRONTEND_URL}/complete-profile`, "#dc2626")}
     ${signOff()}
@@ -1327,8 +1347,7 @@ const notifyMatchingJobseekers = async (job) => {
   try {
     const User = require("../models/User");
     const Application = require("../models/Application");
-    const Job = require("../models/Job");
-    const JobNotificationLog = require("../models/JobNotificationLog"); // Added Log Model
+    const Job = require("../models/Job"); // Added Log Model
 
     const jobSkillsRaw = (Array.isArray(job.skills) ? job.skills : [])
       .flatMap((item) => splitSkills(item))

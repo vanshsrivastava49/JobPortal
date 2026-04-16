@@ -47,7 +47,7 @@ exports.getStats = async (req, res) => {
 ========================================================= */
 exports.getUsers = async (req, res) => {
   try {
-    const { role: roleFilter, search } = req.query;
+    const { role: roleFilter, search, page = 1, limit = 20 } = req.query; // ✅ Added pagination defaults
     const query = {};
 
     if (roleFilter && ["jobseeker", "recruiter", "business", "admin"].includes(roleFilter)) {
@@ -61,12 +61,22 @@ exports.getUsers = async (req, res) => {
       ];
     }
 
-    const users = await User.find(query)
-      .select("-password")
-      .sort({ createdAt: -1 })
-      .limit(1000);
+    // ✅ Calculate skip
+    const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    res.json(users);
+    // ✅ Fetch documents and total count in parallel
+    const [users, total] = await Promise.all([
+      User.find(query).select("-password").sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)),
+      User.countDocuments(query)
+    ]);
+
+    res.json({ 
+      success: true, 
+      users,
+      total,
+      page: parseInt(page),
+      totalPages: Math.ceil(total / parseInt(limit))
+    });
   } catch (err) {
     console.error("GET USERS ERROR:", err);
     res.status(500).json({ success: false, message: "Failed to fetch users" });
@@ -112,7 +122,7 @@ exports.deleteUser = async (req, res) => {
 ========================================================= */
 exports.getJobs = async (req, res) => {
   try {
-    const { status, search } = req.query;
+    const { status, search, page = 1, limit = 20 } = req.query; // ✅ Added pagination defaults
     const query = {};
 
     if (status) query.status = status;
@@ -124,13 +134,26 @@ exports.getJobs = async (req, res) => {
       ];
     }
 
-    const jobs = await Job.find(query)
-      .populate("recruiter", "name email")
-      .populate("business",  "name businessProfile")
-      .sort({ createdAt: -1 })
-      .limit(500);
+    // ✅ Calculate skip
+    const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    res.json({ success: true, jobs });
+    const [jobs, total] = await Promise.all([
+      Job.find(query)
+        .populate("recruiter", "name email")
+        .populate("business",  "name businessProfile")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit)),
+      Job.countDocuments(query)
+    ]);
+
+    res.json({ 
+      success: true, 
+      jobs,
+      total,
+      page: parseInt(page),
+      totalPages: Math.ceil(total / parseInt(limit))
+    });
   } catch (err) {
     console.error("GET JOBS ERROR:", err);
     res.status(500).json({ success: false, message: "Failed to fetch jobs" });
