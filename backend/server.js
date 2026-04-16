@@ -6,39 +6,44 @@ const connectDB = require("./config/db");
 
 const app = express();
 
-// ✅ 1. FIXED SECURITY HEADERS (Solves the COOP / Google Auth error)
+// Trust reverse proxy (Crucial if your EC2/Server uses Nginx or a Load Balancer for HTTPS)
+app.set("trust proxy", 1);
+
+// ✅ 1. FIXED SECURITY HEADERS
 app.use(
   helmet({
     crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
-    // crossOriginResourcePolicy: false, // Uncomment if S3 images break on the frontend
+    crossOriginResourcePolicy: { policy: "cross-origin" }, // <-- CRITICAL: Allows Vercel to read your API responses
   })
 );
 
-// ✅ 2. FIXED CORS (Solves the XMLHttpRequest error)
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      const allowedOrigins = [
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "https://green-jobs-alpha.vercel.app", // <-- Hardcoded your Vercel domain
-        process.env.FRONTEND_URL,
-      ].filter(Boolean);
+// ✅ 2. BULLETPROOF CORS CONFIGURATION
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "https://green-jobs-alpha.vercel.app",
+  process.env.FRONTEND_URL
+].filter(Boolean); // removes undefined values
 
-      // Remove trailing slashes just in case your .env has one
-      const normalizedOrigin = origin ? origin.replace(/\/$/, "") : origin;
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    
+    const normalizedOrigin = origin.replace(/\/$/, "");
+    if (allowedOrigins.includes(normalizedOrigin)) {
+      callback(null, true);
+    } else {
+      console.warn(`[CORS Blocked] Origin: ${origin}`); // Will show in your server logs if a wrong URL tries to connect
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], // <-- Explicitly allow these methods
+  allowedHeaders: ["Content-Type", "Authorization"], // <-- Explicitly allow these headers
+};
 
-      if (!normalizedOrigin) return callback(null, true);
-      
-      if (allowedOrigins.includes(normalizedOrigin)) {
-        return callback(null, true);
-      } else {
-        return callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true,
-  })
-);
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); // <-- CRITICAL: Globally handle browser preflight requests
 
 // Body parsers with payload limits (Prevents DoS)
 app.use(express.json({ limit: "50kb" }));
@@ -63,9 +68,9 @@ app.use((req, res) => {
   res.status(404).json({ success: false, message: "Route not found" });
 });
 
-// Global Error Handler — Masks internal errors in production
+// Global Error Handler
 app.use((err, req, res, next) => {
-  console.error("Error:", err); // Keep full stack trace in your server logs
+  console.error("Error:", err); 
   const isProd = process.env.NODE_ENV === "production";
   
   res.status(err.status || 500).json({ 
