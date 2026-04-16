@@ -5,40 +5,30 @@ const connectDB = require("./config/db");
 
 const app = express();
 
-// Trust proxy (Good practice for cloud deployments like EC2/Render)
-app.set("trust proxy", 1);
+// ✅ 1. CORS — dynamic so env vars are always loaded
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      const allowedOrigins = [
+        "http://localhost:5173",
+        "http://localhost:5174",
+        process.env.FRONTEND_URL,
+      ].filter(Boolean);
 
-// ✅ 1. CORS — Fixed to explicitly handle your Vercel domain and Preflight checks
-const corsOptions = {
-  origin: function (origin, callback) {
-    const allowedOrigins = [
-      "http://localhost:5173",
-      "http://localhost:5174",
-      "https://green-jobs-alpha.vercel.app", // <-- Hardcoded to guarantee it works
-      process.env.FRONTEND_URL,
-    ].filter(Boolean);
+      console.log("Request origin:", origin);
+      console.log("Allowed origins:", allowedOrigins);
 
-    console.log("Request origin:", origin);
-    console.log("Allowed origins:", allowedOrigins);
-
-    // Clean up trailing slashes just in case
-    const normalizedOrigin = origin ? origin.replace(/\/$/, "") : origin;
-
-    if (!normalizedOrigin) return callback(null, true);
-    if (allowedOrigins.includes(normalizedOrigin)) {
-      return callback(null, true);
-    } else {
-      console.log("CORS BLOCKED:", origin);
-      return callback(new Error("Not allowed by CORS"));
-    }
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], // Explicitly allow methods
-  allowedHeaders: ["Content-Type", "Authorization"], // Explicitly allow headers
-};
-
-app.use(cors(corsOptions));
-app.options("*", cors(corsOptions)); // <-- CRITICAL: Fixes the preflight OPTIONS block
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        console.log("CORS BLOCKED:", origin);
+        return callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
 
 // ✅ 2. Body parsers
 app.use(express.json());
