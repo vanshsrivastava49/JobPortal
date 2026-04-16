@@ -104,24 +104,29 @@ const AdminDashboard = () => {
   };
 
   // ── Fetch all data ──────────────────────────────────────────────────────────
+// ── Fetch all data ──────────────────────────────────────────────────────────
   const fetchAllData = useCallback(async () => {
     if (!token) return;
     try {
       setLoading(true);
       const headers = { Authorization: `Bearer ${token}` };
 
+      // ✅ FIX 1: Appended ?limit=1000 to users and jobs endpoints to support client-side filtering
+      // ✅ FIX 2: Changed jobs endpoint from /api/jobs/public to /api/admin/jobs
       const [statsRes, usersRes, liveJobsRes, approvedBizRes, pendingBizRes, pendingRecRes] =
         await Promise.all([
           axios.get(`${API_BASE_URL}/api/admin/stats`, { headers }).catch(() => ({ data: {} })),
-          axios.get(`${API_BASE_URL}/api/admin/users`, { headers }).catch(() => ({ data: [] })),
-          axios.get(`${API_BASE_URL}/api/jobs/public`).catch(() => ({ data: { jobs: [] } })),
+          axios.get(`${API_BASE_URL}/api/admin/users?limit=1000`, { headers }).catch(() => ({ data: { users: [] } })),
+          axios.get(`${API_BASE_URL}/api/admin/jobs?limit=1000`, { headers }).catch(() => ({ data: { jobs: [] } })),
           axios.get(`${API_BASE_URL}/api/profile/business/approved`, { headers }).catch(() => ({ data: [] })),
           axios.get(`${API_BASE_URL}/api/profile/business/pending`, { headers }).catch(() => ({ data: [] })),
           axios.get(`${API_BASE_URL}/api/admin/recruiters/pending-verification`, { headers }).catch(() => ({ data: [] })),
         ]);
 
-      const usersData       = Array.isArray(usersRes.data)        ? usersRes.data        : [];
-      const jobsData        = liveJobsRes.data?.jobs              || [];
+      // ✅ FIX 3: Safely extract 'users' and 'jobs' arrays from the new paginated backend response objects
+      const usersData       = usersRes.data?.users || (Array.isArray(usersRes.data) ? usersRes.data : []);
+      const jobsData        = liveJobsRes.data?.jobs || (Array.isArray(liveJobsRes.data) ? liveJobsRes.data : []);
+      
       const approvedBizData = Array.isArray(approvedBizRes.data)  ? approvedBizRes.data  : [];
       const pendingBizData  = Array.isArray(pendingBizRes.data)   ? pendingBizRes.data   : [];
       const pendingRecData  = Array.isArray(pendingRecRes.data)   ? pendingRecRes.data   : [];
