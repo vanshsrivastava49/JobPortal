@@ -71,7 +71,7 @@
         <div
         style={{
             position: "fixed", inset: 0, background: "rgba(15,23,42,0.6)",
-            backdropFilter: "blur(4px)", zIndex: 1000,
+            backdropFilter: "blur(4px)", zIndex: 9999,
             display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
         }}
         onClick={e => e.target === e.currentTarget && onClose()}
@@ -213,7 +213,10 @@
             </Field>
 
             {/* Image — upload or URL */}
-            <Field label="Ad Image" hint="Upload a file (JPG, PNG, WebP — max 5 MB) or paste an external URL">
+            <Field label="Ad Image" hint={form.bannerType === "full_banner"
+    ? "Recommended: 1440×480px (3:1 ratio) · JPG, PNG, WebP · max 5MB"
+    : "Recommended: 800×450px (16:9 ratio) · JPG, PNG, WebP · max 5MB"
+  }>
                 {/* File picker button */}
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                 <button

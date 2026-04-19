@@ -1099,9 +1099,7 @@ const AdminDashboard = () => {
               ── Ad Manager Tab ──
           ══════════════════════════════════════════ */}
           {activeTab === "ads" && (
-            <div className="section-card">
               <AdminAdsManager token={token} />
-            </div>
           )}
 
         </div>
