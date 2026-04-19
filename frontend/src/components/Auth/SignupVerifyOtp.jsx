@@ -86,9 +86,6 @@ const SignupVerifyOtp = ({ email, onBack, role = "jobseeker" }) => {
 
   return (
     <>
-      <button onClick={onBack} className="link">
-        <ArrowLeft size={18} /> Back
-      </button>
 
       <form onSubmit={handleSubmit}>
 
