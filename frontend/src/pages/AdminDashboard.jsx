@@ -966,13 +966,13 @@ const AdminDashboard = () => {
                   <button
                     key={f.key}
                     onClick={() => setJobStatusFilter(f.key)}
-style={{
-  padding: "5px 14px", borderRadius: 100, border: "none",
-  fontSize: 12, fontWeight: 600, cursor: "pointer",
-  background: jobStatusFilter === f.key ? "#0f172a" : "#f1f5f9",
-  color: jobStatusFilter === f.key ? "#ffffff" : "#64748b",
-  transition: "all 0.15s",
-}}
+                    style={{
+                      padding: "5px 14px", borderRadius: 100, border: "none",
+                      fontSize: 12, fontWeight: 600, cursor: "pointer",
+                      background: jobStatusFilter === f.key ? "#0f172a" : "#f1f5f9",
+                      color: jobStatusFilter === f.key ? "#ffffff" : "#64748b",
+                      transition: "all 0.15s",
+                    }}
                   >
                     {f.label}
                   </button>
