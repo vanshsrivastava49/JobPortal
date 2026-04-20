@@ -1354,12 +1354,12 @@ const notifyMatchingJobseekers = async (job) => {
       .map((s) => s.trim())
       .filter(Boolean);
     const jobSkills = jobSkillsRaw.map((s) => canonicalSkill(s)).filter(Boolean);
-    const jobType = (job.type || "").toLowerCase().trim();
+    const jobType = Array.isArray(job.type) ? job.type.map(t => t.toLowerCase()) : [];
     const jobId = job._id.toString();
     const jobTitle = job.title;
     const companyName = job.company || "a company";
     const location = job.location || "";
-    const jobTypeLabel = job.type || "";
+    const jobTypeLabel = Array.isArray(job.type) ? job.type.join(", ") : job.type || "";
 
     const existingApps = await Application.find({ job: jobId }).select("jobseeker");
     const alreadyApplied = new Set(existingApps.map((a) => a.jobseeker.toString()));
