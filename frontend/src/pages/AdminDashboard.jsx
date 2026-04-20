@@ -33,6 +33,7 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [jobStatusFilter, setJobStatusFilter] = useState("all");
   const [revokingId, setRevokingId] = useState(null);
   const [verifyingId, setVerifyingId] = useState(null);
   const [revokingJobId, setRevokingJobId] = useState(null);
@@ -280,12 +281,14 @@ const AdminDashboard = () => {
     return matchesRole && matchesSearch;
   });
 
-  const filteredJobs = liveJobs.filter(
-    (j) =>
-      j.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      j.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      j.location?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredJobs = liveJobs.filter((j) => {
+  const matchesSearch =
+    j.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    j.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    j.location?.toLowerCase().includes(searchTerm.toLowerCase());
+  const matchesStatus = jobStatusFilter === "all" || j.status === jobStatusFilter;
+  return matchesSearch && matchesStatus;
+});
 
   const filteredBusinesses = [...businesses, ...pendingBusinesses].filter(
     (b) =>
@@ -608,7 +611,7 @@ const AdminDashboard = () => {
               <button
                 key={tab.key}
                 className={`tab-button ${activeTab === tab.key ? "active" : ""}`}
-                onClick={() => { setActiveTab(tab.key); setSearchTerm(""); }}
+                onClick={() => { setActiveTab(tab.key); setSearchTerm(""); setJobStatusFilter("all"); }}
               >
                 {tab.label}
                 {tab.badge && (
@@ -962,11 +965,14 @@ const AdminDashboard = () => {
                 ].map(f => (
                   <button
                     key={f.key}
-                    style={{
-                      padding: "5px 14px", borderRadius: 100, border: "none",
-                      fontSize: 12, fontWeight: 600, cursor: "pointer",
-                      background: "#f1f5f9", color: "#64748b",
-                    }}
+                    onClick={() => setJobStatusFilter(f.key)}
+style={{
+  padding: "5px 14px", borderRadius: 100, border: "none",
+  fontSize: 12, fontWeight: 600, cursor: "pointer",
+  background: jobStatusFilter === f.key ? "#0f172a" : "#f1f5f9",
+  color: jobStatusFilter === f.key ? "#ffffff" : "#64748b",
+  transition: "all 0.15s",
+}}
                   >
                     {f.label}
                   </button>
