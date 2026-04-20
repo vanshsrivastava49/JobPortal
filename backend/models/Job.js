@@ -34,11 +34,20 @@ const jobSchema = new mongoose.Schema({
     required: [true, "Location is required"]
   },
   salary: String,
+
+  // ── Employment Type (multi-select array) ──────────────────────────────────
   type: {
-    type: String,
+    type: [String],
     enum: ['Full Time', 'Part Time', 'Contract', 'Internship', 'Remote', 'Freelance'],
-    default: 'Full Time'
+    default: ['Full Time'],
+    validate: {
+      validator: function (arr) {
+        return Array.isArray(arr) && arr.length > 0;
+      },
+      message: 'At least one employment type is required',
+    },
   },
+
   skills: [{ type: String, trim: true }],
 
   // ── Compensation ──────────────────────────────────────────────────────────
@@ -108,6 +117,7 @@ const jobSchema = new mongoose.Schema({
 jobSchema.index({ status: 1, createdAt: -1 });
 jobSchema.index({ status: 1, isOpen: 1, createdAt: -1 });
 jobSchema.index({ skills: 1 });
+jobSchema.index({ type: 1 });
 jobSchema.index({ businessOwner: 1, postedByBusiness: 1 });
 jobSchema.index({ recruiter: 1 });
 jobSchema.index({ revokedByAdmin: 1 });
