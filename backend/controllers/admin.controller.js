@@ -47,13 +47,12 @@ exports.getStats = async (req, res) => {
 ========================================================= */
 exports.getUsers = async (req, res) => {
   try {
-    const { role: roleFilter, search, page = 1, limit = 20 } = req.query; // ✅ Added pagination defaults
+    const { role: roleFilter, search, page = 1, limit = 20 } = req.query;
     const query = {};
 
     if (roleFilter && ["jobseeker", "recruiter", "business", "admin"].includes(roleFilter)) {
       query.role = roleFilter;
     }
-
     if (search) {
       query.$or = [
         { name:  { $regex: search, $options: "i" } },
@@ -61,21 +60,18 @@ exports.getUsers = async (req, res) => {
       ];
     }
 
-    // ✅ Calculate skip
     const skip = (parseInt(page) - 1) * parseInt(limit);
-
-    // ✅ Fetch documents and total count in parallel
     const [users, total] = await Promise.all([
       User.find(query).select("-password").sort({ createdAt: -1 }).skip(skip).limit(parseInt(limit)),
-      User.countDocuments(query)
+      User.countDocuments(query),
     ]);
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       users,
       total,
       page: parseInt(page),
-      totalPages: Math.ceil(total / parseInt(limit))
+      totalPages: Math.ceil(total / parseInt(limit)),
     });
   } catch (err) {
     console.error("GET USERS ERROR:", err);
@@ -122,7 +118,7 @@ exports.deleteUser = async (req, res) => {
 ========================================================= */
 exports.getJobs = async (req, res) => {
   try {
-    const { status, search, page = 1, limit = 20 } = req.query; // ✅ Added pagination defaults
+    const { status, search, page = 1, limit = 20 } = req.query;
     const query = {};
 
     if (status) query.status = status;
@@ -134,25 +130,24 @@ exports.getJobs = async (req, res) => {
       ];
     }
 
-    // ✅ Calculate skip
     const skip = (parseInt(page) - 1) * parseInt(limit);
-
     const [jobs, total] = await Promise.all([
       Job.find(query)
-        .populate("recruiter", "name email")
-        .populate("business",  "name businessProfile")
+        .populate("recruiter",    "name email")
+        .populate("business",     "name businessProfile")
+        .populate("businessOwner","name email businessProfile")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(parseInt(limit)),
-      Job.countDocuments(query)
+      Job.countDocuments(query),
     ]);
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       jobs,
       total,
       page: parseInt(page),
-      totalPages: Math.ceil(total / parseInt(limit))
+      totalPages: Math.ceil(total / parseInt(limit)),
     });
   } catch (err) {
     console.error("GET JOBS ERROR:", err);
@@ -176,7 +171,7 @@ exports.updateJobStatus = async (req, res) => {
     if (!job) return res.status(404).json({ success: false, message: "Job not found" });
 
     if (job.status === "revoked" && status === "approved") {
-      job.status = "pending_business";
+      job.status    = "pending_business";
       job.approvedAt = null;
     } else {
       job.status = status;
@@ -422,7 +417,7 @@ exports.verifyRecruiter = async (req, res) => {
     }
 
     const updateFields = {
-      "recruiterProfile.verificationStatus":    status,
+      "recruiterProfile.verificationStatus":     status,
       "recruiterProfile.verificationReviewedAt": new Date(),
     };
 
@@ -465,9 +460,6 @@ exports.verifyRecruiter = async (req, res) => {
 /* =========================================================
    CREATE ADMIN
    POST /api/admin/create-admin
-   Only callable by an existing admin. Creates a new admin
-   account directly — no signup flow, no password needed.
-   The new admin logs in via OTP like everyone else.
 ========================================================= */
 exports.createAdmin = async (req, res) => {
   try {
@@ -480,10 +472,8 @@ exports.createAdmin = async (req, res) => {
       return res.status(400).json({ success: false, message: "Email is required" });
     }
 
-    // Normalise email
     const normalised = adminEmail.toLowerCase().trim();
 
-    // Check for existing account
     const existing = await User.findOne({ email: normalised });
     if (existing) {
       return res.status(409).json({
@@ -492,9 +482,6 @@ exports.createAdmin = async (req, res) => {
       });
     }
 
-    // The User model requires a password field — use a long random placeholder.
-    // It will never be used since login is OTP-only, but it satisfies the schema
-    // minlength: 6 validator.
     const crypto = require("crypto");
     const placeholderPassword = crypto.randomBytes(32).toString("hex");
 
@@ -513,11 +500,8 @@ exports.createAdmin = async (req, res) => {
       },
     });
 
-    // Optionally notify the new admin by email
-    email.sendAdminWelcomeEmail?.(
-      normalised,
-      name.trim()
-    ).catch(err => console.warn("Admin welcome email failed (non-fatal):", err.message));
+    email.sendAdminWelcomeEmail?.(normalised, name.trim())
+      .catch(err => console.warn("Admin welcome email failed (non-fatal):", err.message));
 
     console.log(`🛡️  New admin created: ${name.trim()} <${normalised}> by admin ${req.user.id}`);
 
@@ -533,18 +517,187 @@ exports.createAdmin = async (req, res) => {
     });
   } catch (err) {
     console.error("CREATE ADMIN ERROR:", err);
-
-    // Mongoose validation errors (e.g. invalid email format)
     if (err.name === "ValidationError") {
       const messages = Object.values(err.errors).map(e => e.message).join(", ");
       return res.status(400).json({ success: false, message: messages });
     }
-
-    // Duplicate key race condition (two requests at the same time)
     if (err.code === 11000) {
       return res.status(409).json({ success: false, message: "An account with this email already exists" });
     }
-
     res.status(500).json({ success: false, message: "Failed to create admin account" });
+  }
+};
+
+/* =========================================================
+   ADMIN REVOKE JOB
+   PATCH /api/admin/jobs/:id/revoke
+========================================================= */
+exports.revokeJob = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason, revokeType } = req.body;
+
+    // ── Populate ALL possible poster fields up front ────────────────────
+    const job = await Job.findById(id)
+      .populate("recruiter",     "name email")
+      .populate("business",      "name email businessProfile")
+      .populate("businessOwner", "name email businessProfile");
+
+    if (!job) {
+      return res.status(404).json({ success: false, message: "Job not found" });
+    }
+    if (job.status === "revoked") {
+      return res.status(400).json({ success: false, message: "Job is already revoked" });
+    }
+
+    const safeReason = (reason || "").trim() || "Policy violation";
+    const safeType   = ["fraud", "non_applicable", "policy_violation", "other"].includes(revokeType)
+      ? revokeType
+      : "other";
+
+    // Resolve poster BEFORE save (populated refs available here)
+    let posterName  = "Unknown";
+    let posterEmail = "Unknown";
+
+    if (job.postedByBusiness && job.businessOwner) {
+      posterName  = job.businessOwner.name  || "Unknown";
+      posterEmail = job.businessOwner.email || "Unknown";
+    } else if (job.recruiter) {
+      posterName  = job.recruiter.name  || "Unknown";
+      posterEmail = job.recruiter.email || "Unknown";
+    }
+
+    // ── Persist revoke fields ───────────────────────────────────────────
+    job.previousStatus = job.status;
+    job.status         = "revoked";
+    job.revokedByAdmin = true;
+    job.revokeReason   = safeReason;
+    job.revokeType     = safeType;
+    job.revokedAt      = new Date();
+    await job.save();
+
+    const jobTitle    = job.title;
+    const companyName = job.company || "Unknown Company";
+
+    // ── Email the poster ────────────────────────────────────────────────
+    if (job.postedByBusiness && job.businessOwner) {
+      // Direct business-owner post — email the owner only
+      email.sendJobRevokedByAdminEmail(
+        job.businessOwner.email,
+        job.businessOwner.name,
+        jobTitle,
+        companyName,
+        safeReason,
+        safeType
+      ).catch(err => console.error("❌ Revoke email to business owner failed:", err.message));
+
+    } else if (job.recruiter) {
+      // Recruiter post — email the recruiter
+      email.sendJobRevokedByAdminEmail(
+        job.recruiter.email,
+        job.recruiter.name,
+        jobTitle,
+        companyName,
+        safeReason,
+        safeType
+      ).catch(err => console.error("❌ Revoke email to recruiter failed:", err.message));
+
+      // Also notify the linked business owner if present
+      if (job.business) {
+        const bizOwner = job.business; // already populated
+        email.sendJobRevokedBusinessNotification(
+          bizOwner.email,
+          bizOwner.businessProfile?.businessName || bizOwner.name,
+          jobTitle,
+          job.recruiter.name,
+          safeReason,
+          safeType
+        ).catch(err => console.error("❌ Revoke notify to linked business failed:", err.message));
+      }
+    }
+
+    // ── Audit trail email to all admins ────────────────────────────────
+    const adminUsers = await User.find({ role: "admin" }).select("email");
+    adminUsers.forEach(admin => {
+      email.sendAdminJobRevokeAlert(
+        admin.email,
+        jobTitle,
+        posterName,
+        posterEmail,
+        safeReason,
+        safeType
+      ).catch(err => console.error("❌ Admin revoke audit email failed:", err.message));
+    });
+
+    res.json({
+      success: true,
+      message: `"${jobTitle}" revoked. Notification emails sent.`,
+      job,
+    });
+  } catch (err) {
+    console.error("REVOKE JOB ERROR:", err);
+    res.status(500).json({ success: false, message: "Failed to revoke job" });
+  }
+};
+
+/* =========================================================
+   ADMIN RESTORE JOB
+   PATCH /api/admin/jobs/:id/restore
+========================================================= */
+exports.restoreJob = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // ── Populate ALL possible poster fields up front ────────────────────
+    const job = await Job.findById(id)
+      .populate("recruiter",     "name email")
+      .populate("businessOwner", "name email");
+
+    if (!job) {
+      return res.status(404).json({ success: false, message: "Job not found" });
+    }
+    if (job.status !== "revoked") {
+      return res.status(400).json({ success: false, message: "Only revoked jobs can be restored" });
+    }
+
+    const jobTitle    = job.title;
+    const companyName = job.company || "Unknown Company";
+
+    // ── Restore ─────────────────────────────────────────────────────────
+    job.status         = "approved";
+    job.revokedByAdmin = false;
+    job.revokeReason   = "";
+    job.revokeType     = "";
+    job.revokedAt      = null;
+    job.previousStatus = "";
+    job.approvedAt     = new Date();
+    await job.save();
+
+    // ── Email the original poster ───────────────────────────────────────
+    if (job.postedByBusiness && job.businessOwner) {
+      email.sendJobRestoredEmail(
+        job.businessOwner.email,
+        job.businessOwner.name,
+        jobTitle,
+        companyName
+      ).catch(err => console.error("❌ Restore email to business owner failed:", err.message));
+
+    } else if (job.recruiter) {
+      email.sendJobRestoredEmail(
+        job.recruiter.email,
+        job.recruiter.name,
+        jobTitle,
+        companyName
+      ).catch(err => console.error("❌ Restore email to recruiter failed:", err.message));
+    }
+
+    res.json({
+      success: true,
+      message: `"${jobTitle}" restored to live. Notification email sent.`,
+      job,
+    });
+  } catch (err) {
+    console.error("RESTORE JOB ERROR:", err);
+    res.status(500).json({ success: false, message: "Failed to restore job" });
   }
 };

@@ -25,7 +25,9 @@ const {
   revokeBusiness,
   getPendingVerificationRecruiters, 
   verifyRecruiter,
-  createAdmin            
+  createAdmin,
+  revokeJob,
+  restoreJob,         
 } = require("../controllers/admin.controller");
 
 // ── Stats ──────────────────────────────────────────────────
@@ -40,7 +42,8 @@ router.delete("/users/:id", protect, authorizeRoles("admin"), deleteUser);
 router.get("/jobs",              protect, authorizeRoles("admin"), getJobs);
 router.patch("/jobs/:id/status", protect, authorizeRoles("admin"), updateJobStatus);
 router.delete("/jobs/:id",       protect, authorizeRoles("admin"), deleteJob);
-
+router.patch("/jobs/:id/revoke",  protect, authorizeRoles("admin"), revokeJob);
+router.patch("/jobs/:id/restore", protect, authorizeRoles("admin"), restoreJob);
 // ── Businesses ─────────────────────────────────────────────
 router.get("/businesses",               protect, authorizeRoles("admin"), getBusinesses);
 router.patch("/businesses/:id/approve", protect, authorizeRoles("admin"), approveBusiness);
