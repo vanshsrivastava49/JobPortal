@@ -18,8 +18,8 @@ const BusinessLogin = () => {
   const { isAuthenticated, login } = useAuth();
   const navigate = useNavigate();
 
-  if (isAuthenticated) return <Navigate to="/business/dashboard" replace />;
   const { secondsLeft, isCoolingDown, canRequest, recordRequest, startCooldown } = useOtpCooldown(email);
+if (isAuthenticated) return <Navigate to="/business/dashboard" replace />;
   const handleOtpChange = (val, idx) => {
     const digits = val.replace(/\D/g, "").slice(0, 1);
     const next = [...otp]; next[idx] = digits; setOtp(next);
@@ -41,13 +41,13 @@ const BusinessLogin = () => {
 
   const handleSendOtp = async (e) => {
     e?.preventDefault();
-    if (!email) { toast.error("Enter admin email"); return; }
+    if (!email) { toast.error("Enter your email"); return; }
     if (!captchaToken && import.meta.env.VITE_RECAPTCHA_SITE_KEY) { toast.error("Complete the captcha"); return; }
     if (isCoolingDown) { toast.error(`Please wait ${secondsLeft}s`); return; }
     if (!canRequest()) { toast.error("Too many requests. Wait 10 minutes."); return; }
     setLoading(true);
     try {
-      const res = await sendOTP(email, "login", captchaToken || "dev", "admin");
+      const res = await sendOTP(email, "login", captchaToken || "dev", "business");
       if (res.success) {
         toast.success("OTP dispatched");
         recordRequest();
@@ -238,12 +238,12 @@ const BusinessLogin = () => {
                     <div className="biz-captcha"><ReCAPTCHA sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY} onChange={setCaptchaToken} /></div>
                   )}
                   <button className="biz-btn" disabled={loading || isCoolingDown}>
-                    {loading
-    ? <><Loader size={14} className="spinner" /> Sending OTP...</>
+  {loading
+    ? <><Loader size={15} className="spinner" /> Sending OTP...</>
     : isCoolingDown
     ? `Resend available in ${secondsLeft}s`
-    : <><Lock size={14} /> Send OTP →</>}
-                  </button>
+    : "Send OTP →"}  {/* ✅ no Lock icon needed */}
+</button>
                   <div className="biz-divider"><span>or</span></div>
                   <GoogleSignIn />
                 </form>
