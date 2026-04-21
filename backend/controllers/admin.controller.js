@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const Job  = require("../models/Job");
 const RecruiterBusinessLink = require("../models/RecruiterBusinessLink");
+const NavbarBanner = require("../models/NavbarBanner");
 const email = require("../services/emailService");
 
 /* =========================================================
@@ -699,5 +700,124 @@ exports.restoreJob = async (req, res) => {
   } catch (err) {
     console.error("RESTORE JOB ERROR:", err);
     res.status(500).json({ success: false, message: "Failed to restore job" });
+  }
+};
+
+/* =========================================================
+   NAVBAR BANNER MANAGEMENT
+========================================================= */
+
+/* GET NAVBAR BANNER */
+exports.getNavbarBanner = async (req, res) => {
+  try {
+    const banner = await NavbarBanner.findOne({ isActive: true });
+    
+    if (!banner) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "No active banner found",
+        banner: null 
+      });
+    }
+
+    res.json({
+      success: true,
+      banner: {
+        _id: banner._id,
+        imageUrl: banner.imageUrl,
+        altText: banner.altText,
+        height: banner.height,
+        borderRadius: banner.borderRadius,
+        isActive: banner.isActive,
+        updatedAt: banner.updatedAt,
+      }
+    });
+  } catch (err) {
+    console.error("GET NAVBAR BANNER ERROR:", err);
+    res.status(500).json({ success: false, message: "Failed to fetch banner" });
+  }
+};
+
+/* UPDATE NAVBAR BANNER (Admin only) */
+exports.updateNavbarBanner = async (req, res) => {
+  try {
+    const { imageUrl, altText, height, borderRadius, isActive } = req.body;
+
+    if (!imageUrl || !imageUrl.trim()) {
+      return res.status(400).json({ success: false, message: "Image URL is required" });
+    }
+
+    // Find existing banner and update it
+    let banner = await NavbarBanner.findOne();
+
+    if (banner) {
+      // Update existing
+      banner.imageUrl = imageUrl.trim();
+      banner.altText = altText?.trim() || "Navbar Banner";
+      banner.height = height?.trim() || "75px";
+      banner.borderRadius = borderRadius?.trim() || "8px";
+      banner.isActive = isActive !== undefined ? isActive : true;
+      banner.updatedBy = req.user.id;
+      await banner.save();
+    } else {
+      // Create new if doesn't exist
+      banner = await NavbarBanner.create({
+        imageUrl: imageUrl.trim(),
+        altText: altText?.trim() || "Navbar Banner",
+        height: height?.trim() || "75px",
+        borderRadius: borderRadius?.trim() || "8px",
+        isActive: isActive !== undefined ? isActive : true,
+        updatedBy: req.user.id,
+      });
+    }
+
+    console.log(`✅ Navbar banner updated by admin ${req.user.id}`);
+
+    res.json({
+      success: true,
+      message: "Navbar banner updated successfully",
+      banner: {
+        _id: banner._id,
+        imageUrl: banner.imageUrl,
+        altText: banner.altText,
+        height: banner.height,
+        borderRadius: banner.borderRadius,
+        isActive: banner.isActive,
+        updatedAt: banner.updatedAt,
+      }
+    });
+  } catch (err) {
+    console.error("UPDATE NAVBAR BANNER ERROR:", err);
+    res.status(500).json({ success: false, message: "Failed to update banner" });
+  }
+};
+
+/* TOGGLE BANNER ACTIVE STATUS */
+exports.toggleBannerStatus = async (req, res) => {
+  try {
+    const { isActive } = req.body;
+
+    let banner = await NavbarBanner.findOne();
+
+    if (!banner) {
+      return res.status(404).json({ success: false, message: "Banner not found" });
+    }
+
+    banner.isActive = isActive !== undefined ? isActive : !banner.isActive;
+    banner.updatedBy = req.user.id;
+    await banner.save();
+
+    res.json({
+      success: true,
+      message: `Banner ${banner.isActive ? "activated" : "deactivated"}`,
+      banner: {
+        _id: banner._id,
+        isActive: banner.isActive,
+        imageUrl: banner.imageUrl,
+      }
+    });
+  } catch (err) {
+    console.error("TOGGLE BANNER STATUS ERROR:", err);
+    res.status(500).json({ success: false, message: "Failed to toggle banner status" });
   }
 };

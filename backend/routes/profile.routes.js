@@ -5,12 +5,14 @@ const role    = require("../middleware/role");
 const uploadResume = require("../middleware/uploadResume");
 const uploadImage  = require("../middleware/uploadImage");
 const uploadLogo   = require("../middleware/uploadLogo");
+const uploadAvatar = require("../middleware/uploadAvatar");
 
 const {
   completeProfile,
   getMyProfile,
   uploadResume: uploadResumeCtrl,
   uploadLogo: uploadLogoCtrl,
+  uploadProfilePicture,
   uploadBusinessImages,
   getPendingBusinesses,
   approveBusiness,
@@ -36,6 +38,7 @@ router.get("/me",        auth, getMyProfile);
 router.post("/upload-resume",          auth, role("jobseeker"), uploadResume.single("resume"), uploadResumeCtrl);
 router.post("/upload-logo",            auth, role("recruiter"), uploadLogo.single("logo"),     uploadLogoCtrl);
 router.post("/upload-business-images", auth, role("business"),  uploadImage.array("images", 5), uploadBusinessImages);
+router.post("/upload-avatar",          auth, uploadAvatar.single("avatar"), uploadProfilePicture);
 
 // ── Admin business approval ─────────────────────────────────
 router.get("/business/pending",         auth, role("admin"), getPendingBusinesses);

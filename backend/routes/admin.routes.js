@@ -27,7 +27,10 @@ const {
   verifyRecruiter,
   createAdmin,
   revokeJob,
-  restoreJob,         
+  restoreJob,
+  getNavbarBanner,
+  updateNavbarBanner,
+  toggleBannerStatus,
 } = require("../controllers/admin.controller");
 
 // ── Stats ──────────────────────────────────────────────────
@@ -66,4 +69,10 @@ router.patch(
   verifyRecruiter
 );
 router.post("/create-admin", protect, authorizeRoles("admin"), createAdmin);
+
+// ── Navbar Banner Management ───────────────────────────────
+router.get("/navbar-banner", getNavbarBanner);
+router.put("/navbar-banner", protect, authorizeRoles("admin"), updateNavbarBanner);
+router.patch("/navbar-banner/toggle", protect, authorizeRoles("admin"), toggleBannerStatus);
+
 module.exports = router;

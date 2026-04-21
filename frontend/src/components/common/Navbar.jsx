@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import BannerEditModal from "./BannerEditModal";
+import apiClient from "../../api/apiClient";
 
 const roles = [
   { key: "job-seeker", label: "Job Seeker",    desc: "Find green energy jobs",       color: "#10b981" },
@@ -71,7 +73,13 @@ const UserMenu = ({ user, roleLabel, dashboardRoute, onProfile, onLogout, onClos
   return (
     <div className="um-panel">
       <div className="um-header">
-        <div className="um-avatar-lg">{user?.name?.charAt(0).toUpperCase() || "U"}</div>
+        <div className="um-avatar-lg">
+          {user?.profilePicture && (user.role === "business" || user.role === "recruiter") ? (
+            <img src={user.profilePicture} alt={user.name} style={{ width: "100%", height: "100%", borderRadius: "inherit", objectFit: "cover" }} />
+          ) : (
+            user?.name?.charAt(0).toUpperCase() || "U"
+          )}
+        </div>
         <div className="um-info">
           <div className="um-name">{user?.name || "User"}</div>
           <div className="um-email">{user?.email}</div>
@@ -135,16 +143,58 @@ const Navbar = ({ title }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   // Mobile drawer sub-state: null | "login" | "signup"
   const [mobileAuthPanel, setMobileAuthPanel] = useState(null);
+  
+  // Banner state
+  const [bannerImage, setBannerImage] = useState("/worker-navbar.jpeg");
+  const [bannerEditOpen, setBannerEditOpen] = useState(false);
+  const [bannerLoading, setBannerLoading] = useState(false);
 
   const loginRef    = useRef(null);
   const signupRef   = useRef(null);
   const userMenuRef = useRef(null);
+
+  // Fetch banner on component mount
+  useEffect(() => {
+    const fetchBanner = async () => {
+      try {
+        const response = await apiClient.get("/admin/navbar-banner");
+        if (response.data?.banner?.imageUrl) {
+          setBannerImage(response.data.banner.imageUrl);
+        }
+      } catch (err) {
+        console.log("Banner not found, using default");
+        // Use default image if no custom banner is set
+      }
+    };
+    fetchBanner();
+  }, []);
 
   const handleLogout = () => {
     setUserMenuOpen(false);
     setMobileMenuOpen(false);
     logout();
     navigate("/");
+  };
+
+  const handleSaveBanner = async (formData) => {
+    setBannerLoading(true);
+    try {
+      const response = await apiClient.put("/admin/navbar-banner", {
+        imageUrl: formData.imageUrl,
+        altText: formData.altText,
+        height: formData.height,
+        borderRadius: formData.borderRadius,
+      });
+      if (response.data?.success) {
+        setBannerImage(formData.imageUrl);
+        return true;
+      }
+    } catch (err) {
+      const message = err.response?.data?.message || "Failed to update banner";
+      throw new Error(message);
+    } finally {
+      setBannerLoading(false);
+    }
   };
 
   // Close mobile menu on resize back to desktop
@@ -206,9 +256,9 @@ const Navbar = ({ title }) => {
 
         .navbar-center {
           position: absolute; left: 50%; transform: translateX(-50%);
-          display: flex; align-items: center; pointer-events: none; z-index: 0;
+          display: flex; align-items: center; pointer-events: auto; z-index: 5;
         }
-        .worker-image { height: 75px; width: auto; object-fit: contain; border-radius: 8px; }
+        .worker-image { height: 75px; width: auto; object-fit: contain; border-radius: 8px; cursor: pointer; }
 
         .navbar-right { display: flex; align-items: center; gap: 8px; position: relative; z-index: 1; }
 
@@ -539,7 +589,44 @@ const Navbar = ({ title }) => {
 
           {/* CENTER: Worker image (desktop only) */}
           <div className="navbar-center">
-            <img src="/worker-navbar.jpeg" alt="Worker" className="worker-image" onError={(e) => { e.target.style.display = "none"; }} />
+            <div 
+              style={{ position: "relative", display: "inline-block" }}
+              onMouseEnter={(e) => {
+                const btn = e.currentTarget.querySelector('button');
+                if (btn) btn.style.opacity = "1";
+              }}
+              onMouseLeave={(e) => {
+                const btn = e.currentTarget.querySelector('button');
+                if (btn) btn.style.opacity = "0";
+              }}
+            >
+              <img src={bannerImage} alt="Worker" className="worker-image" onError={(e) => { e.target.src = "/worker-navbar.jpeg"; }} />
+              {isAuthenticated && user?.role?.toLowerCase() === "admin" && (
+                <button
+                  onClick={() => setBannerEditOpen(true)}
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    transform: "translate(-50%, -50%)",
+                    backgroundColor: "rgba(0, 0, 0, 0.6)",
+                    color: "white",
+                    border: "none",
+                    padding: "8px 12px",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    opacity: 0,
+                    transition: "opacity 0.3s",
+                    zIndex: 10,
+                  }}
+                  title="Edit banner"
+                >
+                  ✏️ Edit
+                </button>
+              )}
+            </div>
           </div>
 
           {/* RIGHT: Desktop nav + Hamburger */}
@@ -553,7 +640,13 @@ const Navbar = ({ title }) => {
                 <div className="nav-sep" />
                 <div className="user-menu-wrap" ref={userMenuRef}>
                   <div className={`user-chip${userMenuOpen ? " open" : ""}`} onClick={() => setUserMenuOpen((v) => !v)}>
-                    <div className="user-avatar">{user?.name?.charAt(0).toUpperCase() || "U"}</div>
+                    <div className="user-avatar">
+                      {user?.profilePicture && (user.role === "business" || user.role === "recruiter") ? (
+                        <img src={user.profilePicture} alt={user.name} style={{ width: "100%", height: "100%", borderRadius: "inherit", objectFit: "cover" }} />
+                      ) : (
+                        user?.name?.charAt(0).toUpperCase() || "U"
+                      )}
+                    </div>
                     <div className="user-details">
                       <span className="user-name-txt">{user?.name?.split(" ")[0] || "User"}</span>
                       <span className="user-role-txt">{userRoleLabel}</span>
@@ -636,7 +729,13 @@ const Navbar = ({ title }) => {
         {/* User card (authenticated) */}
         {isAuthenticated && (
           <div className="md-user-card">
-            <div className="md-user-avatar">{user?.name?.charAt(0).toUpperCase() || "U"}</div>
+            <div className="md-user-avatar">
+              {user?.profilePicture && (user.role === "business" || user.role === "recruiter") ? (
+                <img src={user.profilePicture} alt={user.name} style={{ width: "100%", height: "100%", borderRadius: "inherit", objectFit: "cover" }} />
+              ) : (
+                user?.name?.charAt(0).toUpperCase() || "U"
+              )}
+            </div>
             <div className="md-user-info">
               <div className="md-user-name">{user?.name || "User"}</div>
               <div className="md-user-email">{user?.email}</div>
@@ -788,6 +887,15 @@ const Navbar = ({ title }) => {
           </div>
         )}
       </div>
+
+      {/* Banner Edit Modal */}
+      <BannerEditModal
+        isOpen={bannerEditOpen}
+        banner={{ imageUrl: bannerImage }}
+        onClose={() => setBannerEditOpen(false)}
+        onSave={handleSaveBanner}
+        isLoading={bannerLoading}
+      />
     </>
   );
 };

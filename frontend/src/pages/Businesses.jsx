@@ -602,7 +602,16 @@ export default function Businesses() {
                   >
                     {/* Image */}
                     <div className="biz-card-img-wrap">
-                      {b.businessProfile?.images?.[0] ? (
+                      {b.profilePicture ? (
+                        <>
+                          <img
+                            src={b.profilePicture}
+                            alt={b.businessProfile?.businessName}
+                            className="biz-card-img"
+                          />
+                          <div className="biz-card-img-overlay" />
+                        </>
+                      ) : b.businessProfile?.images?.[0] ? (
                         <>
                           <img
                             src={b.businessProfile.images[0]}

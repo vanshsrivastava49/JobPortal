@@ -9,6 +9,11 @@ const userSchema = new mongoose.Schema(
       maxlength: [100, "Name cannot exceed 100 characters"],
     },
 
+    profilePicture: {
+      type: String,
+      default: "",
+    },
+
     email: {
       type: String,
       unique: true,
@@ -232,11 +237,11 @@ userSchema.statics.getApprovedBusinesses = function () {
   return this.find({
     role: "business",
     "businessProfile.status": "approved",
-  }).select("name businessProfile");
+  }).select("name businessProfile profilePicture");
 };
 
 userSchema.statics.getBusinessById = function (businessId) {
-  return this.findById(businessId).select("businessProfile name");
+  return this.findById(businessId).select("businessProfile name profilePicture");
 };
 
 module.exports = mongoose.model("User", userSchema);
