@@ -29,6 +29,7 @@ router.patch('/business/:jobId/takedown', auth, role('business'), takedownBusine
 // Recruiter actions
 router.post('/',                        auth, role('recruiter'), createJob);
 router.get('/:jobId',                   auth, role('recruiter'), getJobById);
+router.put('/:jobId',                   auth, role('recruiter'), updateJob);  
 router.patch('/:jobId',                 auth, role('recruiter'), updateJob);
 router.patch('/:jobId/toggle-status',   auth, role('recruiter'), toggleJobStatus);
 router.patch('/:jobId/takedown',        auth, role('recruiter'), takedownJob);

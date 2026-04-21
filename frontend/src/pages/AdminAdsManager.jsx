@@ -536,9 +536,9 @@
             "bannerDescription", "order", "isActive",
         ];
         textFields.forEach(f => {
-            if (form[f] !== undefined && form[f] !== null) {
-            fd.append(f, form[f]);
-            }
+        if (form[f] !== undefined && form[f] !== null) {
+            fd.append(f, typeof form[f] === 'boolean' ? String(form[f]) : form[f]);
+        }
         });
 
         // Image — file upload takes priority over manual URL
@@ -693,21 +693,24 @@
                     Full Banners ({bannerAds.length})
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    {bannerAds.map((ad, i) => (
-                    <AdCard
-                        key={ad._id}
-                        ad={ad}
-                        isFirst={i === 0}
-                        isLast={i === bannerAds.length - 1}
-                        onEdit={a => { setEditingAd(a); setShowForm(true); }}
-                        onDelete={handleDelete}
-                        onToggle={handleToggle}
-                        onMoveUp={() => moveAd(ads.indexOf(ad), "up")}
-                        onMoveDown={() => moveAd(ads.indexOf(ad), "down")}
-                        deleting={deleting}
-                        toggling={toggling}
-                    />
-                    ))}
+                    {bannerAds.map((ad, i) => {
+                        const fullIdx = ads.indexOf(ad);
+                        return (
+                            <AdCard
+                            key={ad._id}
+                            ad={ad}
+                            isFirst={i === 0}
+                            isLast={i === bannerAds.length - 1}
+                            onMoveUp={() => moveAd(fullIdx, "up")}
+                            onMoveDown={() => moveAd(fullIdx, "down")}
+                            onEdit={a => { setEditingAd(a); setShowForm(true); }}
+                            onDelete={handleDelete}
+                            onToggle={handleToggle}
+                            deleting={deleting}
+                            toggling={toggling}
+                            />
+                        );
+                        })}
                 </div>
                 </div>
             )}
@@ -720,21 +723,24 @@
                     Spotlight Cards ({spotlightAds.length})
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    {spotlightAds.map((ad, i) => (
-                    <AdCard
+                    {spotlightAds.map((ad, i) => {
+                    const fullIdx = ads.indexOf(ad);
+                    return (
+                        <AdCard
                         key={ad._id}
                         ad={ad}
                         isFirst={i === 0}
                         isLast={i === spotlightAds.length - 1}
+                        onMoveUp={() => moveAd(fullIdx, "up")}
+                        onMoveDown={() => moveAd(fullIdx, "down")}
                         onEdit={a => { setEditingAd(a); setShowForm(true); }}
                         onDelete={handleDelete}
                         onToggle={handleToggle}
-                        onMoveUp={() => moveAd(ads.indexOf(ad), "up")}
-                        onMoveDown={() => moveAd(ads.indexOf(ad), "down")}
                         deleting={deleting}
                         toggling={toggling}
-                    />
-                    ))}
+                        />
+                    );
+                    })}
                 </div>
                 </div>
             )}
