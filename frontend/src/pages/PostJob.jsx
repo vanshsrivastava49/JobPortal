@@ -13,7 +13,6 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
-  DollarSign,
   Gift,
   Layers,
   Eye,
@@ -35,16 +34,16 @@ const RupeeIcon = ({ size = 16, color = "currentColor" }) => (
 );
 
 const ROUND_TYPES = [
-  { value: "resume_screening",    label: "Resume Screening",        icon: "📄" },
-  { value: "online_test",         label: "Online Test / Assessment", icon: "💻" },
-  { value: "aptitude_test",       label: "Aptitude Test",            icon: "🧠" },
-  { value: "technical_interview", label: "Technical Interview",      icon: "⚙️" },
-  { value: "hr_interview",        label: "HR Interview",             icon: "🤝" },
-  { value: "group_discussion",    label: "Group Discussion",         icon: "💬" },
-  { value: "assignment",          label: "Assignment / Task",        icon: "📝" },
-  { value: "final_interview",     label: "Final Interview",          icon: "🎯" },
-  { value: "offer",               label: "Offer / Selection",        icon: "🏆" },
-  { value: "other",               label: "Other",                    icon: "➕" },
+  { value: "resume_screening",    label: "Resume Screening" },
+  { value: "online_test",         label: "Online Test / Assessment" },
+  { value: "aptitude_test",       label: "Aptitude Test" },
+  { value: "technical_interview", label: "Technical Interview" },
+  { value: "hr_interview",        label: "HR Interview" },
+  { value: "group_discussion",    label: "Group Discussion" },
+  { value: "assignment",          label: "Assignment / Task" },
+  { value: "final_interview",     label: "Final Interview" },
+  { value: "offer",               label: "Offer / Selection" },
+  { value: "other",               label: "Other" },
 ];
 
 const JOB_CATEGORIES = [
@@ -1232,11 +1231,11 @@ const PostJob = () => {
                           ? "⏳ Verification Pending"
                           : "🔒 Verification Required"
                     ) : !isFormValid() ? (
-                      "⏳ Complete Required Fields"
+                      "Complete Required Fields"
                     ) : existingJob ? (
-                      "✅ Update Job Listing"
+                      "Update Job Listing"
                     ) : (
-                      "🚀 Post Job Live"
+                      "Post Job Live"
                     )}
                   </button>
                 )}
