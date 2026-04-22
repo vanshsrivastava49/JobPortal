@@ -105,7 +105,7 @@ export default function GreenJobsHomepage() {
     const fetchJobs = async () => {
       try {
         setJobsLoading(true);
-        const response = await axios.get(`${API_BASE_URL}/api/jobs/public?page=1&limit=8`, { timeout: 10000 });
+        const response = await axios.get(`${API_BASE_URL}/api/jobs/public?page=1&limit=6`, { timeout: 10000 });
         let jobs = response.data.jobs && Array.isArray(response.data.jobs)
           ? response.data.jobs
           : Array.isArray(response.data) ? response.data : [];
@@ -113,7 +113,7 @@ export default function GreenJobsHomepage() {
       } catch {
         try {
           const fallback = await axios.get(`${API_BASE_URL}/api/jobs`, { timeout: 5000 });
-          setFeaturedJobs((fallback.data.jobs || fallback.data || []).filter(j => j.status === "approved").slice(0, 8));
+          setFeaturedJobs((fallback.data.jobs || fallback.data || []).filter(j => j.status === "approved").slice(0, 6));
         } catch { setJobsError("Could not load jobs."); }
       } finally { setJobsLoading(false); }
     };
